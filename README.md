@@ -6,14 +6,24 @@ https://rahiakil.github.io/ticket-tracker/
 
 People who are not signed in see: “For you, without login, we will not allow you.”
 
-Sign in on that page with the one admin account. The username and password are single words and are checked in the browser. There is no Cloudflare worker and no other service.
+Sign in on that page with the one admin account. The username and password are single words and are checked in the browser. The page stays on GitHub Pages. The order list is the text file in Google Drive.
 
-A recognized QR looks like `order-12196-variant-992|993|997`. It is stored in the private file `rahiakil/ticket-tracker-data/scans.txt`. A code that does not match that pattern is Invalid QR. A new matching code is Scanned but not taken. Marking some variants makes it Partially taken. Marking all of them makes it Taken.
+A recognized QR looks like `order-12196-variant-992|993|997`. It is stored in a text file in your Google Drive, `ticket-tracker-scans.txt`. A code that does not match that pattern is Invalid QR. A new matching code is Scanned but not taken. Marking some variants makes it Partially taken. Marking all of them makes it Taken.
 
-The phone writes that file with a GitHub token saved only in that browser. Create a fine-grained token that can access only `ticket-tracker-data`, with Contents set to read and write, then paste it into Private record token. Do not use an account-wide token.
+Anyone with the web app link can read and change that file. The page still asks for the siteadmin login before showing the scanner.
 
-**Seen** means a scan was saved on that phone. It does not prove that someone photographed the QR or received a product.
+## Google Drive record
 
-QR links look like `https://rahiakil.github.io/ticket-tracker/?c=<id>`. Opening the link does not mark it seen. After sign-in, tap **Confirm seen**. The camera starts only after **Scan QR**. Photos are decoded on the phone and are not uploaded.
+1. Create a Google Sheet or open Google Drive.
+2. Extensions or blank Apps Script: paste `scripts/google-record.gs`.
+3. Deploy, Manage deployments, New deployment, type Web app.
+4. Execute as Me. Who has access: Anyone.
+5. Authorize Drive access.
+6. Copy the web app URL that ends in `/exec`.
+7. On the Ticket Tracker page, paste that URL into Google record link and tap Save link on this phone.
+
+The Drive file is viewable from your Google account. Sharing that file as “anyone with the link can view” lets someone look at the text. Updates from the phones go through the web app link. I did not create the Drive file.
+
+A saved status means the shared Drive file has that order. It does not prove that someone photographed the QR or received a product. The camera starts only after **Scan QR**. Photos are decoded on the phone and are not uploaded.
 
 `npm test` checks the scan rules in code. It does not open a phone camera.

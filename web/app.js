@@ -192,12 +192,11 @@ document.querySelector("#file-scan").addEventListener("change", async (event) =>
   }
 });
 
-function remoteOptions() {
+function recordOptions() {
   return {
-    token: config.githubToken || localStorage.getItem("ticket-tracker-data-token") || "",
-    repo: config.dataRepo || "rahiakil/ticket-tracker-data",
-    file: config.dataFile || "scans.txt",
-    branch: "main",
+    recordUrl: config.recordUrl || localStorage.getItem("ticket-tracker-record-url") || "",
+    load: TicketRecord.loadWithScript,
+    post: TicketRecord.postWithForm,
   };
 }
 
@@ -217,7 +216,7 @@ async function submitAttempt() {
   resultEl.textContent = "Saving…";
   resultEl.className = "result pending";
   retryButton.hidden = true;
-  const saved = await TicketLedger.commitRemote(remoteOptions(), (book) => {
+  const saved = await TicketRecord.commit(recordOptions(), (book) => {
     const at = new Date().toISOString();
     const next = TicketLedger.rememberScan(book, parsed, at, USERNAME);
     const order = next.book.orders[parsed.orderId];
@@ -279,7 +278,7 @@ async function setVariant(orderId, variantId, taken) {
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   message.textContent = "Saving…";
-  const saved = await TicketLedger.commitRemote(remoteOptions(), (book) => {
+  const saved = await TicketRecord.commit(recordOptions(), (book) => {
     const next = TicketLedger.markTaken(book, orderId, variantId, taken, new Date().toISOString(), USERNAME);
     const order = next.book.orders[orderId];
     return {
@@ -297,9 +296,9 @@ async function setVariant(orderId, variantId, taken) {
 }
 
 async function refreshOrders() {
-  const options = remoteOptions();
-  if (!options.token) return;
-  const loaded = await TicketLedger.commitRemote(options, (book) => ({
+  const options = recordOptions();
+  if (!TicketRecord.recordUrl(options.recordUrl)) return;
+  const loaded = await TicketRecord.commit(options, (book) => ({
     write: false,
     book,
     message: "",
@@ -311,13 +310,18 @@ async function refreshOrders() {
   }
 }
 
-document.querySelector("#save-token").addEventListener("click", () => {
-  const value = document.querySelector("#data-token").value.trim();
-  document.querySelector("#data-token").value = "";
-  if (!value) return;
-  localStorage.setItem("ticket-tracker-data-token", value);
-  document.querySelector("#admin-message").hidden = false;
-  document.querySelector("#admin-message").textContent = "Token saved on this phone.";
+document.querySelector("#save-link").addEventListener("click", () => {
+  const value = document.querySelector("#record-link").value.trim();
+  const link = TicketRecord.recordUrl(value);
+  const message = document.querySelector("#admin-message");
+  message.hidden = false;
+  if (!link) {
+    message.textContent = "Use the Google web app link ending in /exec.";
+    return;
+  }
+  localStorage.setItem("ticket-tracker-record-url", link);
+  document.querySelector("#record-link").value = "";
+  message.textContent = "Record link saved on this phone.";
   refreshOrders();
 });
 

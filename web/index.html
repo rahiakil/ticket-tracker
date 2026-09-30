@@ -35,7 +35,7 @@
       <p class="eyebrow">Ticket Tracker</p>
       <h1>Hey, scan the QR code.</h1>
       <p id="who"></p>
-      <p class="note">A scan is stored in the private record. Then mark each variant taken, or leave it scanned but not taken.</p>
+      <p class="note">A scan is stored in the shared Google Drive record. Then mark each variant taken, or leave it scanned but not taken.</p>
       <button id="logout" class="secondary" type="button">Log out</button>
     </header>
 
@@ -53,10 +53,10 @@
 
     <section class="panel">
       <h2>Orders</h2>
-      <label>Private record token
-        <input id="data-token" type="password" autocomplete="off" spellcheck="false">
+      <label>Google record link
+        <input id="record-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
       </label>
-      <button id="save-token" class="secondary" type="button">Save token on this phone</button>
+      <button id="save-link" class="secondary" type="button">Save link on this phone</button>
       <button id="refresh" class="secondary" type="button">Refresh</button>
       <p id="admin-message" class="result" role="status" hidden></p>
       <div id="orders"></div>
@@ -77,7 +77,8 @@
   <script src="config.js"></script>
   <script src="vendor/qrcode-generator.js"></script>
   <script src="ledger.js"></script>
+  <script src="record.js?v=3"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
