@@ -477,8 +477,13 @@ function orderCard(order) {
   button.className = "primary";
   button.textContent = "Save picked up";
   button.addEventListener("click", () => saveTaken(order.orderId, input.value));
+  const complete = document.createElement("button");
+  complete.type = "button";
+  complete.className = "primary";
+  complete.textContent = "Taken completely";
+  complete.addEventListener("click", () => saveTaken(order.orderId, order.total));
   row.append(input, button);
-  box.append(status, variantLine(order.variants), row);
+  box.append(status, variantLine(order.variants), row, complete);
   toggle.addEventListener("click", () => { box.hidden = !box.hidden; });
   card.append(toggle, box);
   return card;
