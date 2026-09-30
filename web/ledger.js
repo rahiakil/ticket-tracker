@@ -1,246 +1,172 @@
 (function (root) {
-  const CODE_RE = /^[A-Za-z0-9_-]{22,80}$/;
-  const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const PAGE = "https://rahiakil.github.io/ticket-tracker/";
-  const STORAGE_KEY = "ticket-tracker-event-v1";
-  const MESSAGES = {
-    recorded: "Recorded",
-    already_seen: "Already seen",
-    invalid: "Invalid code",
-    save_failed: "Could not save—retry",
-    closed: "Event closed",
-  };
+  const ORDER_RE = /order-(\d+)-variant-(\d+(?:\|\d+)*)/i;
 
-  function emptyState(now) {
-    return {
-      schemaVersion: 1,
-      event: { name: "Ticket Tracker", status: "open", updatedAt: now },
-      issued: [],
-      statuses: {},
-      events: [],
-      processedRequestIds: {},
-    };
-  }
-
-  function failed() {
-    return { ok: false, outcome: "save_failed", message: MESSAGES.save_failed };
-  }
-
-  function ready(state) {
-    return Boolean(state && state.schemaVersion === 1 && state.event && Array.isArray(state.issued) && state.statuses && Array.isArray(state.events) && state.processedRequestIds);
-  }
-
-  function bytesToBase64Url(bytes) {
-    let binary = "";
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
-  }
-
-  function newCode() {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return bytesToBase64Url(bytes);
-  }
-
-  function codeUrl(code) {
-    const url = new URL(PAGE);
-    url.searchParams.set("c", code);
-    return url.toString();
-  }
-
-  function extractCode(raw) {
+  function parseQr(raw) {
     if (typeof raw !== "string") return null;
-    const text = raw.trim();
-    if (!text || text.length > 500) return null;
-    if (CODE_RE.test(text)) return text;
-    let url;
-    try { url = new URL(text); } catch { return null; }
-    if (url.username || url.password) return null;
-    if (url.origin !== "https://rahiakil.github.io") return null;
-    const path = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
-    if (path !== "/ticket-tracker/") return null;
-    const code = url.searchParams.get("c");
-    if (!code || !CODE_RE.test(code)) return null;
-    return code;
+    const match = raw.match(ORDER_RE);
+    if (!match) return null;
+    const variants = [...new Set(match[2].split("|").filter(Boolean))];
+    if (!variants.length) return null;
+    return { orderId: match[1], variants, raw: match[0] };
   }
 
-  function prior(state, requestId) {
-    const saved = state.processedRequestIds[requestId];
-    if (!saved) return null;
-    if (saved.outcome === "recorded") return { ok: true, outcome: "recorded", message: MESSAGES.recorded };
-    if (saved.outcome === "reversed") return { ok: true, outcome: "reversed", message: "Marked as unseen" };
-    if (saved.outcome === "issued") return { ok: true, outcome: "issued", message: "Codes issued", codes: saved.codes || [] };
-    if (saved.outcome === "event_open" || saved.outcome === "event_closed") {
-      const status = saved.outcome === "event_open" ? "open" : "closed";
-      return { ok: true, outcome: "event_status", status, message: status === "open" ? "Event open" : "Event closed" };
+  function emptyBook() {
+    return { schemaVersion: 1, lines: [], orders: {} };
+  }
+
+  function ready(book) {
+    return Boolean(book && book.schemaVersion === 1 && Array.isArray(book.lines) && book.orders);
+  }
+
+  function statusOf(order) {
+    const variants = Object.values(order.variants);
+    const taken = variants.filter((item) => item.taken).length;
+    if (taken === 0) return "Scanned but not taken";
+    if (taken < variants.length) return "Partially taken";
+    return "Taken";
+  }
+
+  function addLine(book, at, text) {
+    book.lines.push(`${at} ${text}`);
+  }
+
+  function rememberScan(book, parsed, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const existing = next.orders[parsed.orderId];
+    const variants = existing ? structuredClone(existing.variants) : {};
+    let changed = !existing;
+    for (const id of parsed.variants) {
+      if (!variants[id]) {
+        variants[id] = { taken: false, takenAt: null };
+        changed = true;
+      }
     }
-    return null;
+    next.orders[parsed.orderId] = {
+      orderId: parsed.orderId,
+      raw: parsed.raw,
+      scannedAt: existing?.scannedAt || at,
+      updatedAt: existing && !changed ? existing.updatedAt : at,
+      actor: existing?.actor || actor,
+      variants,
+    };
+    if (!existing) addLine(next, at, `order ${parsed.orderId} scanned but not taken`);
+    return { book: next, changed };
   }
 
-  function applyScan(state, { code, requestId, actor, at }) {
-    if (!ready(state)) return { write: false, result: failed() };
-    const next = structuredClone(state);
-    const previous = prior(next, requestId);
-    if (previous) return { write: false, result: previous };
-    if (next.event.status !== "open") return { write: false, result: { ok: false, outcome: "closed", message: MESSAGES.closed } };
-    if (!next.issued.some((item) => item.id === code)) return { write: false, result: { ok: false, outcome: "invalid", message: MESSAGES.invalid } };
-    const status = next.statuses[code] || { seen: false, firstSeenAt: null, cycle: 1 };
-    if (status.seen) return { write: false, result: { ok: true, outcome: "already_seen", message: MESSAGES.already_seen } };
-    status.seen = true;
-    status.firstSeenAt = at;
-    next.statuses[code] = status;
-    next.events.push({ type: "scan", code, at, actor, cycle: status.cycle, requestId });
-    next.processedRequestIds[requestId] = { outcome: "recorded", at };
-    return { write: true, data: next, result: { ok: true, outcome: "recorded", message: MESSAGES.recorded } };
+  function markTaken(book, orderId, variantId, taken, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const order = next.orders[orderId];
+    if (!order || !order.variants[variantId]) return { book: next, changed: false };
+    const variant = order.variants[variantId];
+    if (Boolean(variant.taken) === Boolean(taken)) return { book: next, changed: false };
+    variant.taken = Boolean(taken);
+    variant.takenAt = taken ? at : null;
+    order.updatedAt = at;
+    order.actor = actor || order.actor;
+    addLine(next, at, `order ${orderId} variant ${variantId} ${taken ? "taken" : "not taken"}`);
+    return { book: next, changed: true };
   }
 
-  function applyUnsee(state, { code, requestId, actor, reason, at }) {
-    if (!ready(state)) return { write: false, result: failed() };
-    const next = structuredClone(state);
-    const previous = prior(next, requestId);
-    if (previous) return { write: false, result: previous };
-    if (!next.issued.some((item) => item.id === code)) return { write: false, result: { ok: false, outcome: "invalid", message: MESSAGES.invalid } };
-    const status = next.statuses[code];
-    if (!status?.seen) return { write: false, result: { ok: true, outcome: "already_unseen", message: "Already unseen" } };
-    const cycle = status.cycle;
-    status.seen = false;
-    status.firstSeenAt = null;
-    status.cycle += 1;
-    next.events.push({ type: "reversal", code, at, actor, reason: reason || "", cycle, requestId });
-    next.processedRequestIds[requestId] = { outcome: "reversed", at };
-    return { write: true, data: next, result: { ok: true, outcome: "reversed", message: "Marked as unseen" } };
+  function summary(book) {
+    return Object.values(book.orders || {})
+      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))
+      .map((order) => ({
+        orderId: order.orderId,
+        raw: order.raw,
+        scannedAt: order.scannedAt,
+        updatedAt: order.updatedAt,
+        actor: order.actor,
+        status: statusOf(order),
+        variants: Object.keys(order.variants).sort((left, right) => Number(left) - Number(right)).map((id) => ({
+          id,
+          taken: Boolean(order.variants[id].taken),
+          takenAt: order.variants[id].takenAt,
+        })),
+      }));
   }
 
-  function applyEventStatus(state, { status, requestId, actor, at }) {
-    if (!ready(state) || (status !== "open" && status !== "closed")) return { write: false, result: failed() };
-    const next = structuredClone(state);
-    const previous = prior(next, requestId);
-    if (previous) return { write: false, result: previous };
-    if (next.event.status === status) {
-      return { write: false, result: { ok: true, outcome: "event_status", status, message: status === "open" ? "Event open" : "Event closed" } };
+  function utf8ToBase64(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
     }
-    next.event.status = status;
-    next.event.updatedAt = at;
-    next.events.push({ type: "event_status", status, at, actor, requestId });
-    next.processedRequestIds[requestId] = { outcome: status === "open" ? "event_open" : "event_closed", at };
-    return { write: true, data: next, result: { ok: true, outcome: "event_status", status, message: status === "open" ? "Event open" : "Event closed" } };
+    return btoa(binary);
   }
 
-  function applyIssue(state, { count, requestId, actor, at }) {
-    if (!ready(state)) return { write: false, result: failed() };
-    const next = structuredClone(state);
-    const previous = prior(next, requestId);
-    if (previous) return { write: false, result: previous };
-    if (next.event.status !== "open") return { write: false, result: { ok: false, outcome: "closed", message: MESSAGES.closed } };
-    if (!Number.isInteger(count) || count < 1 || count > 50) return { write: false, result: { ok: false, outcome: "invalid", message: "Choose between 1 and 50 codes." } };
-    const codes = [];
-    const taken = new Set(next.issued.map((item) => item.id));
-    while (codes.length < count) {
-      const code = newCode();
-      if (taken.has(code)) continue;
-      taken.add(code);
-      codes.push(code);
-    }
-    for (const code of codes) {
-      next.issued.push({ id: code, issuedAt: at });
-      next.statuses[code] = { seen: false, firstSeenAt: null, cycle: 1 };
-    }
-    next.events.push({ type: "issue", at, actor, count, requestId });
-    next.processedRequestIds[requestId] = { outcome: "issued", at, codes };
-    return { write: true, data: next, result: { ok: true, outcome: "issued", message: "Codes issued", codes } };
+  function base64ToUtf8(value) {
+    const binary = atob(String(value).replace(/\s/g, ""));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new TextDecoder().decode(bytes);
   }
 
-  function dashboard(state) {
+  function headers(token) {
     return {
-      ok: true,
-      event: state.event,
-      codes: state.issued.map((item) => {
-        const status = state.statuses[item.id] || { seen: false, firstSeenAt: null, cycle: 1 };
-        return { id: item.id, issuedAt: item.issuedAt, seen: Boolean(status.seen), firstSeenAt: status.seen ? status.firstSeenAt : null, cycle: status.cycle || 1 };
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "ticket-tracker",
+      "Content-Type": "application/json",
+    };
+  }
+
+  async function readRemote(options) {
+    const response = await options.fetchImpl(`${options.url}?ref=${encodeURIComponent(options.branch || "main")}`, { headers: headers(options.token) });
+    if (response.status === 404) return { book: emptyBook(), sha: null };
+    if (!response.ok) throw new Error("read failed");
+    const body = await response.json();
+    const book = JSON.parse(base64ToUtf8(body.content || ""));
+    if (!ready(book)) throw new Error("bad book");
+    return { book, sha: body.sha };
+  }
+
+  async function writeRemote(options, book, sha, message) {
+    const response = await options.fetchImpl(options.url, {
+      method: "PUT",
+      headers: headers(options.token),
+      body: JSON.stringify({
+        message,
+        content: utf8ToBase64(`${JSON.stringify(book, null, 2)}\n`),
+        sha: sha || undefined,
+        branch: options.branch || "main",
       }),
-      history: state.events.map((event) => ({
-        type: event.type,
-        code: event.code || "",
-        at: event.at,
-        actor: event.actor || "",
-        reason: event.reason || "",
-        cycle: event.cycle || null,
-        status: event.status || "",
-        count: event.count || null,
-      })),
-    };
+    });
+    if (response.status === 409 || response.status === 422) return { ok: false, conflict: true };
+    if (!response.ok) return { ok: false, conflict: false };
+    const body = await response.json();
+    return { ok: true, sha: body.content?.sha || null };
   }
 
-  function csvField(value) {
-    const text = value == null ? "" : String(value);
-    if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
-    return text;
-  }
-
-  function reportCsv(view) {
-    const rows = [["record_type", "id", "status", "first_seen_at", "cycle", "issued_at", "event_type", "at", "actor", "reason", "count"]];
-    for (const code of view.codes) rows.push(["code", code.id, code.seen ? "seen" : "unseen", code.firstSeenAt || "", code.cycle, code.issuedAt, "", "", "", "", ""]);
-    for (const event of view.history) rows.push(["event", event.code, event.status, "", event.cycle ?? "", "", event.type, event.at, event.actor, event.reason, event.count ?? ""]);
-    return `${rows.map((row) => row.map(csvField).join(",")).join("\n")}\n`;
-  }
-
-  function openLedger(storage) {
-    function read() {
-      const raw = storage.getItem(STORAGE_KEY);
-      if (!raw) return emptyState(new Date().toISOString());
-      const parsed = JSON.parse(raw);
-      if (!ready(parsed)) throw new Error("bad state");
-      return parsed;
-    }
-    function commit(mutate) {
+  async function commitRemote(options, mutate) {
+    if (!options.token || !options.repo) return { ok: false, message: "Could not save—retry" };
+    const safeRepo = /^[\w.-]+\/[\w.-]+$/.test(options.repo);
+    const safeFile = /^[\w.-]+$/.test(options.file || "");
+    if (!safeRepo || !safeFile) return { ok: false, message: "Could not save—retry" };
+    const url = `https://api.github.com/repos/${options.repo}/contents/${options.file}`;
+    const fetchImpl = options.fetchImpl || root.fetch.bind(root);
+    const target = { ...options, url, fetchImpl };
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       let current;
-      try { current = read(); } catch { return failed(); }
-      const applied = mutate(current);
-      if (!applied.write) return applied.result;
-      try { storage.setItem(STORAGE_KEY, JSON.stringify(applied.data)); } catch { return failed(); }
-      return applied.result;
+      try { current = await readRemote(target); } catch { return { ok: false, message: "Could not save—retry" }; }
+      const changed = mutate(current.book);
+      if (!changed.write) return { ok: true, message: changed.message, book: current.book, sha: current.sha };
+      const written = await writeRemote(target, changed.book, current.sha, changed.commitMessage);
+      if (written.ok) return { ok: true, message: changed.message, book: changed.book, sha: written.sha };
+      if (!written.conflict) return { ok: false, message: "Could not save—retry" };
     }
-    const actorOf = (actor) => actor || "siteadmin";
-    return {
-      view() {
-        try { return dashboard(read()); } catch { return null; }
-      },
-      scan(raw, requestId, actor) {
-        if (!REQUEST_ID_RE.test(requestId || "")) return failed();
-        const code = extractCode(raw);
-        if (!code) return { ok: false, outcome: "invalid", message: MESSAGES.invalid };
-        return commit((state) => applyScan(state, { code, requestId, actor: actorOf(actor), at: new Date().toISOString() }));
-      },
-      unsee(code, requestId, reason, actor) {
-        if (!REQUEST_ID_RE.test(requestId || "")) return failed();
-        return commit((state) => applyUnsee(state, { code, requestId, reason, actor: actorOf(actor), at: new Date().toISOString() }));
-      },
-      setEvent(status, requestId, actor) {
-        if (!REQUEST_ID_RE.test(requestId || "")) return failed();
-        return commit((state) => applyEventStatus(state, { status, requestId, actor: actorOf(actor), at: new Date().toISOString() }));
-      },
-      issue(count, requestId, actor) {
-        if (!REQUEST_ID_RE.test(requestId || "")) return failed();
-        return commit((state) => applyIssue(state, { count, requestId, actor: actorOf(actor), at: new Date().toISOString() }));
-      },
-      report() {
-        const view = this.view();
-        if (!view) return null;
-        return {
-          json: JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), event: view.event, codes: view.codes, history: view.history }, null, 2),
-          csv: reportCsv(view),
-        };
-      },
-    };
+    return { ok: false, message: "Could not save—retry" };
   }
 
-  function qrSvg(text) {
-    if (typeof root.qrcode !== "function") return "";
-    const qr = root.qrcode(0, "M");
-    qr.addData(text);
-    qr.make();
-    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  }
-
-  root.TicketLedger = { openLedger, extractCode, codeUrl, qrSvg, CODE_RE };
+  root.TicketLedger = {
+    parseQr,
+    emptyBook,
+    statusOf,
+    rememberScan,
+    markTaken,
+    summary,
+    commitRemote,
+    readRemote,
+  };
 })(typeof globalThis !== "undefined" ? globalThis : this);

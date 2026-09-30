@@ -33,21 +33,13 @@
   <main id="workspace" class="screen" hidden>
     <header class="panel">
       <p class="eyebrow">Ticket Tracker</p>
-      <h1>Scan a ticket</h1>
+      <h1>Hey, scan the QR code.</h1>
       <p id="who"></p>
-      <p id="phone-note" class="result pending">Records stay on this phone for 3 days. Another phone keeps its own list.</p>
-      <p class="note">Seen means a scan was recorded. It does not prove that someone photographed the QR or received a product.</p>
+      <p class="note">A scan is stored in the private record. Then mark each variant taken, or leave it scanned but not taken.</p>
       <button id="logout" class="secondary" type="button">Log out</button>
     </header>
 
-    <section id="confirm" class="panel" hidden>
-      <h2>Confirm seen</h2>
-      <p>This link is an event QR code. Nothing is recorded until you confirm.</p>
-      <button id="confirm-seen" class="primary" type="button">Confirm seen</button>
-    </section>
-
     <section class="panel">
-      <p id="closed-note" class="result pending" hidden>This event is closed. New scans are not being recorded.</p>
       <button id="scan-btn" class="primary" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <div id="reader" hidden></div>
@@ -60,25 +52,14 @@
     </section>
 
     <section class="panel">
-      <h2>Admin</h2>
+      <h2>Orders</h2>
+      <label>Private record token
+        <input id="data-token" type="password" autocomplete="off" spellcheck="false">
+      </label>
+      <button id="save-token" class="secondary" type="button">Save token on this phone</button>
       <button id="refresh" class="secondary" type="button">Refresh</button>
-      <button id="event-toggle" class="secondary" type="button">Close event</button>
-      <div class="row-buttons">
-        <button id="download-json" class="secondary" type="button">Download JSON</button>
-        <button id="download-csv" class="secondary" type="button">Download CSV</button>
-      </div>
-      <form id="issue-form">
-        <label>How many QR codes
-          <input id="issue-count" type="number" min="1" max="50" value="10" inputmode="numeric">
-        </label>
-        <button class="primary" type="submit">Generate QR codes</button>
-      </form>
       <p id="admin-message" class="result" role="status" hidden></p>
-      <div id="sheet"></div>
-      <h3>Issued codes</h3>
-      <div id="codes"></div>
-      <h3>Activity</h3>
-      <div id="history"></div>
+      <div id="orders"></div>
     </section>
   </main>
 
