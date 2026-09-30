@@ -14,15 +14,21 @@
 
 * { box-sizing: border-box; }
 
-body {
+[hidden] { display: none !important; }
+
+html, body {
   margin: 0;
+  min-height: 100%;
+}
+
+body {
   font-family: "Segoe UI", system-ui, sans-serif;
   background: var(--paper);
   color: var(--ink);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
-button, input { font: inherit; font-size: 1rem; }
+button, input { font: inherit; font-size: 16px; }
 
 button, .file-btn {
   min-height: 52px;
@@ -83,15 +89,25 @@ label { display: block; font-weight: 650; margin: 14px 0; }
 .screen {
   width: min(100%, 480px);
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  padding: max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom));
 }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.topbar .text-button { min-height: 44px; }
 
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 16px;
-  margin-bottom: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
 
 h1, h2, h3 { line-height: 1.2; margin: 0 0 8px; }
@@ -112,7 +128,22 @@ h2 { font-size: 1.25rem; }
 .seen { color: var(--good); font-weight: 700; }
 .unseen { color: var(--warn); font-weight: 700; }
 
-#reader, #reader video { width: 100%; border-radius: 12px; }
+#reader {
+  width: 100%;
+  max-height: 46dvh;
+  overflow: hidden;
+  border-radius: 12px;
+}
+#reader video,
+#reader img,
+#reader canvas {
+  width: 100% !important;
+  max-height: 46dvh !important;
+  object-fit: cover;
+  border-radius: 12px;
+}
+#reader__dashboard_section,
+#reader__dashboard_section_csr { width: 100% !important; }
 #sheet { display: grid; gap: 12px; }
 #sheet img, #sheet svg { width: min(100%, 240px); height: auto; background: white; }
 
