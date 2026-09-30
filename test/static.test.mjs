@@ -16,6 +16,8 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.equal(html.includes("/api/scans"), false);
   assert.match(css, /min-height:\s*52px/);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none !important/);
+  assert.match(app, /is-mobile/);
+  assert.match(css, /html\.is-mobile #login\.screen/);
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
   assert.match(app, /Save picked up/);

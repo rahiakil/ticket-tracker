@@ -1,4 +1,11 @@
 const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
+
+function markMobile() {
+  const mobile = window.matchMedia("(max-width: 820px), (pointer: coarse)").matches;
+  document.documentElement.classList.toggle("is-mobile", mobile);
+}
+markMobile();
+window.addEventListener("resize", markMobile);
 const ACCOUNTS = {
   siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "records" },
   admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
