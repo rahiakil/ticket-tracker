@@ -1,0 +1,15 @@
+name = "ticket-tracker"
+main = "src/worker.mjs"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "web"
+binding = "ASSETS"
+
+[vars]
+DATA_REPO = "rahiakil/ticket-tracker-data"
+DATA_BRANCH = "main"
+PUBLIC_PAGE_URL = "https://rahiakil.github.io/ticket-tracker/"
+ALLOWED_ORIGINS = "https://rahiakil.github.io"
+COOKIE_SAMESITE = "None"

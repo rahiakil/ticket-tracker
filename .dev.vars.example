@@ -1,0 +1,2 @@
+SESSION_SECRET=replace-with-at-least-32-random-characters
+GITHUB_TOKEN=replace-with-a-fine-grained-token-for-ticket-tracker-data-only

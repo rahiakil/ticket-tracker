@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-09-29T20:00:00.000Z",
+  "event": {
+    "name": "Ticket Tracker",
+    "status": "open",
+    "updatedAt": "2026-09-29T00:00:00.000Z"
+  },
+  "codes": [
+    {
+      "id": "samplecode000000000001",
+      "issuedAt": "2026-09-29T00:00:00.000Z",
+      "seen": false,
+      "firstSeenAt": null,
+      "cycle": 2
+    },
+    {
+      "id": "samplecode000000000002",
+      "issuedAt": "2026-09-29T00:00:00.000Z",
+      "seen": true,
+      "firstSeenAt": "2026-09-29T18:05:00.000Z",
+      "cycle": 1
+    }
+  ],
+  "history": [
+    {
+      "type": "scan",
+      "code": "samplecode000000000001",
+      "at": "2026-09-29T18:00:00.000Z",
+      "actor": "example-admin",
+      "reason": "",
+      "cycle": 1,
+      "status": "",
+      "count": null
+    },
+    {
+      "type": "reversal",
+      "code": "samplecode000000000001",
+      "at": "2026-09-29T18:30:00.000Z",
+      "actor": "example-admin",
+      "reason": "Scanned the wrong ticket",
+      "cycle": 1,
+      "status": "",
+      "count": null
+    },
+    {
+      "type": "scan",
+      "code": "samplecode000000000002",
+      "at": "2026-09-29T18:05:00.000Z",
+      "actor": "example-admin",
+      "reason": "",
+      "cycle": 1,
+      "status": "",
+      "count": null
+    }
+  ]
+}

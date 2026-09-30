@@ -1,0 +1,22 @@
+{
+  "name": "ticket-tracker",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test",
+    "hash-password": "node scripts/hash-password.mjs",
+    "init-demo": "node scripts/init-demo.mjs",
+    "upsert-user": "node scripts/upsert-user.mjs"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "html5-qrcode": "2.3.8"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "users": [
+    {
+      "username": "example-admin",
+      "role": "admin",
+      "passwordHash": "scrypt$16384$8$1$00112233445566778899aabbccddeeff$0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "createdAt": "2026-09-29T00:00:00.000Z",
+      "mustChangePassword": true
+    }
+  ]
+}

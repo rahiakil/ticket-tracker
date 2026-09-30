@@ -1,0 +1,7 @@
+node_modules/
+data-local/
+.env
+.dev.vars
+.wrangler/
+password.txt
+*.log

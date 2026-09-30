@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "event": {
+    "name": "Ticket Tracker",
+    "status": "open",
+    "updatedAt": "2026-09-29T00:00:00.000Z"
+  },
+  "issued": [
+    {
+      "id": "samplecode000000000001",
+      "issuedAt": "2026-09-29T00:00:00.000Z"
+    }
+  ],
+  "statuses": {
+    "samplecode000000000001": {
+      "seen": true,
+      "firstSeenAt": "2026-09-29T18:05:00.000Z",
+      "cycle": 1
+    }
+  },
+  "events": [
+    {
+      "type": "scan",
+      "code": "samplecode000000000001",
+      "at": "2026-09-29T18:05:00.000Z",
+      "actor": "example-admin",
+      "cycle": 1,
+      "requestId": "11111111-1111-4111-8111-111111111111"
+    }
+  ],
+  "processedRequestIds": {
+    "11111111-1111-4111-8111-111111111111": {
+      "outcome": "recorded",
+      "at": "2026-09-29T18:05:00.000Z"
+    }
+  }
+}
