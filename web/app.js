@@ -415,7 +415,7 @@ function renderOrders() {
   fillVariantCounts("#site-variant-counts", counts);
   const rows = TicketLedger.summary(currentBook);
   const breakdown = statusBreakdown(rows);
-  const breakdownText = `(${breakdown.scanned} scanned) (${breakdown.partial} scanned and taken partially) (${breakdown.complete} taken completely)`;
+  const breakdownText = `(${breakdown.scanned} scanned only) (${breakdown.partial} taken partially) (${breakdown.complete} taken completely)`;
   const heading = document.querySelector("#order-heading");
   const siteHeading = document.querySelector("#site-order-heading");
   const orderBreakdown = document.querySelector("#order-breakdown");
@@ -453,7 +453,7 @@ function variantLine(variants) {
 function orderCard(order) {
   const card = document.createElement("article");
   card.className = "card";
-  const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "scanned and taken partially" : "scanned";
+  const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "secondary order-toggle";
@@ -498,7 +498,7 @@ function renderRecent() {
   for (const order of rows) {
     const card = document.createElement("article");
     card.className = "card";
-    const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "scanned and taken partially" : "scanned";
+    const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "secondary order-toggle";
