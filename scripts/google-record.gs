@@ -25,6 +25,16 @@ function doPost(e) {
 }
 
 function mergeBook_(current, incoming) {
+  if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
+    current.orders = incoming.orders || {};
+    current.lines = incoming.lines || [];
+    current.log = incoming.log || [];
+    current.baseWriteId = "";
+    current.lastWriteId = incoming.lastWriteId || "";
+    pruneOld_(current);
+    current.counts = countBook_(current);
+    return current;
+  }
   var orders = current.orders || {};
   var incomingOrders = incoming.orders || {};
   Object.keys(incomingOrders).forEach(function (orderId) {
@@ -39,6 +49,7 @@ function mergeBook_(current, incoming) {
       variants[variantId] = next.variants[variantId];
     });
     prior.variants = variants;
+    if (typeof next.takenCount === "number") prior.takenCount = next.takenCount;
     prior.raw = next.raw || prior.raw;
     prior.updatedAt = next.updatedAt || prior.updatedAt;
     orders[orderId] = prior;
@@ -99,7 +110,15 @@ function countBook_(book) {
       else variants[variantId].notTaken += 1;
     });
   });
-  return { peopleScanned: orders.length, variants: variants };
+  var ticketsTaken = 0;
+  orders.forEach(function (order) {
+    var total = Object.keys(order.variants || {}).length;
+    var taken = typeof order.takenCount === "number" ? order.takenCount : 0;
+    if (taken < 0) taken = 0;
+    if (taken > total) taken = total;
+    ticketsTaken += taken;
+  });
+  return { peopleScanned: orders.length, ticketsTaken: ticketsTaken, variants: variants };
 }
 
 function readBook_() {

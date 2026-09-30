@@ -37,12 +37,28 @@
     return Boolean(book && book.schemaVersion === 1 && book.orders);
   }
 
+  function takenNumbers(order) {
+    const total = Object.keys(order.variants || {}).length;
+    let taken = typeof order.takenCount === "number"
+      ? order.takenCount
+      : Object.values(order.variants || {}).filter((item) => item.taken).length;
+    if (!Number.isFinite(taken)) taken = 0;
+    taken = Math.max(0, Math.min(total, Math.round(taken)));
+    return { taken, total };
+  }
+
   function statusOf(order) {
-    const variants = Object.values(order.variants);
-    const taken = variants.filter((item) => item.taken).length;
-    if (taken === 0) return "Scanned but not taken";
-    if (taken < variants.length) return "Partially taken";
+    const { taken, total } = takenNumbers(order);
+    if (taken <= 0) return "Scanned but not taken";
+    if (taken < total) return "Partially taken";
     return "Taken";
+  }
+
+  function statusDetail(order) {
+    const { taken, total } = takenNumbers(order);
+    const status = statusOf(order);
+    if (status === "Scanned but not taken") return status;
+    return `${status}, ${taken} out of ${total} have been taken`;
   }
 
   function addLine(book, at, text) {
@@ -75,6 +91,34 @@
     return { book: pruneBook(next), changed: changed || Boolean(existing), already: Boolean(existing) };
   }
 
+  function setTakenCount(book, orderId, count, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const order = next.orders[orderId];
+    if (!order) return { book: next, changed: false };
+    const total = Object.keys(order.variants || {}).length;
+    let taken = Math.round(Number(count));
+    if (!Number.isFinite(taken)) taken = total;
+    taken = Math.max(0, Math.min(total, taken));
+    if (takenNumbers(order).taken === taken && typeof order.takenCount === "number") return { book: next, changed: false };
+    order.takenCount = taken;
+    order.updatedAt = at;
+    order.actor = actor || order.actor;
+    addLine(next, at, `order ${orderId} taken ${taken} out of ${total}`);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `order ${orderId} taken ${taken} out of ${total}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function deleteOrder(book, orderId, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!next.orders[orderId]) return { book: next, changed: false };
+    delete next.orders[orderId];
+    addLine(next, at, `order ${orderId} deleted by ${actor}`);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `order ${orderId} deleted by ${actor}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
   function markTaken(book, orderId, variantId, taken, at, actor) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     const order = next.orders[orderId];
@@ -98,11 +142,12 @@
       for (const [id, variant] of Object.entries(order.variants || {})) {
         if (!variants[id]) variants[id] = { orders: 0, taken: 0, notTaken: 0 };
         variants[id].orders += 1;
-        if (variant.taken) variants[id].taken += 1;
-        else variants[id].notTaken += 1;
+        variants[id].taken += 0;
+        variants[id].notTaken += 1;
       }
     }
-    return { peopleScanned: orders.length, variants };
+    const ticketsTaken = orders.reduce((sum, order) => sum + takenNumbers(order).taken, 0);
+    return { peopleScanned: orders.length, ticketsTaken, variants };
   }
 
   function summary(book) {
@@ -115,6 +160,9 @@
         updatedAt: order.updatedAt,
         actor: order.actor,
         status: statusOf(order),
+        detail: statusDetail(order),
+        taken: takenNumbers(order).taken,
+        total: takenNumbers(order).total,
         variants: Object.keys(order.variants).sort((left, right) => Number(left) - Number(right)).map((id) => ({
           id,
           taken: Boolean(order.variants[id].taken),
@@ -201,6 +249,9 @@
     parseQr,
     emptyBook,
     statusOf,
+    statusDetail,
+    setTakenCount,
+    deleteOrder,
     rememberScan,
     markTaken,
     countsOf,

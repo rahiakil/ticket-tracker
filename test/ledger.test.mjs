@@ -30,12 +30,16 @@ test("a new order is scanned but not taken, then partial, then taken", () => {
   assert.equal(variant992.orders, 1);
   assert.equal(variant992.notTaken, 1);
   assert.match(again.book.log.map((item) => item.text).join(" "), /already scanned order 12196/);
-  const partial = ledger.markTaken(again.book, "12196", "992", true, "2026-09-30T01:10:00.000Z", "siteadmin");
+  const partial = ledger.setTakenCount(again.book, "12196", 3, "2026-09-30T01:10:00.000Z", "siteadmin");
   assert.equal(ledger.statusOf(partial.book.orders["12196"]), "Partially taken");
-  let book = partial.book;
-  for (const id of parsed.variants) book = ledger.markTaken(book, "12196", id, true, "2026-09-30T01:20:00.000Z", "siteadmin").book;
-  assert.equal(ledger.statusOf(book.orders["12196"]), "Taken");
-  assert.equal(book.orders["12196"].scannedAt, "2026-09-30T01:00:00.000Z");
+  assert.equal(ledger.statusDetail(partial.book.orders["12196"]), "Partially taken, 3 out of 12 have been taken");
+  assert.equal(partial.book.orders["12196"].takenCount, 3);
+  const full = ledger.setTakenCount(partial.book, "12196", 12, "2026-09-30T01:20:00.000Z", "siteadmin");
+  assert.equal(ledger.statusOf(full.book.orders["12196"]), "Taken");
+  assert.equal(full.book.orders["12196"].scannedAt, "2026-09-30T01:00:00.000Z");
+  const removed = ledger.deleteOrder(full.book, "12196", "2026-09-30T01:30:00.000Z", "admin");
+  assert.equal(removed.changed, true);
+  assert.equal(Boolean(removed.book.orders["12196"]), false);
 });
 
 test("saving a new order retries a GitHub SHA conflict and keeps the text record", async () => {

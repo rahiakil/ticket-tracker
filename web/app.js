@@ -1,12 +1,15 @@
 const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
-const USERNAME = "siteadmin";
-const PASSWORD_SHA256 = "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc";
+const ACCOUNTS = {
+  siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "scanner" },
+  admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "admin" },
+};
 const SESSION_KEY = "ticket-tracker-session";
 const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 
 const gate = document.querySelector("#gate");
 const login = document.querySelector("#login");
 const workspace = document.querySelector("#workspace");
+const adminScreen = document.querySelector("#admin-screen");
 const resultEl = document.querySelector("#result");
 const retryButton = document.querySelector("#retry");
 const reader = document.querySelector("#reader");
@@ -26,6 +29,7 @@ function show(view) {
   gate.hidden = view !== gate;
   login.hidden = view !== login;
   workspace.hidden = view !== workspace;
+  adminScreen.hidden = view !== adminScreen;
 }
 
 function showGate() {
@@ -48,7 +52,7 @@ function sameText(left, right) {
 function readSession() {
   try {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (!saved || saved.username !== USERNAME || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
+    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
     return saved;
   } catch {
     return null;
@@ -56,18 +60,33 @@ function readSession() {
 }
 
 function enterApp() {
-  document.querySelector("#who").textContent = `Signed in as ${USERNAME}`;
+  const session = readSession();
+  if (!session) return showGate();
   if (config.recordUrl) {
     document.querySelector("#record-link").closest("label").hidden = true;
     document.querySelector("#save-link").hidden = true;
   }
+  if (session.role === "admin") {
+    document.querySelector("#admin-who").textContent = "Signed in as admin";
+    show(adminScreen);
+    refreshOrders();
+    return;
+  }
+  document.querySelector("#who").textContent = `Signed in as ${session.username}`;
   show(workspace);
   refreshOrders();
 }
 
 document.querySelector("#show-login").addEventListener("click", () => {
+  document.querySelector("#username").value = "";
   show(login);
   document.querySelector("#username").focus();
+});
+
+document.querySelector("#show-admin").addEventListener("click", () => {
+  document.querySelector("#username").value = "admin";
+  show(login);
+  document.querySelector("#password").focus();
 });
 
 document.querySelector("#login-back").addEventListener("click", showGate);
@@ -83,13 +102,14 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   document.querySelector("#password").value = "";
   try {
     const digest = await sha256(password);
-    const accepted = username === USERNAME && sameText(digest, PASSWORD_SHA256);
+    const account = ACCOUNTS[username];
+    const accepted = account && sameText(digest, account.hash);
     if (!accepted) {
       error.hidden = false;
       error.textContent = "Incorrect username or password.";
       return;
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: USERNAME, exp: Date.now() + SESSION_MS }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, exp: Date.now() + SESSION_MS }));
     enterApp();
   } catch {
     error.hidden = false;
@@ -105,6 +125,7 @@ function logout() {
 }
 
 document.querySelector("#logout").addEventListener("click", logout);
+document.querySelector("#admin-logout").addEventListener("click", logout);
 
 function library() {
   if (typeof Html5Qrcode === "function") return Html5Qrcode;
@@ -222,13 +243,14 @@ async function submitAttempt() {
   retryButton.hidden = true;
   const saved = await TicketRecord.commit(recordOptions(), (book) => {
     const at = new Date().toISOString();
-    const next = TicketLedger.rememberScan(book, parsed, at, USERNAME);
+    const next = TicketLedger.rememberScan(book, parsed, at, readSession()?.username || "siteadmin");
+    next.book.baseWriteId = book.lastWriteId || "";
     const order = next.book.orders[parsed.orderId];
-    const status = TicketLedger.statusOf(order);
+    const detail = TicketLedger.statusDetail(order);
     return {
       write: next.changed,
       book: next.book,
-      message: next.already ? `Order ${parsed.orderId} already scanned. ${status}` : `Order ${parsed.orderId}. ${status}`,
+      message: next.already ? `Order ${parsed.orderId} already scanned. ${detail}` : `Order ${parsed.orderId}. ${detail}`,
       commitMessage: `Scan order ${parsed.orderId}`,
     };
   });
@@ -300,7 +322,7 @@ function renderOrders() {
   for (const id of variantIds) {
     const item = counts.variants[id];
     const line = document.createElement("p");
-    line.textContent = `Variant ${id}: ${item.orders} scanned, ${item.taken} taken, ${item.notTaken} not taken`;
+    line.textContent = `Variant ${id}: ${item.orders} people`;
     variantList.append(line);
   }
   const orders = document.querySelector("#orders");
@@ -312,45 +334,117 @@ function renderOrders() {
     orders.append(empty);
     return;
   }
+  for (const order of rows) orders.append(orderCard(order));
+  renderLog();
+  renderRecent();
+}
+
+function orderCard(order) {
+  const card = document.createElement("article");
+  card.className = "card";
+  const title = document.createElement("p");
+  title.textContent = `Order ${order.orderId}`;
+  const status = document.createElement("p");
+  status.className = order.status === "Taken" ? "seen" : "unseen";
+  status.textContent = order.detail || order.status;
+  const row = document.createElement("div");
+  row.className = "taken-row";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.max = String(order.total);
+  input.inputMode = "numeric";
+  input.value = String(order.taken);
+  input.setAttribute("aria-label", `How many taken for order ${order.orderId}`);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "primary";
+  button.textContent = "Mark taken";
+  button.addEventListener("click", () => saveTaken(order.orderId, input.value));
+  const expand = document.createElement("button");
+  expand.type = "button";
+  expand.className = "text-button";
+  expand.textContent = "Show variants";
+  const list = document.createElement("p");
+  list.className = "variant-list";
+  list.hidden = true;
+  list.textContent = order.variants.map((variant) => variant.id).join(", ");
+  expand.addEventListener("click", () => {
+    list.hidden = !list.hidden;
+    expand.textContent = list.hidden ? "Show variants" : "Hide variants";
+  });
+  row.append(input, button);
+  card.append(title, status, row, expand, list);
+  return card;
+}
+
+function renderRecent() {
+  const box = document.querySelector("#recent-orders");
+  if (!box) return;
+  box.replaceChildren();
+  const rows = TicketLedger.summary(currentBook).slice(0, 30);
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No recent scans.";
+    box.append(empty);
+    return;
+  }
   for (const order of rows) {
     const card = document.createElement("article");
     card.className = "card";
     const title = document.createElement("p");
     title.textContent = `Order ${order.orderId}`;
     const status = document.createElement("p");
-    status.className = order.status === "Taken" ? "seen" : "unseen";
-    status.textContent = order.status;
-    card.append(title, status);
-    for (const variant of order.variants) {
-      const line = document.createElement("p");
-      line.textContent = `Variant ${variant.id}: ${variant.taken ? "taken" : "not taken"}`;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "secondary";
-      button.textContent = variant.taken ? "Mark not taken" : "Mark taken";
-      button.addEventListener("click", () => setVariant(order.orderId, variant.id, !variant.taken));
-      card.append(line, button);
-    }
-    orders.append(card);
+    status.textContent = order.detail || order.status;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary";
+    button.textContent = "Delete";
+    button.addEventListener("click", () => deleteRecent(order.orderId));
+    card.append(title, status, button);
+    box.append(card);
   }
-  renderLog();
 }
 
-async function setVariant(orderId, variantId, taken) {
+async function saveTaken(orderId, rawCount) {
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   message.textContent = "Saving…";
   const saved = await TicketRecord.commit(recordOptions(), (book) => {
-    const next = TicketLedger.markTaken(book, orderId, variantId, taken, new Date().toISOString(), USERNAME);
+    const next = TicketLedger.setTakenCount(book, orderId, rawCount, new Date().toISOString(), readSession()?.username || "siteadmin");
+    next.book.baseWriteId = book.lastWriteId || "";
     const order = next.book.orders[orderId];
     return {
       write: next.changed,
       book: next.book,
-      message: order ? TicketLedger.statusOf(order) : "Could not save—retry",
-      commitMessage: `Update order ${orderId} variant ${variantId}`,
+      message: order ? TicketLedger.statusDetail(order) : "Could not save—retry",
+      commitMessage: `Update taken count for order ${orderId}`,
     };
   });
-  message.textContent = saved.ok ? saved.message : "Could not save—retry";
+  message.textContent = saved.ok ? saved.message : (saved.message || "Could not save—retry");
+  if (!saved.ok) note(message.textContent);
+  if (saved.ok) {
+    currentBook = saved.book;
+    renderOrders();
+  }
+}
+
+async function deleteRecent(orderId) {
+  const message = document.querySelector("#admin-note");
+  message.hidden = false;
+  message.textContent = "Saving…";
+  const saved = await TicketRecord.commit(recordOptions(), (book) => {
+    const next = TicketLedger.deleteOrder(book, orderId, new Date().toISOString(), "admin");
+    next.book.baseWriteId = book.lastWriteId || "";
+    return {
+      write: next.changed,
+      book: next.book,
+      message: `Order ${orderId} deleted`,
+      commitMessage: `Delete order ${orderId}`,
+    };
+  });
+  message.textContent = saved.ok ? saved.message : (saved.message || "Could not save—retry");
+  if (!saved.ok) note(message.textContent);
   if (saved.ok) {
     currentBook = saved.book;
     renderOrders();
@@ -395,6 +489,7 @@ document.querySelector("#save-link").addEventListener("click", () => {
 });
 
 document.querySelector("#refresh").addEventListener("click", () => { refreshOrders(); });
+document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
 
 show(gate);
 if (readSession()) enterApp();

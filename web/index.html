@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
   <main id="gate" class="gate">
     <div>
       <p class="gate-message">For you, without login, we will not allow you.</p>
-      <button id="show-login" class="text-button" type="button">Admin login</button>
+      <button id="show-login" class="text-button" type="button">Log in</button>
+      <button id="show-admin" class="text-button" type="button">Admin</button>
     </div>
   </main>
 
@@ -50,7 +51,7 @@
       <div id="file-reader" hidden></div>
       <p id="result" class="result" role="status" aria-live="polite"></p>
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
-      <p class="note">A scan is stored in the TicketTracker Google Drive folder. Then mark each variant taken, or leave it scanned but not taken.</p>
+      <p class="note">Each person is one row. Open the row to see that person's variants. One button records how many were taken.</p>
     </section>
 
     <section class="panel" id="count-panel">
@@ -76,6 +77,23 @@
     </section>
   </main>
 
+  <main id="admin-screen" class="screen" hidden>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Admin</p>
+        <p id="admin-who"></p>
+      </div>
+      <button id="admin-logout" class="text-button" type="button">Log out</button>
+    </header>
+    <section class="panel">
+      <h1>Recent scans</h1>
+      <p class="note">Delete a scan that just happened. This removes it from the Drive file.</p>
+      <button id="admin-refresh" class="secondary" type="button">Refresh</button>
+      <p id="admin-note" class="result" role="status" hidden></p>
+      <div id="recent-orders"></div>
+    </section>
+  </main>
+
   <div id="dialog" class="backdrop" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <h2 id="dialog-title"></h2>
@@ -89,9 +107,9 @@
 
   <script src="config.js?v=10"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="ledger.js?v=9"></script>
+  <script src="ledger.js?v=11"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

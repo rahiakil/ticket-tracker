@@ -116,6 +116,9 @@ h2 { font-size: 1.25rem; }
 .eyebrow { margin: 0; letter-spacing: .04em; text-transform: uppercase; font-size: .8rem; color: var(--teal-dark); }
 #who { margin: 2px 0 0; font-size: .95rem; }
 .people-count { margin: 0; font-size: 3rem; font-weight: 750; line-height: 1; }
+.taken-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.taken-row input { width: 5.5rem; flex: 0 0 auto; margin-top: 0; }
+.variant-list { margin: 8px 0 0; color: #4d463d; word-break: break-word; }
 .note { color: #4d463d; }
 .row-buttons { display: grid; gap: 10px; margin: 10px 0; }
 
