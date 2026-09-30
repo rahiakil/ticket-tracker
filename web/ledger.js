@@ -54,12 +54,13 @@
     return "Taken";
   }
 
-  function statusDetail(order) {
-    const { taken, total } = takenNumbers(order);
-    const status = statusOf(order);
-    if (status === "Scanned but not taken") return status;
-    return `${status}, ${taken} out of ${total} have been taken`;
-  }
+function statusDetail(order) {
+  const { taken, total } = takenNumbers(order);
+  const status = statusOf(order);
+  const notPickedUp = Math.max(0, total - taken);
+  if (status === "Scanned but not taken") return `${status}. Picked up 0. Not picked up ${total}.`;
+  return `${status}. Picked up ${taken}. Not picked up ${notPickedUp}.`;
+}
 
   function addLine(book, at, text) {
     book.lines.push(`${at} ${text}`);

@@ -32,7 +32,7 @@ test("a new order is scanned but not taken, then partial, then taken", () => {
   assert.match(again.book.log.map((item) => item.text).join(" "), /already scanned order 12196/);
   const partial = ledger.setTakenCount(again.book, "12196", 3, "2026-09-30T01:10:00.000Z", "siteadmin");
   assert.equal(ledger.statusOf(partial.book.orders["12196"]), "Partially taken");
-  assert.equal(ledger.statusDetail(partial.book.orders["12196"]), "Partially taken, 3 out of 12 have been taken");
+  assert.equal(ledger.statusDetail(partial.book.orders["12196"]), "Partially taken. Picked up 3. Not picked up 9.");
   assert.equal(partial.book.orders["12196"].takenCount, 3);
   const full = ledger.setTakenCount(partial.book, "12196", 12, "2026-09-30T01:20:00.000Z", "siteadmin");
   assert.equal(ledger.statusOf(full.book.orders["12196"]), "Taken");

@@ -1,7 +1,7 @@
 const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
 const ACCOUNTS = {
-  siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "scanner" },
-  admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "admin" },
+  siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "records" },
+  admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
 };
 const SESSION_KEY = "ticket-tracker-session";
 const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
@@ -66,8 +66,8 @@ function enterApp() {
     document.querySelector("#record-link").closest("label").hidden = true;
     document.querySelector("#save-link").hidden = true;
   }
-  if (session.role === "admin") {
-    document.querySelector("#admin-who").textContent = "Signed in as admin";
+  if (session.role === "records") {
+    document.querySelector("#admin-who").textContent = "Signed in as siteadmin";
     show(adminScreen);
     refreshOrders();
     return;
@@ -78,13 +78,13 @@ function enterApp() {
 }
 
 document.querySelector("#show-login").addEventListener("click", () => {
-  document.querySelector("#username").value = "";
+  document.querySelector("#username").value = "admin";
   show(login);
-  document.querySelector("#username").focus();
+  document.querySelector("#password").focus();
 });
 
 document.querySelector("#show-admin").addEventListener("click", () => {
-  document.querySelector("#username").value = "admin";
+  document.querySelector("#username").value = "siteadmin";
   show(login);
   document.querySelector("#password").focus();
 });
@@ -288,29 +288,33 @@ function readNotes() {
 }
 
 function renderLog() {
-  const box = document.querySelector("#activity-log");
+  const boxes = [document.querySelector("#activity-log"), document.querySelector("#site-log")].filter(Boolean);
   const rows = [...(currentBook.log || []), ...readNotes()]
     .sort((left, right) => String(right.at).localeCompare(String(left.at)))
     .slice(0, 30);
-  box.replaceChildren();
-  if (!rows.length) {
-    const empty = document.createElement("p");
-    empty.textContent = "No log entries yet.";
-    box.append(empty);
-    return;
-  }
-  for (const item of rows) {
-    const line = document.createElement("p");
-    const when = new Date(item.at);
-    const clock = Number.isNaN(when.getTime()) ? item.at : when.toLocaleString();
-    line.textContent = `${clock} — ${item.text}`;
-    box.append(line);
+  for (const box of boxes) {
+    box.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No log entries yet.";
+      box.append(empty);
+      continue;
+    }
+    for (const item of rows) {
+      const line = document.createElement("p");
+      const when = new Date(item.at);
+      const clock = Number.isNaN(when.getTime()) ? item.at : when.toLocaleString();
+      line.textContent = `${clock} — ${item.text}`;
+      box.append(line);
+    }
   }
 }
 
 function renderOrders() {
   const counts = TicketLedger.countsOf(currentBook);
   document.querySelector("#people-count").textContent = String(counts.peopleScanned);
+  const siteCount = document.querySelector("#site-people-count");
+  if (siteCount) siteCount.textContent = String(counts.peopleScanned);
   const variantList = document.querySelector("#variant-counts");
   variantList.replaceChildren();
   const variantIds = Object.keys(counts.variants).sort((left, right) => Number(left) - Number(right));
@@ -359,7 +363,7 @@ function orderCard(order) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "primary";
-  button.textContent = "Mark taken";
+  button.textContent = "Save picked up";
   button.addEventListener("click", () => saveTaken(order.orderId, input.value));
   const expand = document.createElement("button");
   expand.type = "button";

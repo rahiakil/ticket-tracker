@@ -18,7 +18,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none !important/);
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
-  assert.match(app, /Mark taken/);
+  assert.match(app, /Save picked up/);
   assert.equal(app.includes("FormData"), false);
   assert.equal(app.includes("location.href"), false);
   assert.match(app, /facingMode:\s*"environment"/);
