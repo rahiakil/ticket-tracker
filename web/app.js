@@ -1,5 +1,9 @@
-const config = window.TICKET_TRACKER_CONFIG || { apiBase: "", publicPageUrl: "" };
+const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
 const CODE_RE = /^[A-Za-z0-9_-]{22,80}$/;
+const USERNAME = "siteadmin";
+const PASSWORD_SHA256 = "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc";
+const SESSION_KEY = "ticket-tracker-session";
+const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 const OUTCOMES = {
   recorded: "Recorded",
   already_seen: "Already seen",
@@ -10,8 +14,8 @@ const OUTCOMES = {
 
 const gate = document.querySelector("#gate");
 const login = document.querySelector("#login");
-const changeView = document.querySelector("#change-password");
 const workspace = document.querySelector("#workspace");
+const ledger = TicketLedger.openLedger(localStorage);
 const resultEl = document.querySelector("#result");
 const retryButton = document.querySelector("#retry");
 const reader = document.querySelector("#reader");
@@ -22,7 +26,6 @@ const cancelButton = document.querySelector("#cancel-scan");
 const confirmPanel = document.querySelector("#confirm");
 const dialog = document.querySelector("#dialog");
 
-let csrfToken = "";
 let scanLock = false;
 let scanGeneration = 0;
 let camera = null;
@@ -30,59 +33,44 @@ let cameraOn = false;
 let lastAttempt = null;
 let eventStatus = "open";
 
-function apiUrl(path) {
-  const base = String(config.apiBase || "").replace(/\/$/, "");
-  return `${base}${path}`;
-}
-
 function show(view) {
   gate.hidden = view !== gate;
   login.hidden = view !== login;
-  changeView.hidden = view !== changeView;
   workspace.hidden = view !== workspace;
 }
 
 function showGate() {
-  csrfToken = "";
   stopCamera();
   show(gate);
 }
 
-async function api(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  if (options.json !== undefined) headers.set("Content-Type", "application/json");
-  if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
-  const response = await fetch(apiUrl(path), {
-    method: options.method || "GET",
-    credentials: "include",
-    headers,
-    body: options.json !== undefined ? JSON.stringify(options.json) : options.body,
-  });
-  const data = await response.clone().json().catch(() => null);
-  if (response.status === 401 && path !== "/api/login" && path !== "/api/password") showGate();
-  return { response, data };
+async function sha256(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function applySession(data) {
-  csrfToken = data.csrfToken || "";
-  document.querySelector("#who").textContent = `Signed in as ${data.username}`;
-  document.querySelector("#demo-banner").hidden = !data.demo;
-  if (data.mustChangePassword) {
-    show(changeView);
-    return;
+function sameText(left, right) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return difference === 0;
+}
+
+function readSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!saved || saved.username !== USERNAME || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
+    return saved;
+  } catch {
+    return null;
   }
+}
+
+function enterApp() {
+  document.querySelector("#who").textContent = `Signed in as ${USERNAME}`;
   show(workspace);
   showDeepLink();
   loadAdmin();
-}
-
-async function restoreSession() {
-  try {
-    const { response, data } = await api("/api/session");
-    if (response.ok && data?.authenticated) applySession(data);
-  } catch {
-    showGate();
-  }
 }
 
 document.querySelector("#show-login").addEventListener("click", () => {
@@ -98,82 +86,33 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   error.hidden = true;
   const button = event.target.querySelector("button[type=submit]");
   button.disabled = true;
+  const username = document.querySelector("#username").value.trim();
+  const password = document.querySelector("#password").value;
+  document.querySelector("#password").value = "";
   try {
-    const { response, data } = await api("/api/login", {
-      method: "POST",
-      json: {
-        username: document.querySelector("#username").value,
-        password: document.querySelector("#password").value,
-      },
-    });
-    document.querySelector("#password").value = "";
-    if (!response.ok || !data?.ok) {
+    const digest = await sha256(password);
+    const accepted = username === USERNAME && sameText(digest, PASSWORD_SHA256);
+    if (!accepted) {
       error.hidden = false;
-      error.textContent = data?.message || "The sign-in service is not connected yet.";
+      error.textContent = "Incorrect username or password.";
       return;
     }
-    applySession(data);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: USERNAME, exp: Date.now() + SESSION_MS }));
+    enterApp();
   } catch {
     error.hidden = false;
-    error.textContent = "The sign-in service is not connected yet.";
+    error.textContent = "Could not save—retry";
   } finally {
     button.disabled = false;
   }
 });
 
-async function logout() {
-  try {
-    await api("/api/logout", { method: "POST", json: {} });
-  } catch {
-    // Clearing the screen still ends the visit on this phone.
-  }
+function logout() {
+  localStorage.removeItem(SESSION_KEY);
   showGate();
 }
 
 document.querySelector("#logout").addEventListener("click", logout);
-document.querySelector("#change-logout").addEventListener("click", logout);
-
-async function changePassword(currentPassword, newPassword, messageEl) {
-  const { response, data } = await api("/api/password", {
-    method: "POST",
-    json: { currentPassword, newPassword },
-  });
-  messageEl.hidden = false;
-  messageEl.className = `result ${response.ok ? "recorded" : "invalid"}`;
-  messageEl.textContent = data?.message || "Could not save—retry";
-  if (response.ok && data?.csrfToken) {
-    csrfToken = data.csrfToken;
-    if (!data.mustChangePassword) {
-      show(workspace);
-      showDeepLink();
-      loadAdmin();
-    }
-  }
-  return response.ok;
-}
-
-document.querySelector("#change-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const ok = await changePassword(
-    document.querySelector("#current-password").value,
-    document.querySelector("#new-password").value,
-    document.querySelector("#change-message"),
-  );
-  if (ok) {
-    document.querySelector("#current-password").value = "";
-    document.querySelector("#new-password").value = "";
-  }
-});
-
-document.querySelector("#password-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const ok = await changePassword(
-    document.querySelector("#later-current").value,
-    document.querySelector("#later-new").value,
-    document.querySelector("#admin-message"),
-  );
-  if (ok) event.target.reset();
-});
 
 function library() {
   if (typeof Html5Qrcode === "function") return Html5Qrcode;
@@ -304,23 +243,18 @@ function showOutcome(outcome, message) {
   retryButton.hidden = outcome !== "save_failed";
 }
 
-async function submitAttempt() {
+function submitAttempt() {
   if (!lastAttempt) return;
   resultEl.textContent = "Saving…";
   resultEl.className = "result pending";
   retryButton.hidden = true;
-  try {
-    const { response, data } = await api("/api/scans", { method: "POST", json: lastAttempt });
-    if (response.status === 401) return;
-    if (!data || !data.outcome) {
-      showOutcome("save_failed");
-      return;
-    }
-    showOutcome(data.outcome, data.message);
-    if (data.outcome === "recorded" || data.outcome === "already_seen") loadAdmin();
-  } catch {
+  const data = ledger.scan(lastAttempt.raw, lastAttempt.requestId, USERNAME);
+  if (!data || !data.outcome) {
     showOutcome("save_failed");
+    return;
   }
+  showOutcome(data.outcome, data.message);
+  if (data.outcome === "recorded" || data.outcome === "already_seen") loadAdmin();
 }
 
 retryButton.addEventListener("click", () => { if (!scanLock) submitAttempt(); });
@@ -397,7 +331,7 @@ function renderAdmin(data) {
     qr.type = "button";
     qr.className = "secondary";
     qr.textContent = "Download QR";
-    qr.addEventListener("click", () => download(`/api/codes/${code.id}/qr.svg`, `${code.id}.svg`));
+    qr.addEventListener("click", () => saveFile(`${code.id}.svg`, TicketLedger.qrSvg(TicketLedger.codeUrl(code.id)), "image/svg+xml"));
     card.append(qr);
     codes.append(card);
   }
@@ -433,9 +367,9 @@ function historyLabel(item) {
   return item.type || "Activity";
 }
 
-async function loadAdmin() {
-  const { response, data } = await api("/api/admin");
-  if (response.ok && data?.ok) renderAdmin(data);
+function loadAdmin() {
+  const data = ledger.view();
+  if (data) renderAdmin(data);
 }
 
 document.querySelector("#refresh").addEventListener("click", () => { loadAdmin(); });
@@ -443,10 +377,7 @@ document.querySelector("#refresh").addEventListener("click", () => { loadAdmin()
 async function markUnseen(code) {
   const answer = await ask("Mark this code as unseen?", true, "Mark as unseen");
   if (!answer) return;
-  const { data } = await api("/api/unsee", {
-    method: "POST",
-    json: { code, reason: answer.reason, requestId: requestId() },
-  });
+  const data = ledger.unsee(code, requestId(), answer.reason, USERNAME);
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   message.className = "result pending";
@@ -458,21 +389,15 @@ document.querySelector("#event-toggle").addEventListener("click", async () => {
   const next = eventStatus === "open" ? "closed" : "open";
   const answer = await ask(next === "closed" ? "Close the event to new scans?" : "Open the event to new scans?", false, next === "closed" ? "Close event" : "Open event");
   if (!answer) return;
-  const { data } = await api("/api/event", { method: "POST", json: { status: next, requestId: requestId() } });
+  const data = ledger.setEvent(next, requestId(), USERNAME);
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   message.textContent = data?.message || "Could not save—retry";
   loadAdmin();
 });
 
-async function download(path, filename) {
-  const response = await fetch(apiUrl(path), {
-    credentials: "include",
-    headers: { "X-CSRF-Token": csrfToken },
-  });
-  if (response.status === 401) { showGate(); return; }
-  if (!response.ok) return;
-  const blob = await response.blob();
+function saveFile(filename, contents, type) {
+  const blob = new Blob([contents], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -483,20 +408,28 @@ async function download(path, filename) {
   URL.revokeObjectURL(url);
 }
 
-document.querySelector("#download-json").addEventListener("click", () => download("/api/report.json", "ticket-tracker-report.json"));
-document.querySelector("#download-csv").addEventListener("click", () => download("/api/report.csv", "ticket-tracker-report.csv"));
+document.querySelector("#download-json").addEventListener("click", () => {
+  const report = ledger.report();
+  if (report) saveFile("ticket-tracker-report.json", report.json, "application/json");
+});
+document.querySelector("#download-csv").addEventListener("click", () => {
+  const report = ledger.report();
+  if (report) saveFile("ticket-tracker-report.csv", report.csv, "text/csv");
+});
 
-document.querySelector("#issue-form").addEventListener("submit", async (event) => {
+document.querySelector("#issue-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const count = Number(document.querySelector("#issue-count").value);
-  const { data, response } = await api("/api/codes", {
-    method: "POST",
-    json: { count, requestId: requestId() },
-  });
+  const data = ledger.issue(count, requestId(), USERNAME);
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   message.textContent = data?.message || "Could not save—retry";
-  if (!response.ok || !data?.codes) return;
+  if (!data?.ok || !data.codes) return;
+  const cards = data.codes.map((id) => {
+    const url = TicketLedger.codeUrl(id);
+    const svg = TicketLedger.qrSvg(url);
+    return { id, url, svg };
+  });
   const sheet = document.querySelector("#sheet");
   sheet.replaceChildren();
   const downloadSheet = document.createElement("button");
@@ -504,20 +437,14 @@ document.querySelector("#issue-form").addEventListener("submit", async (event) =
   downloadSheet.className = "secondary";
   downloadSheet.textContent = "Download printable sheet";
   downloadSheet.addEventListener("click", () => {
-    const html = `<!DOCTYPE html><meta charset="utf-8"><title>Ticket Tracker QR codes</title>${data.codes.map((code) => (
+    const html = `<!DOCTYPE html><meta charset="utf-8"><title>Ticket Tracker QR codes</title>${cards.map((code) => (
       code.svg.includes("<svg") ? `<section>${code.svg}<p>${code.url.replaceAll("&", "&amp;").replaceAll("<", "&lt;")}</p></section>` : ""
     )).join("")}`;
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ticket-tracker-qr-sheet.html";
-    link.click();
-    URL.revokeObjectURL(url);
+    saveFile("ticket-tracker-qr-sheet.html", html, "text/html");
   });
   sheet.append(downloadSheet);
   loadAdmin();
 });
 
 show(gate);
-restoreSession();
+if (readSession()) enterApp();

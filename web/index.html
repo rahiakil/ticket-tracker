@@ -30,28 +30,12 @@
     </form>
   </main>
 
-  <main id="change-password" class="screen" hidden>
-    <form id="change-form" class="panel">
-      <h1>Change password</h1>
-      <p>Change the setup password before using Ticket Tracker.</p>
-      <p id="change-message" class="result" hidden></p>
-      <label>Current password
-        <input id="current-password" type="password" autocomplete="current-password" required>
-      </label>
-      <label>New password
-        <input id="new-password" type="password" autocomplete="new-password" minlength="10" required>
-      </label>
-      <button class="primary" type="submit">Save password</button>
-      <button id="change-logout" class="secondary" type="button">Log out</button>
-    </form>
-  </main>
-
   <main id="workspace" class="screen" hidden>
     <header class="panel">
       <p class="eyebrow">Ticket Tracker</p>
       <h1>Scan a ticket</h1>
       <p id="who"></p>
-      <p id="demo-banner" class="result pending" hidden>Demo mode. These records are local and are not the live event file.</p>
+      <p id="phone-note" class="result pending">Records stay on this phone for 3 days. Another phone keeps its own list.</p>
       <p class="note">Seen means a scan was recorded. It does not prove that someone photographed the QR or received a product.</p>
       <button id="logout" class="secondary" type="button">Log out</button>
     </header>
@@ -95,16 +79,6 @@
       <div id="codes"></div>
       <h3>Activity</h3>
       <div id="history"></div>
-      <form id="password-form">
-        <h3>Change password</h3>
-        <label>Current password
-          <input id="later-current" type="password" autocomplete="current-password">
-        </label>
-        <label>New password
-          <input id="later-new" type="password" autocomplete="new-password" minlength="10">
-        </label>
-        <button class="secondary" type="submit">Save password</button>
-      </form>
     </section>
   </main>
 
@@ -120,7 +94,9 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="vendor/qrcode-generator.js"></script>
+  <script src="ledger.js"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

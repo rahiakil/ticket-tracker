@@ -17,6 +17,7 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "html5-qrcode": "2.3.8"
+    "html5-qrcode": "2.3.8",
+    "qrcode-generator": "^1.4.4"
   }
 }

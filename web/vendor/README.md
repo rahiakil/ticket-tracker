@@ -1,3 +1,4 @@
+qrcode-generator is vendored for drawing QR images in the browser. License: MIT.
 html5-qrcode 2.3.8 is vendored for the phone camera and image decoder.
 License: Apache-2.0. See html5-qrcode.LICENSE.
 Source: https://github.com/mebjas/html5-qrcode

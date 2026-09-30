@@ -22,4 +22,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.equal(app.includes("FormData"), false);
   assert.equal(app.includes("location.href"), false);
   assert.match(app, /facingMode:\s*"environment"/);
+  assert.match(app, /siteadmin/);
+  assert.equal(app.includes("not connected"), false);
+  assert.equal(app.includes("/api/login"), false);
 });
