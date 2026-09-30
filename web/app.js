@@ -57,6 +57,10 @@ function readSession() {
 
 function enterApp() {
   document.querySelector("#who").textContent = `Signed in as ${USERNAME}`;
+  if (config.recordUrl) {
+    document.querySelector("#record-link").closest("label").hidden = true;
+    document.querySelector("#save-link").hidden = true;
+  }
   show(workspace);
   refreshOrders();
 }
