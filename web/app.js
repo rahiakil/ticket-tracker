@@ -373,6 +373,14 @@ function renderLog() {
   }
 }
 
+function statusBreakdown(rows) {
+  return {
+    scanned: rows.filter((order) => order.status === "Scanned but not taken").length,
+    partial: rows.filter((order) => order.status === "Partially taken").length,
+    complete: rows.filter((order) => order.status === "Taken").length,
+  };
+}
+
 function fillCount(id, value) {
   const node = document.querySelector(id);
   if (node) node.textContent = String(value);
@@ -405,9 +413,19 @@ function renderOrders() {
   fillCount("#site-item-count", counts.itemTotal);
   fillVariantCounts("#variant-counts", counts);
   fillVariantCounts("#site-variant-counts", counts);
+  const rows = TicketLedger.summary(currentBook);
+  const breakdown = statusBreakdown(rows);
+  const breakdownText = `(${breakdown.scanned} scanned) (${breakdown.partial} scanned and taken partially) (${breakdown.complete} taken completely)`;
+  const heading = document.querySelector("#order-heading");
+  const siteHeading = document.querySelector("#site-order-heading");
+  const orderBreakdown = document.querySelector("#order-breakdown");
+  const siteBreakdown = document.querySelector("#site-order-breakdown");
+  if (heading) heading.textContent = `Orders (${rows.length})`;
+  if (siteHeading) siteHeading.textContent = `Orders (${rows.length})`;
+  if (orderBreakdown) orderBreakdown.textContent = breakdownText;
+  if (siteBreakdown) siteBreakdown.textContent = breakdownText;
   const orders = document.querySelector("#orders");
   orders.replaceChildren();
-  const rows = TicketLedger.summary(currentBook);
   if (!rows.length) {
     const empty = document.createElement("p");
     empty.textContent = "No orders scanned yet.";
@@ -435,10 +453,11 @@ function variantLine(variants) {
 function orderCard(order) {
   const card = document.createElement("article");
   card.className = "card";
+  const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "scanned and taken partially" : "scanned";
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "secondary order-toggle";
-  toggle.textContent = `Order ${order.orderId}`;
+  toggle.textContent = `Order ${order.orderId} (${order.total}) ${kind}`;
   const box = document.createElement("div");
   box.hidden = true;
   const status = document.createElement("p");
@@ -479,10 +498,11 @@ function renderRecent() {
   for (const order of rows) {
     const card = document.createElement("article");
     card.className = "card";
+    const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "scanned and taken partially" : "scanned";
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "secondary order-toggle";
-    toggle.textContent = `Order ${order.orderId}`;
+    toggle.textContent = `Order ${order.orderId} (${order.total}) ${kind}`;
     const box = document.createElement("div");
     box.hidden = true;
     const status = document.createElement("p");

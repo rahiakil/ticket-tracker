@@ -41,6 +41,14 @@
     </header>
 
     <section class="panel">
+      <h2 id="order-heading">Orders (0)</h2>
+      <p id="order-breakdown" class="note">(0 scanned) (0 scanned and taken partially) (0 taken completely)</p>
+      <button id="refresh" class="secondary" type="button">Refresh</button>
+      <p id="admin-message" class="result" role="status" hidden></p>
+      <div id="orders"></div>
+    </section>
+
+    <section class="panel">
       <h1>Hey, scan the QR code.</h1>
       <button id="scan-btn" class="primary" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -66,14 +74,10 @@
     </section>
 
     <section class="panel">
-      <h2>Orders</h2>
       <label>Google record link
         <input id="record-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
       </label>
       <button id="save-link" class="secondary" type="button">Save link on this phone</button>
-      <button id="refresh" class="secondary" type="button">Refresh</button>
-      <p id="admin-message" class="result" role="status" hidden></p>
-      <div id="orders"></div>
     </section>
 
     <section class="panel">
@@ -91,7 +95,8 @@
       <button id="admin-logout" class="text-button" type="button">Log out</button>
     </header>
     <section class="panel">
-      <h1>Records</h1>
+      <h1 id="site-order-heading">Orders (0)</h1>
+      <p id="site-order-breakdown" class="note">(0 scanned) (0 scanned and taken partially) (0 taken completely)</p>
       <p class="note">Loaded from the Drive text file. Delete removes that scan from the file.</p>
       <button id="show-site-totals" class="secondary" type="button">Show totals</button>
       <div id="site-count-body" hidden>
@@ -125,6 +130,6 @@
   <script src="ledger.js?v=14"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
