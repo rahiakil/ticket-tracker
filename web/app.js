@@ -233,7 +233,8 @@ async function submitAttempt() {
     };
   });
   if (!saved.ok) {
-    showMessage("Could not save—retry", "save_failed");
+    note(saved.message || "Could not save—retry");
+    showMessage(saved.message || "Could not save—retry", "save_failed");
     return;
   }
   currentBook = saved.book;
@@ -246,6 +247,44 @@ retryButton.addEventListener("click", () => { if (!scanLock) submitAttempt(); })
 
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopCamera(); });
 window.addEventListener("pagehide", () => { stopCamera(); });
+
+function note(text) {
+  const items = readNotes();
+  items.push({ at: new Date().toISOString(), text });
+  const kept = items.slice(-200);
+  localStorage.setItem("ticket-tracker-local-log", JSON.stringify(kept));
+  renderLog();
+}
+
+function readNotes() {
+  try {
+    const items = JSON.parse(localStorage.getItem("ticket-tracker-local-log") || "[]");
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderLog() {
+  const box = document.querySelector("#activity-log");
+  const rows = [...(currentBook.log || []), ...readNotes()]
+    .sort((left, right) => String(right.at).localeCompare(String(left.at)))
+    .slice(0, 30);
+  box.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No log entries yet.";
+    box.append(empty);
+    return;
+  }
+  for (const item of rows) {
+    const line = document.createElement("p");
+    const when = new Date(item.at);
+    const clock = Number.isNaN(when.getTime()) ? item.at : when.toLocaleString();
+    line.textContent = `${clock} — ${item.text}`;
+    box.append(line);
+  }
+}
 
 function renderOrders() {
   const counts = TicketLedger.countsOf(currentBook);
@@ -294,6 +333,7 @@ function renderOrders() {
     }
     orders.append(card);
   }
+  renderLog();
 }
 
 async function setVariant(orderId, variantId, taken) {
@@ -330,6 +370,7 @@ async function refreshOrders() {
     const message = document.querySelector("#admin-message");
     message.hidden = false;
     message.textContent = loaded.message || "Could not save—retry";
+    note(message.textContent);
     return;
   }
   currentBook = loaded.book;

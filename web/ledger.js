@@ -11,11 +11,30 @@
   }
 
   function emptyBook() {
-    return { schemaVersion: 1, lines: [], orders: {} };
+    return { schemaVersion: 1, lines: [], log: [], orders: {} };
+  }
+
+  const MAX_ORDERS = 10000;
+
+  function pruneBook(book) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!Array.isArray(next.log)) next.log = [];
+    const oldestFirst = Object.keys(next.orders || {}).sort((left, right) => {
+      const leftTime = Date.parse(next.orders[left].updatedAt || next.orders[left].scannedAt || 0);
+      const rightTime = Date.parse(next.orders[right].updatedAt || next.orders[right].scannedAt || 0);
+      return leftTime - rightTime;
+    });
+    while (oldestFirst.length > MAX_ORDERS) {
+      delete next.orders[oldestFirst.shift()];
+    }
+    if (next.log.length > MAX_ORDERS) next.log = next.log.slice(-MAX_ORDERS);
+    if ((next.lines || []).length > MAX_ORDERS) next.lines = next.lines.slice(-MAX_ORDERS);
+    next.counts = countsOf(next);
+    return next;
   }
 
   function ready(book) {
-    return Boolean(book && book.schemaVersion === 1 && Array.isArray(book.lines) && book.orders);
+    return Boolean(book && book.schemaVersion === 1 && book.orders);
   }
 
   function statusOf(order) {
@@ -49,9 +68,11 @@
       actor: existing?.actor || actor,
       variants,
     };
+    const note = existing ? `already scanned order ${parsed.orderId}` : `scanned order ${parsed.orderId}`;
     if (!existing) addLine(next, at, `order ${parsed.orderId} scanned but not taken`);
-    next.counts = countsOf(next);
-    return { book: next, changed, already: Boolean(existing) };
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: note });
+    return { book: pruneBook(next), changed: changed || Boolean(existing), already: Boolean(existing) };
   }
 
   function markTaken(book, orderId, variantId, taken, at, actor) {
@@ -65,8 +86,9 @@
     order.updatedAt = at;
     order.actor = actor || order.actor;
     addLine(next, at, `order ${orderId} variant ${variantId} ${taken ? "taken" : "not taken"}`);
-    next.counts = countsOf(next);
-    return { book: next, changed: true };
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `order ${orderId} variant ${variantId} ${taken ? "taken" : "not taken"}` });
+    return { book: pruneBook(next), changed: true };
   }
 
   function countsOf(book) {
@@ -182,6 +204,7 @@
     rememberScan,
     markTaken,
     countsOf,
+    pruneBook,
     summary,
     commitRemote,
     readRemote,

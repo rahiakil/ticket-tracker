@@ -52,9 +52,37 @@ function mergeBook_(current, incoming) {
     lines.push(line);
   });
   current.lines = lines;
+  current.log = mergeLog_(current.log, incoming.log);
   current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
+  pruneOld_(current);
   current.counts = countBook_(current);
   return current;
+}
+
+function mergeLog_(currentLog, incomingLog) {
+  var seen = {};
+  var log = [];
+  (currentLog || []).concat(incomingLog || []).forEach(function (item) {
+    if (!item || !item.at) return;
+    var key = item.at + "|" + item.text;
+    if (seen[key]) return;
+    seen[key] = true;
+    log.push(item);
+  });
+  return log;
+}
+
+function pruneOld_(book) {
+  var maxOrders = 10000;
+  var ids = Object.keys(book.orders || {});
+  ids.sort(function (left, right) {
+    var leftTime = Date.parse(book.orders[left].updatedAt || book.orders[left].scannedAt || 0);
+    var rightTime = Date.parse(book.orders[right].updatedAt || book.orders[right].scannedAt || 0);
+    return leftTime - rightTime;
+  });
+  while (ids.length > maxOrders) delete book.orders[ids.shift()];
+  if ((book.log || []).length > maxOrders) book.log = book.log.slice(book.log.length - maxOrders);
+  if ((book.lines || []).length > maxOrders) book.lines = book.lines.slice(book.lines.length - maxOrders);
 }
 
 function countBook_(book) {
