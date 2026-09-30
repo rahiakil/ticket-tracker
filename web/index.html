@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=17">
+  <link rel="stylesheet" href="styles.css?v=18">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -55,13 +55,14 @@
     </section>
 
     <section class="panel" id="count-panel">
-      <p id="people-count" class="people-count">0</p>
-      <p class="note">QR codes</p>
-      <p id="item-count" class="people-count">0</p>
-      <p class="note">Individual items</p>
-      <p id="taken-count" class="people-count">0</p>
-      <p class="note">Items taken</p>
-      <div id="variant-counts"></div>
+      <button id="show-totals" class="secondary" type="button">Show totals</button>
+      <div id="count-body" hidden>
+        <p id="people-count" class="people-count">0</p>
+        <p class="note">QR codes</p>
+        <p id="item-count" class="people-count">0</p>
+        <p class="note">Individual items</p>
+        <div id="variant-counts"></div>
+      </div>
     </section>
 
     <section class="panel">
@@ -92,13 +93,14 @@
     <section class="panel">
       <h1>Records</h1>
       <p class="note">Loaded from the Drive text file. Delete removes that scan from the file.</p>
-      <p id="site-people-count" class="people-count">0</p>
-      <p class="note">QR codes</p>
-      <p id="site-item-count" class="people-count">0</p>
-      <p class="note">Individual items</p>
-      <p id="site-taken-count" class="people-count">0</p>
-      <p class="note">Items taken</p>
-      <div id="site-variant-counts"></div>
+      <button id="show-site-totals" class="secondary" type="button">Show totals</button>
+      <div id="site-count-body" hidden>
+        <p id="site-people-count" class="people-count">0</p>
+        <p class="note">QR codes</p>
+        <p id="site-item-count" class="people-count">0</p>
+        <p class="note">Individual items</p>
+        <div id="site-variant-counts"></div>
+      </div>
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
@@ -123,6 +125,6 @@
   <script src="ledger.js?v=14"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

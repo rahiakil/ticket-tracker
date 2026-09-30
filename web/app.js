@@ -403,8 +403,6 @@ function renderOrders() {
   fillCount("#site-people-count", counts.peopleScanned);
   fillCount("#item-count", counts.itemTotal);
   fillCount("#site-item-count", counts.itemTotal);
-  fillCount("#taken-count", counts.ticketsTaken);
-  fillCount("#site-taken-count", counts.ticketsTaken);
   fillVariantCounts("#variant-counts", counts);
   fillVariantCounts("#site-variant-counts", counts);
   const orders = document.querySelector("#orders");
@@ -572,6 +570,19 @@ document.querySelector("#save-link").addEventListener("click", () => {
   document.querySelector("#record-link").value = "";
   message.textContent = "Record link saved on this phone.";
   refreshOrders();
+});
+
+function toggleBox(button, boxId, closedLabel) {
+  const box = document.querySelector(boxId);
+  box.hidden = !box.hidden;
+  button.textContent = box.hidden ? closedLabel : "Hide totals";
+}
+
+document.querySelector("#show-totals").addEventListener("click", (event) => {
+  toggleBox(event.currentTarget, "#count-body", "Show totals");
+});
+document.querySelector("#show-site-totals").addEventListener("click", (event) => {
+  toggleBox(event.currentTarget, "#site-count-body", "Show totals");
 });
 
 document.querySelector("#refresh").addEventListener("click", () => { refreshOrders(); });
