@@ -303,10 +303,16 @@ function submitAttempt() {
     const next = TicketLedger.rememberScan(book, parsed, at, actor);
     const order = next.book.orders[parsed.orderId];
     const detail = TicketLedger.statusDetail(order);
+    const numbers = TicketLedger.takenNumbers(order);
+    let message = `Order ${parsed.orderId}. ${detail}`;
+    if (next.already) {
+      const remainingItems = Math.max(0, numbers.total - numbers.taken);
+      message = remainingItems <= 0 ? "Okay this was already picked." : `Okay ${remainingItems} items remain.`;
+    }
     return {
       write: next.changed,
       book: next.book,
-      message: next.already ? `Order ${parsed.orderId} already scanned. ${detail}` : `Order ${parsed.orderId}. ${detail}`,
+      message,
     };
   });
   const already = String(applied.message || "").includes("already scanned");
@@ -415,14 +421,31 @@ function renderOrders() {
   renderRecent();
 }
 
+function variantLine(variants) {
+  const list = document.createElement("p");
+  list.className = "variant-list";
+  variants.forEach((variant, index) => {
+    if (index > 0) list.append(", ");
+    const part = document.createElement("span");
+    part.textContent = variant.id;
+    if (variant.taken) part.className = "taken-variant";
+    list.append(part);
+  });
+  return list;
+}
+
 function orderCard(order) {
   const card = document.createElement("article");
   card.className = "card";
-  const title = document.createElement("p");
-  title.textContent = `Order ${order.orderId}`;
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "secondary order-toggle";
+  toggle.textContent = `Order ${order.orderId}`;
+  const box = document.createElement("div");
+  box.hidden = true;
   const status = document.createElement("p");
   status.className = order.status === "Taken" ? "seen" : "unseen";
-  status.textContent = order.detail || order.status;
+  status.textContent = `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
   const row = document.createElement("div");
   row.className = "taken-row";
   const input = document.createElement("input");
@@ -431,32 +454,16 @@ function orderCard(order) {
   input.max = String(order.total);
   input.inputMode = "numeric";
   input.value = String(order.taken);
-  input.setAttribute("aria-label", `How many taken for order ${order.orderId}`);
+  input.setAttribute("aria-label", `How many picked up for order ${order.orderId}`);
   const button = document.createElement("button");
   button.type = "button";
   button.className = "primary";
   button.textContent = "Save picked up";
   button.addEventListener("click", () => saveTaken(order.orderId, input.value));
-  const expand = document.createElement("button");
-  expand.type = "button";
-  expand.className = "text-button";
-  expand.textContent = "Show variants";
-  const list = document.createElement("p");
-  list.className = "variant-list";
-  list.hidden = true;
-  order.variants.forEach((variant, index) => {
-    if (index > 0) list.append(", ");
-    const part = document.createElement("span");
-    part.textContent = variant.id;
-    if (variant.taken) part.className = "taken-variant";
-    list.append(part);
-  });
-  expand.addEventListener("click", () => {
-    list.hidden = !list.hidden;
-    expand.textContent = list.hidden ? "Show variants" : "Hide variants";
-  });
   row.append(input, button);
-  card.append(title, status, row, expand, list);
+  box.append(status, variantLine(order.variants), row);
+  toggle.addEventListener("click", () => { box.hidden = !box.hidden; });
+  card.append(toggle, box);
   return card;
 }
 
@@ -474,16 +481,23 @@ function renderRecent() {
   for (const order of rows) {
     const card = document.createElement("article");
     card.className = "card";
-    const title = document.createElement("p");
-    title.textContent = `Order ${order.orderId}`;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary order-toggle";
+    toggle.textContent = `Order ${order.orderId}`;
+    const box = document.createElement("div");
+    box.hidden = true;
     const status = document.createElement("p");
-    status.textContent = order.detail || order.status;
+    status.textContent = `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
+    box.append(status, variantLine(order.variants));
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary";
     button.textContent = "Delete";
     button.addEventListener("click", () => deleteRecent(order.orderId));
-    card.append(title, status, button);
+    box.append(button);
+    toggle.addEventListener("click", () => { box.hidden = !box.hidden; });
+    card.append(toggle, box);
     box.append(card);
   }
 }

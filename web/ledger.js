@@ -258,6 +258,7 @@ function statusDetail(order) {
     emptyBook,
     statusOf,
     statusDetail,
+    takenNumbers,
     setTakenCount,
     deleteOrder,
     rememberScan,
