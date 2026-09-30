@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -53,6 +53,12 @@
       <p class="note">A scan is stored in the TicketTracker Google Drive folder. Then mark each variant taken, or leave it scanned but not taken.</p>
     </section>
 
+    <section class="panel" id="count-panel">
+      <p id="people-count" class="people-count">0</p>
+      <p class="note">People scanned</p>
+      <div id="variant-counts"></div>
+    </section>
+
     <section class="panel">
       <h2>Orders</h2>
       <label>Google record link
@@ -78,9 +84,9 @@
 
   <script src="config.js?v=5"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="ledger.js"></script>
+  <script src="ledger.js?v=7"></script>
   <script src="record.js?v=3"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

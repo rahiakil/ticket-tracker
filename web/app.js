@@ -224,10 +224,11 @@ async function submitAttempt() {
     const at = new Date().toISOString();
     const next = TicketLedger.rememberScan(book, parsed, at, USERNAME);
     const order = next.book.orders[parsed.orderId];
+    const status = TicketLedger.statusOf(order);
     return {
       write: next.changed,
       book: next.book,
-      message: `Order ${parsed.orderId}. ${TicketLedger.statusOf(order)}`,
+      message: next.already ? `Order ${parsed.orderId} already scanned. ${status}` : `Order ${parsed.orderId}. ${status}`,
       commitMessage: `Scan order ${parsed.orderId}`,
     };
   });
@@ -236,7 +237,8 @@ async function submitAttempt() {
     return;
   }
   currentBook = saved.book;
-  showMessage(saved.message, TicketLedger.statusOf(saved.book.orders[parsed.orderId]) === "Taken" ? "recorded" : "pending");
+  const already = String(saved.message || "").includes("already scanned");
+  showMessage(saved.message, already ? "already_seen" : "pending");
   renderOrders();
 }
 
@@ -246,6 +248,22 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) stopC
 window.addEventListener("pagehide", () => { stopCamera(); });
 
 function renderOrders() {
+  const counts = TicketLedger.countsOf(currentBook);
+  document.querySelector("#people-count").textContent = String(counts.peopleScanned);
+  const variantList = document.querySelector("#variant-counts");
+  variantList.replaceChildren();
+  const variantIds = Object.keys(counts.variants).sort((left, right) => Number(left) - Number(right));
+  if (!variantIds.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No variant IDs yet.";
+    variantList.append(empty);
+  }
+  for (const id of variantIds) {
+    const item = counts.variants[id];
+    const line = document.createElement("p");
+    line.textContent = `Variant ${id}: ${item.orders} scanned, ${item.taken} taken, ${item.notTaken} not taken`;
+    variantList.append(line);
+  }
   const orders = document.querySelector("#orders");
   orders.replaceChildren();
   const rows = TicketLedger.summary(currentBook);
@@ -308,10 +326,14 @@ async function refreshOrders() {
     message: "",
     commitMessage: "",
   }));
-  if (loaded.ok) {
-    currentBook = loaded.book;
-    renderOrders();
+  if (!loaded.ok) {
+    const message = document.querySelector("#admin-message");
+    message.hidden = false;
+    message.textContent = loaded.message || "Could not save—retry";
+    return;
   }
+  currentBook = loaded.book;
+  renderOrders();
 }
 
 document.querySelector("#save-link").addEventListener("click", () => {

@@ -23,7 +23,12 @@ test("a new order is scanned but not taken, then partial, then taken", () => {
   assert.equal(ledger.statusOf(first.book.orders["12196"]), "Scanned but not taken");
   const again = ledger.rememberScan(first.book, parsed, "2026-09-30T01:05:00.000Z", "siteadmin");
   assert.equal(again.changed, false);
+  assert.equal(again.already, true);
   assert.equal(again.book.lines.length, 1);
+  assert.equal(again.book.counts.peopleScanned, 1);
+  const variant992 = again.book.counts.variants["992"];
+  assert.equal(variant992.orders, 1);
+  assert.equal(variant992.notTaken, 1);
   const partial = ledger.markTaken(again.book, "12196", "992", true, "2026-09-30T01:10:00.000Z", "siteadmin");
   assert.equal(ledger.statusOf(partial.book.orders["12196"]), "Partially taken");
   let book = partial.book;

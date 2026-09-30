@@ -20,8 +20,58 @@ function doPost(e) {
   if (!book || book.schemaVersion !== 1 || !book.orders || !Array.isArray(book.lines)) {
     return ContentService.createTextOutput("bad").setMimeType(ContentService.MimeType.TEXT);
   }
-  writeBook_(book);
+  writeBook_(mergeBook_(readBook_(), book));
   return ContentService.createTextOutput("ok").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function mergeBook_(current, incoming) {
+  var orders = current.orders || {};
+  var incomingOrders = incoming.orders || {};
+  Object.keys(incomingOrders).forEach(function (orderId) {
+    var prior = orders[orderId];
+    var next = incomingOrders[orderId];
+    if (!prior) {
+      orders[orderId] = next;
+      return;
+    }
+    var variants = prior.variants || {};
+    Object.keys(next.variants || {}).forEach(function (variantId) {
+      variants[variantId] = next.variants[variantId];
+    });
+    prior.variants = variants;
+    prior.raw = next.raw || prior.raw;
+    prior.updatedAt = next.updatedAt || prior.updatedAt;
+    orders[orderId] = prior;
+  });
+  current.orders = orders;
+  var seenLines = {};
+  var lines = [];
+  (current.lines || []).concat(incoming.lines || []).forEach(function (line) {
+    if (seenLines[line]) return;
+    seenLines[line] = true;
+    lines.push(line);
+  });
+  current.lines = lines;
+  current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
+  current.counts = countBook_(current);
+  return current;
+}
+
+function countBook_(book) {
+  var orders = [];
+  var variants = {};
+  Object.keys(book.orders || {}).forEach(function (orderId) {
+    orders.push(book.orders[orderId]);
+  });
+  orders.forEach(function (order) {
+    Object.keys(order.variants || {}).forEach(function (variantId) {
+      if (!variants[variantId]) variants[variantId] = { orders: 0, taken: 0, notTaken: 0 };
+      variants[variantId].orders += 1;
+      if (order.variants[variantId].taken) variants[variantId].taken += 1;
+      else variants[variantId].notTaken += 1;
+    });
+  });
+  return { peopleScanned: orders.length, variants: variants };
 }
 
 function readBook_() {

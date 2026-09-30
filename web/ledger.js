@@ -50,7 +50,8 @@
       variants,
     };
     if (!existing) addLine(next, at, `order ${parsed.orderId} scanned but not taken`);
-    return { book: next, changed };
+    next.counts = countsOf(next);
+    return { book: next, changed, already: Boolean(existing) };
   }
 
   function markTaken(book, orderId, variantId, taken, at, actor) {
@@ -64,7 +65,22 @@
     order.updatedAt = at;
     order.actor = actor || order.actor;
     addLine(next, at, `order ${orderId} variant ${variantId} ${taken ? "taken" : "not taken"}`);
+    next.counts = countsOf(next);
     return { book: next, changed: true };
+  }
+
+  function countsOf(book) {
+    const orders = Object.values((book && book.orders) || {});
+    const variants = {};
+    for (const order of orders) {
+      for (const [id, variant] of Object.entries(order.variants || {})) {
+        if (!variants[id]) variants[id] = { orders: 0, taken: 0, notTaken: 0 };
+        variants[id].orders += 1;
+        if (variant.taken) variants[id].taken += 1;
+        else variants[id].notTaken += 1;
+      }
+    }
+    return { peopleScanned: orders.length, variants };
   }
 
   function summary(book) {
@@ -165,6 +181,7 @@
     statusOf,
     rememberScan,
     markTaken,
+    countsOf,
     summary,
     commitRemote,
     readRemote,
