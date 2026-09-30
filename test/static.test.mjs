@@ -10,11 +10,12 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /<title>Ticket Tracker<\/title>/);
   assert.match(html, /For you, without login, we will not allow you\./);
   assert.match(html, /name="viewport"/);
-  assert.match(html, /href="styles\.css"/);
+  assert.match(html, /href="styles\.css/);
   assert.match(html, /Hey, scan the QR code\./);
   assert.match(html, /Scan QR/);
   assert.equal(html.includes("/api/scans"), false);
   assert.match(css, /min-height:\s*52px/);
+  assert.match(css, /\[hidden\]\s*\{\s*display:\s*none !important/);
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
   assert.match(app, /Mark taken/);
