@@ -34,6 +34,10 @@ test("a new order is scanned but not taken, then partial, then taken", () => {
   assert.equal(ledger.statusOf(partial.book.orders["12196"]), "Partially taken");
   assert.equal(ledger.statusDetail(partial.book.orders["12196"]), "Partially taken. Picked up 3. Not picked up 9.");
   assert.equal(partial.book.orders["12196"].takenCount, 3);
+  assert.equal(partial.book.orders["12196"].variants["992"].taken, true);
+  assert.equal(partial.book.orders["12196"].variants["1012"].taken, false);
+  assert.equal(partial.book.counts.itemTotal, 12);
+  assert.equal(partial.book.counts.ticketsTaken, 3);
   const full = ledger.setTakenCount(partial.book, "12196", 12, "2026-09-30T01:20:00.000Z", "siteadmin");
   assert.equal(ledger.statusOf(full.book.orders["12196"]), "Taken");
   assert.equal(full.book.orders["12196"].scannedAt, "2026-09-30T01:00:00.000Z");

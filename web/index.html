@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -56,7 +56,11 @@
 
     <section class="panel" id="count-panel">
       <p id="people-count" class="people-count">0</p>
-      <p class="note">People scanned</p>
+      <p class="note">QR codes</p>
+      <p id="item-count" class="people-count">0</p>
+      <p class="note">Individual items</p>
+      <p id="taken-count" class="people-count">0</p>
+      <p class="note">Items taken</p>
       <div id="variant-counts"></div>
     </section>
 
@@ -89,7 +93,12 @@
       <h1>Records</h1>
       <p class="note">Loaded from the Drive text file. Delete removes that scan from the file.</p>
       <p id="site-people-count" class="people-count">0</p>
-      <p class="note">People scanned</p>
+      <p class="note">QR codes</p>
+      <p id="site-item-count" class="people-count">0</p>
+      <p class="note">Individual items</p>
+      <p id="site-taken-count" class="people-count">0</p>
+      <p class="note">Items taken</p>
+      <div id="site-variant-counts"></div>
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
@@ -111,9 +120,9 @@
 
   <script src="config.js?v=13"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="ledger.js?v=12"></script>
+  <script src="ledger.js?v=13"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

@@ -317,25 +317,40 @@ function renderLog() {
   }
 }
 
-function renderOrders() {
-  const counts = TicketLedger.countsOf(currentBook);
-  document.querySelector("#people-count").textContent = String(counts.peopleScanned);
-  const siteCount = document.querySelector("#site-people-count");
-  if (siteCount) siteCount.textContent = String(counts.peopleScanned);
-  const variantList = document.querySelector("#variant-counts");
+function fillCount(id, value) {
+  const node = document.querySelector(id);
+  if (node) node.textContent = String(value);
+}
+
+function fillVariantCounts(elementId, counts) {
+  const variantList = document.querySelector(elementId);
+  if (!variantList) return;
   variantList.replaceChildren();
   const variantIds = Object.keys(counts.variants).sort((left, right) => Number(left) - Number(right));
   if (!variantIds.length) {
     const empty = document.createElement("p");
     empty.textContent = "No variant IDs yet.";
     variantList.append(empty);
+    return;
   }
   for (const id of variantIds) {
     const item = counts.variants[id];
     const line = document.createElement("p");
-    line.textContent = `Variant ${id}: ${item.orders} people`;
+    line.textContent = `Variant ${id}: ${item.orders} QR codes, ${item.taken} taken, ${item.notTaken} not taken`;
     variantList.append(line);
   }
+}
+
+function renderOrders() {
+  const counts = TicketLedger.countsOf(currentBook);
+  fillCount("#people-count", counts.peopleScanned);
+  fillCount("#site-people-count", counts.peopleScanned);
+  fillCount("#item-count", counts.itemTotal);
+  fillCount("#site-item-count", counts.itemTotal);
+  fillCount("#taken-count", counts.ticketsTaken);
+  fillCount("#site-taken-count", counts.ticketsTaken);
+  fillVariantCounts("#variant-counts", counts);
+  fillVariantCounts("#site-variant-counts", counts);
   const orders = document.querySelector("#orders");
   orders.replaceChildren();
   const rows = TicketLedger.summary(currentBook);
@@ -379,7 +394,13 @@ function orderCard(order) {
   const list = document.createElement("p");
   list.className = "variant-list";
   list.hidden = true;
-  list.textContent = order.variants.map((variant) => variant.id).join(", ");
+  order.variants.forEach((variant, index) => {
+    if (index > 0) list.append(", ");
+    const part = document.createElement("span");
+    part.textContent = variant.id;
+    if (variant.taken) part.className = "taken-variant";
+    list.append(part);
+  });
   expand.addEventListener("click", () => {
     list.hidden = !list.hidden;
     expand.textContent = list.hidden ? "Show variants" : "Hide variants";

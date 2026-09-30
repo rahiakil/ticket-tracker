@@ -102,6 +102,12 @@ function statusDetail(order) {
     taken = Math.max(0, Math.min(total, taken));
     if (takenNumbers(order).taken === taken && typeof order.takenCount === "number") return { book: next, changed: false };
     order.takenCount = taken;
+    const ids = Object.keys(order.variants || {}).sort((left, right) => Number(left) - Number(right));
+    ids.forEach((id, index) => {
+      const isTaken = index < taken;
+      order.variants[id].taken = isTaken;
+      order.variants[id].takenAt = isTaken ? at : null;
+    });
     order.updatedAt = at;
     order.actor = actor || order.actor;
     addLine(next, at, `order ${orderId} taken ${taken} out of ${total}`);
@@ -143,12 +149,13 @@ function statusDetail(order) {
       for (const [id, variant] of Object.entries(order.variants || {})) {
         if (!variants[id]) variants[id] = { orders: 0, taken: 0, notTaken: 0 };
         variants[id].orders += 1;
-        variants[id].taken += 0;
-        variants[id].notTaken += 1;
+        if (variant.taken) variants[id].taken += 1;
+        else variants[id].notTaken += 1;
       }
     }
+    const itemTotal = orders.reduce((sum, order) => sum + takenNumbers(order).total, 0);
     const ticketsTaken = orders.reduce((sum, order) => sum + takenNumbers(order).taken, 0);
-    return { peopleScanned: orders.length, ticketsTaken, variants };
+    return { peopleScanned: orders.length, itemTotal, ticketsTaken, variants };
   }
 
   function summary(book) {
