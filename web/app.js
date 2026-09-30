@@ -316,7 +316,9 @@ document.querySelector("#save-link").addEventListener("click", () => {
   const message = document.querySelector("#admin-message");
   message.hidden = false;
   if (!link) {
-    message.textContent = "Use the Google web app link ending in /exec.";
+    message.textContent = value.indexOf("drive.google.com") >= 0
+      ? "That Drive folder is the storage place. Paste the web app link that ends in /exec."
+      : "Use the Google web app link ending in /exec.";
     return;
   }
   localStorage.setItem("ticket-tracker-record-url", link);

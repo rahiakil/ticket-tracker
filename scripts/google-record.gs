@@ -1,4 +1,5 @@
 var FILE_NAME = "ticket-tracker-scans.txt";
+var FOLDER_ID = "1r679tCaeKA5-y4sXuUEX3xB2GCxx7Xg7";
 
 function doGet(e) {
   var book = readBook_();
@@ -38,6 +39,7 @@ function writeBook_(book) {
 }
 
 function findFile_() {
+  var folder = DriveApp.getFolderById(FOLDER_ID);
   var props = PropertiesService.getScriptProperties();
   var stored = props.getProperty("FILE_ID");
   if (stored) {
@@ -47,10 +49,10 @@ function findFile_() {
       stored = "";
     }
   }
-  var matches = DriveApp.getFilesByName(FILE_NAME);
+  var matches = folder.getFilesByName(FILE_NAME);
   var file = matches.hasNext()
     ? matches.next()
-    : DriveApp.createFile(FILE_NAME, JSON.stringify({ schemaVersion: 1, lines: [], orders: {}, lastWriteId: "" }), MimeType.PLAIN_TEXT);
+    : folder.createFile(FILE_NAME, JSON.stringify({ schemaVersion: 1, lines: [], orders: {}, lastWriteId: "" }), MimeType.PLAIN_TEXT);
   props.setProperty("FILE_ID", file.getId());
   return file;
 }

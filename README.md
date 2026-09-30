@@ -14,8 +14,10 @@ Anyone with the web app link can read and change that file. The page still asks 
 
 ## Google Drive record
 
-1. Create a Google Sheet or open Google Drive.
-2. Extensions or blank Apps Script: paste `scripts/google-record.gs`.
+The shared folder is https://drive.google.com/drive/folders/1r679tCaeKA5-y4sXuUEX3xB2GCxx7Xg7?usp=sharing. It is named TicketTracker and is currently empty. The scan text file is created inside that folder.
+
+1. Open https://script.google.com while signed in as the owner of that folder.
+2. New project, then paste `scripts/google-record.gs`.
 3. Deploy, Manage deployments, New deployment, type Web app.
 4. Execute as Me. Who has access: Anyone.
 5. Authorize Drive access.
