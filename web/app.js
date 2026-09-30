@@ -31,6 +31,11 @@ let camera = null;
 let cameraOn = false;
 let lastAttempt = null;
 let currentBook = TicketLedger.emptyBook();
+const pendingWrites = [];
+let flushTimer = null;
+let flushing = false;
+const BATCH_WAIT_MS = 2500;
+const BATCH_MAX = 8;
 
 function show(view) {
   gate.hidden = view !== gate;
@@ -238,44 +243,89 @@ function showMessage(message, kind) {
   retryButton.hidden = kind !== "save_failed";
 }
 
-async function submitAttempt() {
+function queueWrite(mutate) {
+  const applied = mutate(currentBook);
+  if (applied.book) currentBook = applied.book;
+  if (applied.write) pendingWrites.push(mutate);
+  if (pendingWrites.length >= BATCH_MAX) flushWrites();
+  else if (pendingWrites.length) {
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+  }
+  return applied;
+}
+
+async function flushWrites() {
+  clearTimeout(flushTimer);
+  if (flushing || !pendingWrites.length) return;
+  const batch = pendingWrites.splice(0, pendingWrites.length);
+  flushing = true;
+  const saved = await TicketRecord.commit(recordOptions(), (book) => {
+    let working = book;
+    let message = "";
+    let write = false;
+    for (const mutate of batch) {
+      const applied = mutate(working);
+      if (applied.book) working = applied.book;
+      if (applied.write) write = true;
+      if (applied.message) message = applied.message;
+    }
+    working.baseWriteId = book.lastWriteId || "";
+    return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
+  });
+  flushing = false;
+  if (!saved.ok) {
+    pendingWrites.unshift(...batch);
+    note(saved.message || "Could not save—retry");
+    showMessage(saved.message || "Could not save—retry", "save_failed");
+    flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+    return;
+  }
+  currentBook = saved.book || currentBook;
+  for (const mutate of pendingWrites) {
+    const applied = mutate(currentBook);
+    if (applied.book) currentBook = applied.book;
+  }
+  renderOrders();
+  if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+}
+
+function submitAttempt() {
   if (!lastAttempt) return;
   const parsed = TicketLedger.parseQr(lastAttempt.raw);
   if (!parsed) {
     showMessage("Invalid QR", "invalid");
     return;
   }
-  resultEl.textContent = "Saving…";
-  resultEl.className = "result pending";
-  retryButton.hidden = true;
-  const saved = await TicketRecord.commit(recordOptions(), (book) => {
-    const at = new Date().toISOString();
-    const next = TicketLedger.rememberScan(book, parsed, at, readSession()?.username || "siteadmin");
-    next.book.baseWriteId = book.lastWriteId || "";
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.rememberScan(book, parsed, at, actor);
     const order = next.book.orders[parsed.orderId];
     const detail = TicketLedger.statusDetail(order);
     return {
       write: next.changed,
       book: next.book,
       message: next.already ? `Order ${parsed.orderId} already scanned. ${detail}` : `Order ${parsed.orderId}. ${detail}`,
-      commitMessage: `Scan order ${parsed.orderId}`,
     };
   });
-  if (!saved.ok) {
-    note(saved.message || "Could not save—retry");
-    showMessage(saved.message || "Could not save—retry", "save_failed");
-    return;
-  }
-  currentBook = saved.book;
-  const already = String(saved.message || "").includes("already scanned");
-  showMessage(saved.message, already ? "already_seen" : "pending");
+  const already = String(applied.message || "").includes("already scanned");
+  showMessage(applied.message, already ? "already_seen" : "pending");
   renderOrders();
 }
 
-retryButton.addEventListener("click", () => { if (!scanLock) submitAttempt(); });
+retryButton.addEventListener("click", () => { flushWrites(); });
 
-document.addEventListener("visibilitychange", () => { if (document.hidden) stopCamera(); });
-window.addEventListener("pagehide", () => { stopCamera(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopCamera();
+    flushWrites();
+  }
+});
+window.addEventListener("pagehide", () => {
+  stopCamera();
+  flushWrites();
+});
 
 function note(text) {
   const items = readNotes();
@@ -438,52 +488,42 @@ function renderRecent() {
   }
 }
 
-async function saveTaken(orderId, rawCount) {
-  const message = document.querySelector("#admin-message");
-  message.hidden = false;
-  message.textContent = "Saving…";
-  const saved = await TicketRecord.commit(recordOptions(), (book) => {
-    const next = TicketLedger.setTakenCount(book, orderId, rawCount, new Date().toISOString(), readSession()?.username || "siteadmin");
-    next.book.baseWriteId = book.lastWriteId || "";
+function saveTaken(orderId, rawCount) {
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.setTakenCount(book, orderId, rawCount, at, actor);
     const order = next.book.orders[orderId];
     return {
       write: next.changed,
       book: next.book,
       message: order ? TicketLedger.statusDetail(order) : "Could not save—retry",
-      commitMessage: `Update taken count for order ${orderId}`,
     };
   });
-  message.textContent = saved.ok ? saved.message : (saved.message || "Could not save—retry");
-  if (!saved.ok) note(message.textContent);
-  if (saved.ok) {
-    currentBook = saved.book;
-    renderOrders();
-  }
+  const message = document.querySelector("#admin-message");
+  message.hidden = false;
+  message.textContent = applied.message || "Could not save—retry";
+  renderOrders();
 }
 
-async function deleteRecent(orderId) {
-  const message = document.querySelector("#admin-note");
-  message.hidden = false;
-  message.textContent = "Saving…";
-  const saved = await TicketRecord.commit(recordOptions(), (book) => {
-    const next = TicketLedger.deleteOrder(book, orderId, new Date().toISOString(), "admin");
-    next.book.baseWriteId = book.lastWriteId || "";
+function deleteRecent(orderId) {
+  const at = new Date().toISOString();
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.deleteOrder(book, orderId, at, "siteadmin");
     return {
       write: next.changed,
       book: next.book,
-      message: `Order ${orderId} deleted`,
-      commitMessage: `Delete order ${orderId}`,
+      message: next.changed ? `Order ${orderId} deleted` : `Order ${orderId} was already removed`,
     };
   });
-  message.textContent = saved.ok ? saved.message : (saved.message || "Could not save—retry");
-  if (!saved.ok) note(message.textContent);
-  if (saved.ok) {
-    currentBook = saved.book;
-    renderOrders();
-  }
+  const message = document.querySelector("#admin-note");
+  message.hidden = false;
+  message.textContent = applied.message;
+  renderOrders();
 }
 
 async function refreshOrders() {
+  if (pendingWrites.length) await flushWrites();
   const options = recordOptions();
   if (!TicketRecord.recordUrl(options.recordUrl)) return;
   const loaded = await TicketRecord.commit(options, (book) => ({
