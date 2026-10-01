@@ -24,6 +24,10 @@ function doPost(e) {
   return ContentService.createTextOutput("ok").setMimeType(ContentService.MimeType.TEXT);
 }
 
+function keepSheet_(current, incoming) {
+  if (incoming && incoming.sheet && incoming.sheet.orders) current.sheet = incoming.sheet;
+}
+
 function lockFresh_(lock) {
   if (!lock || !lock.holder || !lock.at) return false;
   var age = Date.now() - Date.parse(lock.at);
@@ -42,6 +46,7 @@ function mergeBook_(current, incoming) {
     current.baseWriteId = "";
     current.lastWriteId = incoming.lastWriteId || "";
     current.counts = countBook_(current);
+    keepSheet_(current, incoming);
     return current;
   }
   if (incoming && incoming.releaseAllLocks && incoming.actor === "siteadmin") {
@@ -50,6 +55,7 @@ function mergeBook_(current, incoming) {
     current.log = mergeLog_(current.log, incoming.log);
     current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
     current.counts = countBook_(current);
+    keepSheet_(current, incoming);
     return current;
   }
   if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
@@ -65,6 +71,7 @@ function mergeBook_(current, incoming) {
     current.lastWriteId = incoming.lastWriteId || "";
     pruneOld_(current);
     current.counts = countBook_(current);
+    keepSheet_(current, incoming);
     return current;
   }
   var orders = current.orders || {};
@@ -123,6 +130,7 @@ function mergeBook_(current, incoming) {
   current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
   pruneOld_(current);
   current.counts = countBook_(current);
+  keepSheet_(current, incoming);
   return current;
 }
 

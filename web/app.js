@@ -305,10 +305,29 @@ async function flushWrites() {
   if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
 }
 
+function activeOrders() {
+  const fromBook = currentBook.sheet && currentBook.sheet.orders;
+  if (fromBook && Object.keys(fromBook).length) return fromBook;
+  try {
+    const saved = JSON.parse(localStorage.getItem("ticket-tracker-sheet") || "null");
+    if (saved && saved.orders && Object.keys(saved.orders).length) return saved.orders;
+  } catch {
+    /* use the built-in sheet */
+  }
+  return (window.TicketCatalog && window.TicketCatalog.orders) || {};
+}
+
 function catalogPerson(raw) {
-  const catalog = window.TicketCatalog;
-  if (!catalog || typeof catalog.lookup !== "function") return null;
-  return catalog.lookup(raw);
+  const orders = activeOrders();
+  const text = String(raw || "").trim();
+  const orderCode = text.match(/order-(\d+)/i);
+  if (orderCode) return orders[orderCode[1].slice(-5)] || null;
+  const utt = text.match(/UTT(\d{8,})/i);
+  if (utt) return orders[utt[1].slice(-5)] || null;
+  if (/^\d{5}$/.test(text)) return orders[text] || null;
+  const tail = text.match(/(\d{5})\s*$/);
+  if (tail && text.length <= 80) return orders[tail[1]] || null;
+  return null;
 }
 
 function activeCounter() {
@@ -633,7 +652,7 @@ function laneBreakdown(people) {
 }
 
 function listedPeople(filter) {
-  const catalog = (window.TicketCatalog && window.TicketCatalog.orders) || {};
+  const catalog = activeOrders();
   const query = filter.trim().toLowerCase();
   if (query) {
     return Object.values(catalog).filter((person) => `${person.name} ${person.email} ${person.full} ${person.code}`.toLowerCase().includes(query));
@@ -812,8 +831,7 @@ async function refreshOrders() {
 }
 
 function exportStatus() {
-  const catalog = window.TicketCatalog && window.TicketCatalog.orders;
-  const csv = TicketLedger.exportCsv(currentBook, catalog || {});
+  const csv = TicketLedger.exportCsv(currentBook, activeOrders());
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -882,6 +900,41 @@ document.querySelector("#release-locks").addEventListener("click", () => {
   noteBox.hidden = false;
   noteBox.textContent = applied.write ? "All locks released." : "There were no locks.";
   renderOrders();
+});
+async function applySheetFile(file) {
+  const noteBox = document.querySelector("#sheet-note");
+  const lower = file.name.toLowerCase();
+  let orders;
+  try {
+    if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+      if (typeof XLSX === "undefined" || !XLSX.read) throw new Error("Excel reader did not load.");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const workbook = XLSX.read(bytes, { type: "array" });
+      const grid = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, raw: false, defval: "" });
+      orders = TicketSheet.ordersFromRows(grid);
+    } else if (lower.endsWith(".tsv") || lower.endsWith(".txt")) {
+      orders = TicketSheet.ordersFromText(await file.text(), "\t");
+    } else {
+      orders = TicketSheet.ordersFromText(await file.text(), ",");
+    }
+  } catch (error) {
+    noteBox.textContent = error && error.message ? error.message : "Could not read that sheet.";
+    return;
+  }
+  const sheet = { orders, fileName: file.name, uploadedAt: new Date().toISOString() };
+  try { localStorage.setItem("ticket-tracker-sheet", JSON.stringify(sheet)); } catch { /* the Drive file still receives it */ }
+  queueWrite((book) => {
+    book.sheet = sheet;
+    return { write: true, book, message: `Loaded ${Object.keys(orders).length} orders from ${file.name}` };
+  });
+  noteBox.textContent = `Loaded ${Object.keys(orders).length} orders from ${file.name}.`;
+  renderOrders();
+}
+
+document.querySelector("#sheet-upload").addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (file) await applySheetFile(file);
 });
 document.querySelector("#cleanup-all").addEventListener("click", () => {
   if (!window.confirm("Clean up everything? This clears every scan, lock, and log.")) return;

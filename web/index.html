@@ -136,6 +136,9 @@
       <button id="admin-export-csv" class="secondary" type="button">Export CSV</button>
       <button id="release-locks" class="secondary" type="button">Release all locks</button>
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
+      <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
+      <input id="sheet-upload" class="visually-hidden" type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values">
+      <p id="sheet-note" class="note"></p>
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
       <h2>Log</h2>
@@ -156,10 +159,12 @@
 
   <script src="config.js?v=13"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="catalog.js?v=2"></script>
-  <script src="ledger.js?v=20"></script>
+  <script src="vendor/xlsx.mini.min.js"></script>
+  <script src="sheet.js?v=1"></script>
+  <script src="catalog.js?v=3"></script>
+  <script src="ledger.js?v=21"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>

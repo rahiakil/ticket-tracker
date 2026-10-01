@@ -319,7 +319,7 @@ function statusDetail(order) {
     if (/\bpaneer\b/.test(text)) return "paneer";
     if (/\bmutton\b/.test(text)) return "mutton";
     if (/\bchicken\b/.test(text)) return "chicken";
-    if (/\bfish\b/.test(text)) return "fish";
+    if (/\bfish\b|\bmachh/.test(text)) return "fish";
     if (/non-?veg/.test(text)) return "nonveg";
     if (/\bvegetarian\b|\bveg\b/.test(text)) return "veg";
     return "food-other";
@@ -376,6 +376,7 @@ function statusDetail(order) {
 
   function cleanupAll(book, at) {
     const next = emptyBook();
+    if (book && book.sheet) next.sheet = book.sheet;
     next.lines = [`${at} siteadmin cleaned up everything`];
     next.log = [{ at, text: "siteadmin cleaned up everything" }];
     next.cleanupAll = true;
