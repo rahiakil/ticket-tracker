@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=23">
+  <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
   <header class="brand-bar">
@@ -53,6 +53,7 @@
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
+      <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
       <div id="qr-box"></div>
       <label>Order number
         <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Last 5 digits or full order number">
@@ -113,6 +114,7 @@
   <main id="ticket-screen" class="screen" hidden>
     <header class="topbar">
       <button id="main-page" class="btn-orange" type="button">Main page</button>
+      <button id="demo-mode-ticket" class="demo-toggle btn-orange" type="button">Demo</button>
     </header>
     <section class="panel">
       <div id="ticket-body"></div>
@@ -175,9 +177,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=3"></script>
-  <script src="ledger.js?v=21"></script>
+  <script src="ledger.js?v=22"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 </body>
 </html>

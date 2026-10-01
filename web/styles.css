@@ -198,6 +198,8 @@ h2 { font-size: 1.25rem; }
 .coupon-entry-sunday { background: #1e3a8a; }
 .coupon-food-other { background: #0f766e; }
 .item-pill.picked { background: #9ca3af; color: #1f2937; }
+.item-pill.semi { filter: grayscale(0.62); opacity: 0.78; }
+.topbar #main-page, .topbar .demo-toggle { width: auto; flex: 1; }
 .item-pill.other-lane { background: #d1d5db; color: #4b5563; }
 .item-pill.not-yet { background: #374151; color: #e5e7eb; }
 .card.complete { background: transparent; color: inherit; }

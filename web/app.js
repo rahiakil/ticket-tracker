@@ -391,11 +391,20 @@ function holderNow() {
   return { holder: deviceId(), actor: readSession()?.username || "admin", at: new Date().toISOString() };
 }
 
+let demoMode = false;
+
+function paintDemo() {
+  for (const button of document.querySelectorAll(".demo-toggle")) {
+    button.textContent = demoMode ? "Demo on" : "Demo";
+    button.className = demoMode ? "demo-toggle btn-teal" : "demo-toggle btn-orange";
+  }
+}
+
 function markOne(person, index) {
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId());
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode });
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
       : next.blocked
@@ -446,11 +455,11 @@ function itemButtons(person) {
     button.type = "button";
     const kind = TicketLedger.couponKind(item.id, item.lane);
     const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now);
-    const future = Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
-    const otherLane = foodCounter ? item.lane !== "food" : item.lane !== "entry";
-    const state = item.taken ? "picked" : future ? "not-yet" : otherLane ? "other-lane" : "ready";
+    const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
+    const otherLane = !demoMode && (foodCounter ? item.lane !== "food" : item.lane !== "entry");
+    const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : otherLane ? "other-lane" : "ready";
     button.className = `item-pill coupon-${kind} ${state}`;
-    if (kind === "entry-other" && state === "ready") button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
+    if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
     const note = item.taken ? "Done" : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
     button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
     if (locked || state !== "ready") button.disabled = true;
@@ -916,6 +925,15 @@ document.querySelector("#site-log-search").addEventListener("input", () => { ren
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
+document.querySelectorAll(".demo-toggle").forEach((button) => {
+  button.addEventListener("click", () => {
+    demoMode = !demoMode;
+    paintDemo();
+    const person = catalogPerson(openedCode);
+    if (person) paintOpen(person);
+    renderOrders();
+  });
+});
 document.querySelector("#search-order").addEventListener("click", searchOrder);
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchOrder();

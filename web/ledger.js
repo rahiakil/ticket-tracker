@@ -384,14 +384,15 @@ function statusDetail(order) {
     return { book: next, changed: true };
   }
 
-  function markItem(book, person, itemIndex, at, actor, holder) {
+  function markItem(book, person, itemIndex, at, actor, holder, options) {
     if (foreignLock(book, person.code, holder, at)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
       return { book: pruneBook(current), changed: false, locked: true, already: false, phrase: "" };
     }
     const named = person.items && person.items[itemIndex];
     const when = new Date(at);
-    if (named && itemDay(named.name) && daysAhead(itemDay(named.name), when) > 0) {
+    const demo = Boolean(options && options.demo);
+    if (!demo && named && itemDay(named.name) && daysAhead(itemDay(named.name), when) > 0) {
       const current = structuredClone(ready(book) ? book : emptyBook());
       return { book: pruneBook(current), changed: false, blocked: true, already: false, phrase: "" };
     }
