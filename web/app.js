@@ -478,14 +478,18 @@ function itemButtons(person) {
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const groups = [
-    ["Friday", "friday"],
-    ["Saturday", "saturday"],
-    ["Sunday", "sunday"],
-    ["Other", "other"],
+    ["Friday entry", "friday", "entry"],
+    ["Friday food", "friday", "food"],
+    ["Saturday entry", "saturday", "entry"],
+    ["Saturday food", "saturday", "food"],
+    ["Sunday entry", "sunday", "entry"],
+    ["Sunday food", "sunday", "food"],
+    ["Other entry", "other", "entry"],
+    ["Other food", "other", "food"],
   ];
   const board = document.createElement("div");
-  for (const [label, bucket] of groups) {
-    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket);
+  for (const [label, bucket, lane] of groups) {
+    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane);
     if (!rows.length) continue;
     const heading = document.createElement("p");
     heading.className = "day-heading";
@@ -500,7 +504,7 @@ function itemButtons(person) {
       const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
       const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
       button.className = `item-pill coupon-${kind} ${state}`;
-      if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
+      if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
       const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
       const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
       const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";

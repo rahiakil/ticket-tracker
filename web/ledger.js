@@ -330,10 +330,14 @@ function statusDetail(order) {
     const text = String(name || "").toLowerCase();
     const entry = lane === "entry" || /\bentry\b/.test(text);
     if (entry) {
-      if (/\bfriday\b/.test(text)) return "entry-friday";
-      if (/\bsaturday\b/.test(text)) return "entry-saturday";
-      if (/\bsunday\b/.test(text)) return "entry-sunday";
-      return "entry-other";
+      const day = /\bfriday\b/.test(text) ? "fri" : /\bsaturday\b/.test(text) ? "sat" : /\bsunday\b/.test(text) ? "sun" : "any";
+      const role = /\bkid|\bchild|years old|below\b/.test(text) ? "kids"
+        : /\bstudent\b/.test(text) ? "student"
+        : /\bsenior\b/.test(text) ? "senior"
+        : /\bparent/.test(text) ? "parents"
+        : /\badult\b/.test(text) ? "adult"
+        : "adult";
+      return `entry-${day}-${role}`;
     }
     if (/\bsnacks?\b/.test(text)) return "snack";
     if (/\bpaneer\b/.test(text)) return "paneer";

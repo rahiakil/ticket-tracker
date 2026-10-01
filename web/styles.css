@@ -195,9 +195,21 @@ h2 { font-size: 1.25rem; }
 .coupon-veg { background: #15803d; }
 .coupon-paneer { background: #f3e6c8; color: #3f2e12; }
 .coupon-snack { background: #facc15; color: #1f2937; }
-.coupon-entry-friday { background: #0f766e; }
-.coupon-entry-saturday { background: #6d28d9; }
-.coupon-entry-sunday { background: #1e3a8a; }
+.coupon-entry-fri-adult { background: #0f766e; }
+.coupon-entry-fri-kids { background: #99f6e4; color: #134e4a; }
+.coupon-entry-fri-student { background: #14b8a6; }
+.coupon-entry-fri-senior { background: #115e59; }
+.coupon-entry-fri-parents { background: #0d9488; }
+.coupon-entry-sat-adult { background: #6d28d9; }
+.coupon-entry-sat-kids { background: #ddd6fe; color: #4c1d95; }
+.coupon-entry-sat-student { background: #8b5cf6; }
+.coupon-entry-sat-senior { background: #4c1d95; }
+.coupon-entry-sat-parents { background: #7c3aed; }
+.coupon-entry-sun-adult { background: #1e40af; }
+.coupon-entry-sun-kids { background: #bfdbfe; color: #1e3a8a; }
+.coupon-entry-sun-student { background: #3b82f6; }
+.coupon-entry-sun-senior { background: #1e3a8a; }
+.coupon-entry-sun-parents { background: #2563eb; }
 .coupon-food-other { background: #0f766e; }
 .item-pill.picked { background: #9ca3af; color: #1f2937; }
 .item-pill.semi { filter: grayscale(0.62); opacity: 0.78; }
@@ -282,6 +294,9 @@ h2 { font-size: 1.25rem; }
   overflow-wrap: anywhere;
 }
 .legend.is-open .legend-tile { font-size: 26px; padding: 12px; }
+.legend-tile.coupon-entry-fri-kids,
+.legend-tile.coupon-entry-sat-kids,
+.legend-tile.coupon-entry-sun-kids,
 .legend-tile.coupon-paneer,
 .legend-tile.coupon-snack,
 .legend-tile.coupon-chicken,

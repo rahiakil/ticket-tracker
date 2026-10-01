@@ -175,7 +175,11 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(ledger.couponKind("Sunday Machher Kalia", "food"), "fish");
   assert.equal(ledger.couponKind("Maacher Kalia", "food"), "fish");
   assert.equal(ledger.couponKind("Saturday Lunch Vegetarian", "food"), "veg");
-  assert.equal(ledger.couponKind("Regular Member Entry", "entry"), "entry-other");
+  assert.equal(ledger.couponKind("Saturday Adult Member Entry", "entry"), "entry-sat-adult");
+  assert.equal(ledger.couponKind("Saturday Kids Member Entry", "entry"), "entry-sat-kids");
+  assert.equal(ledger.couponKind("Friday Student Member Entry", "entry"), "entry-fri-student");
+  assert.equal(ledger.couponKind("Sunday Senior Member Entry", "entry"), "entry-sun-senior");
+  assert.equal(ledger.couponKind("Regular Member Entry", "entry"), "entry-any-adult");
   assert.equal(ledger.activityFor({ log: [{ at: "2026-10-03T18:00:00.000Z", text: "12166 food picked up" }, { at: "2026-10-03T18:01:00.000Z", text: "12222 scanned" }] }, "12166").length, 1);
   assert.equal(ledger.daysAhead("saturday", new Date("2026-09-30T18:00:00.000Z")) > 0, true);
   assert.equal(ledger.daysAhead("saturday", new Date("2026-10-03T18:00:00.000Z")), 0);
