@@ -160,8 +160,22 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(entered.phrase, "Entry done for Saturday. Food not taken");
   assert.equal(entered.book.orders["12166"].variants["item:1:Regular Member Entry"].taken, true);
   assert.equal(entered.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, false);
-  const fed = ledger.markItem(entered.book, person, 0, "2026-09-30T17:30:00.000Z", "admin");
+  const early = ledger.markItem(entered.book, person, 0, "2026-09-30T18:00:00.000Z", "admin");
+  assert.equal(early.blocked, true);
+  assert.equal(early.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, false);
+  const fed = ledger.markItem(entered.book, person, 0, "2026-10-03T18:00:00.000Z", "admin");
   assert.equal(fed.phrase, "Entry done for Saturday. Food taken");
+  const undone = ledger.revertLast(fed.book, person, "2026-10-03T18:05:00.000Z", "admin");
+  assert.equal(undone.changed, true);
+  assert.equal(undone.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, false);
+  assert.equal(ledger.couponKind("Mutton Biriyani", "food"), "mutton");
+  assert.equal(ledger.couponKind("Chicken Chaap", "food"), "chicken");
+  assert.equal(ledger.couponKind("Member Non-Veg Snacks (2 fish Chop, Salad)", "food"), "snack");
+  assert.equal(ledger.couponKind("Veg Pulao with Paneer Kofta", "food"), "paneer");
+  assert.equal(ledger.couponKind("Saturday Lunch Vegetarian", "food"), "veg");
+  assert.equal(ledger.couponKind("Regular Member Entry", "entry"), "entry-other");
+  assert.equal(ledger.daysAhead("saturday", new Date("2026-09-30T18:00:00.000Z")) > 0, true);
+  assert.equal(ledger.daysAhead("saturday", new Date("2026-10-03T18:00:00.000Z")), 0);
 });
 
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {

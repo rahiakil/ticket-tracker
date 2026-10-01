@@ -279,7 +279,63 @@ function statusDetail(order) {
     return [entryText, foodText].filter(Boolean).join(". ");
   }
 
+  function itemDay(name) {
+    const text = String(name || "").toLowerCase();
+    if (/\bfriday\b/.test(text)) return "friday";
+    if (/\bsaturday\b/.test(text)) return "saturday";
+    if (/\bsunday\b/.test(text)) return "sunday";
+    return "";
+  }
+
+  function daysAhead(dayName, now) {
+    const clock = now instanceof Date ? now : new Date(now || Date.now());
+    const weekday = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+    let target = weekday[dayName];
+    if (target === undefined) return 0;
+    const today = clock.getDay();
+    if (today === 0) {
+      if (target === 0) return 0;
+      if (target === 6) return -1;
+      if (target === 5) return -2;
+      return target;
+    }
+    if (target === 0) target = 7;
+    return target - today;
+  }
+
+  function couponKind(name, lane) {
+    const text = String(name || "").toLowerCase();
+    const entry = lane === "entry" || /\bentry\b/.test(text);
+    if (entry) {
+      if (/\bfriday\b/.test(text)) return "entry-friday";
+      if (/\bsaturday\b/.test(text)) return "entry-saturday";
+      if (/\bsunday\b/.test(text)) return "entry-sunday";
+      return "entry-other";
+    }
+    if (/\bsnacks?\b/.test(text)) return "snack";
+    if (/\bpaneer\b/.test(text)) return "paneer";
+    if (/\bmutton\b/.test(text)) return "mutton";
+    if (/\bchicken\b/.test(text)) return "chicken";
+    if (/\bfish\b/.test(text)) return "fish";
+    if (/non-?veg/.test(text)) return "nonveg";
+    if (/\bvegetarian\b|\bveg\b/.test(text)) return "veg";
+    return "food-other";
+  }
+
+  function entryHue(name) {
+    let hash = 0;
+    const text = String(name || "").toLowerCase();
+    for (let index = 0; index < text.length; index += 1) hash = (hash * 33 + text.charCodeAt(index)) >>> 0;
+    return 165 + (hash % 115);
+  }
+
   function markItem(book, person, itemIndex, at, actor) {
+    const named = person.items && person.items[itemIndex];
+    const when = new Date(at);
+    if (named && itemDay(named.name) && daysAhead(itemDay(named.name), when) > 0) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, blocked: true, already: false, phrase: "" };
+    }
     const next = structuredClone(ready(book) ? book : emptyBook());
     const placed = ensureSheetOrder(next, person, person.full, at, actor);
     const key = Object.keys(placed.order.variants).find((id) => id.startsWith(`item:${itemIndex}:`));
@@ -298,6 +354,34 @@ function statusDetail(order) {
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text });
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
+  }
+
+  function revertLast(book, person, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const order = next.orders[person.code];
+    if (!order) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
+    let latestKey = "";
+    let latestTime = -1;
+    for (const [key, item] of Object.entries(order.variants || {})) {
+      if (!item.taken) continue;
+      const time = Date.parse(item.takenAt || 0);
+      if (time >= latestTime) {
+        latestTime = time;
+        latestKey = key;
+      }
+    }
+    if (!latestKey) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
+    const item = order.variants[latestKey];
+    item.taken = false;
+    item.takenAt = null;
+    syncTakenCount(order);
+    order.updatedAt = at;
+    order.actor = actor || order.actor;
+    const text = `${person.code} reverted ${item.name}`;
+    addLine(next, at, text);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text });
+    return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(order)) };
   }
 
   function activityFor(book, code) {
@@ -496,6 +580,11 @@ function statusDetail(order) {
     exportCsv,
     sheetPhrase,
     markItem,
+    revertLast,
+    itemDay,
+    daysAhead,
+    couponKind,
+    entryHue,
     markTaken,
     countsOf,
     pruneBook,

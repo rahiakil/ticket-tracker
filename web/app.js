@@ -351,28 +351,74 @@ function markOne(person, index) {
   const actor = readSession()?.username || "admin";
   const applied = queueWrite((book) => {
     const next = TicketLedger.markItem(book, person, index, at, actor);
-    const message = next.already ? `Already picked up. ${person.name}. ${person.email}.` : `${next.phrase}. ${person.name}. ${person.email}.`;
+    const message = next.blocked
+      ? `Unavailable yet. ${person.name}. ${person.email}.`
+      : next.already ? `Already picked up. ${person.name}. ${person.email}.` : `${next.phrase}. ${person.name}. ${person.email}.`;
     return { write: next.changed, book: next.book, message };
   });
-  showMessage(applied.message, String(applied.message).startsWith("Already") ? "already_seen" : "pending");
+  showMessage(applied.message, String(applied.message).startsWith("Already") || String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
   paintOpen(person);
   renderOrders();
 }
 
+function revertOne(person) {
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.revertLast(book, person, at, actor);
+    const message = next.changed ? `Reverted. ${next.phrase}. ${person.name}. ${person.email}.` : `Nothing to revert. ${person.name}. ${person.email}.`;
+    return { write: next.changed, book: next.book, message };
+  });
+  showMessage(applied.message, String(applied.message).startsWith("Nothing") ? "already_seen" : "pending");
+  paintOpen(person);
+  renderOrders();
+}
+
+function tileOrder(items) {
+  const foodCounter = activeCounter() === "food";
+  return items.map((item, index) => ({ item, index })).sort((left, right) => {
+    const leftFood = left.item.lane === "food" ? 0 : 1;
+    const rightFood = right.item.lane === "food" ? 0 : 1;
+    if (foodCounter) return leftFood - rightFood;
+    return rightFood - leftFood;
+  });
+}
+
 function itemButtons(person) {
   const view = orderView(person);
+  const foodCounter = activeCounter() === "food";
+  const now = new Date();
   const list = document.createElement("div");
   list.className = "item-pills";
-  view.items.forEach((item, index) => {
+  for (const { item, index } of tileOrder(view.items)) {
     const button = document.createElement("button");
     button.type = "button";
-    const state = view.allTaken ? "complete" : item.taken ? "picked" : "pending";
-    button.className = `item-pill tone-${item.tone || "other"} ${state}`;
-    button.textContent = `${item.id} x ${item.qty || 1}`;
-    button.addEventListener("click", () => markOne(person, index));
+    const kind = TicketLedger.couponKind(item.id, item.lane);
+    const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now);
+    const future = Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
+    const otherLane = foodCounter ? item.lane !== "food" : item.lane !== "entry";
+    const state = item.taken ? "picked" : future ? "not-yet" : otherLane ? "other-lane" : "ready";
+    button.className = `item-pill coupon-${kind} ${state}`;
+    if (kind === "entry-other" && state === "ready") button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
+    const note = item.taken ? "Done" : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
+    button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
+    if (state !== "ready") button.disabled = true;
+    else button.addEventListener("click", () => markOne(person, index));
     list.append(button);
-  });
+  }
   return list;
+}
+
+function itemBoard(person) {
+  const wrap = document.createElement("div");
+  wrap.append(itemButtons(person));
+  const revert = document.createElement("button");
+  revert.type = "button";
+  revert.className = "secondary";
+  revert.textContent = "Revert last";
+  revert.addEventListener("click", () => revertOne(person));
+  wrap.append(revert);
+  return wrap;
 }
 
 function paintOpen(person) {
@@ -408,7 +454,7 @@ function paintOpen(person) {
   }
   const phrase = document.createElement("p");
   phrase.textContent = orderView(person).phrase;
-  card.append(title, mail, eventLine, phrase, itemButtons(person), activity);
+  card.append(title, mail, eventLine, phrase, itemBoard(person), activity);
   host.append(card);
 }
 
@@ -617,7 +663,7 @@ function orderCard(person, options = {}) {
   mail.textContent = `${person.email}. ${person.full}.`;
   const status = document.createElement("p");
   status.textContent = seen ? view.phrase : `Not seen yet. ${view.phrase}`;
-  box.append(mail, status, itemButtons(person));
+  box.append(mail, status, itemBoard(person));
   if (options.delete) {
     const button = document.createElement("button");
     button.type = "button";
@@ -756,14 +802,12 @@ document.querySelector("#show-site-totals").addEventListener("click", (event) =>
 document.querySelector("#counter-entry").addEventListener("click", () => {
   localStorage.setItem("ticket-tracker-counter", "entry");
   paintCounter();
-  const person = catalogPerson(openedCode);
-  if (person) paintOpen(person);
+  renderOrders();
 });
 document.querySelector("#counter-food").addEventListener("click", () => {
   localStorage.setItem("ticket-tracker-counter", "food");
   paintCounter();
-  const person = catalogPerson(openedCode);
-  if (person) paintOpen(person);
+  renderOrders();
 });
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
