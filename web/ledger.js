@@ -166,11 +166,17 @@ function statusDetail(order) {
       const leftIndex = Number(String(left).split(":")[1]);
       const rightIndex = Number(String(right).split(":")[1]);
       if (Number.isFinite(leftIndex) && Number.isFinite(rightIndex) && leftIndex !== rightIndex) return leftIndex - rightIndex;
+      const leftUnit = Number(String(left).split(":")[2]);
+      const rightUnit = Number(String(right).split(":")[2]);
+      if (Number.isFinite(leftUnit) && Number.isFinite(rightUnit) && leftUnit !== rightUnit) return leftUnit - rightUnit;
       const byNumber = Number(left) - Number(right);
       return Number.isFinite(byNumber) && byNumber !== 0 ? byNumber : String(left).localeCompare(String(right));
     }).map((id) => ({
       id: order.variants[id].name || id,
       key: id,
+      index: Number(String(id).split(":")[1]) || 0,
+      unit: Number.isFinite(Number(order.variants[id].unit)) ? Number(order.variants[id].unit) : 0,
+      parts: order.variants[id].parts || order.variants[id].qty || 1,
       qty: order.variants[id].qty || 1,
       lane: order.variants[id].lane || "",
       tone: order.variants[id].tone || "",
@@ -180,19 +186,33 @@ function statusDetail(order) {
     }));
   }
 
-  function sheetVariants(person) {
+  function expandVariants(person, previous) {
     const variants = {};
-    person.items.forEach((item, index) => {
-      variants[`item:${index}:${item.name}`] = {
-        taken: false,
-        takenAt: null,
-        name: item.name,
-        qty: item.qty,
-        lane: item.lane,
-        tone: item.tone,
-      };
+    const source = previous || {};
+    (person.items || []).forEach((item, index) => {
+      const qty = Math.max(1, Number(item.qty) || 1);
+      const legacy = source[`item:${index}:${item.name}`];
+      for (let unit = 0; unit < qty; unit += 1) {
+        const key = `item:${index}:${unit}:${item.name}`;
+        const prior = source[key];
+        variants[key] = prior ? structuredClone(prior) : {
+          taken: Boolean(legacy && legacy.taken),
+          takenAt: legacy && legacy.taken ? legacy.takenAt : null,
+          takenBy: legacy && legacy.taken ? (legacy.takenBy || "") : "",
+          name: item.name,
+          qty: 1,
+          unit,
+          parts: qty,
+          lane: item.lane || "",
+          tone: item.tone || "",
+        };
+      }
     });
     return variants;
+  }
+
+  function sheetVariants(person) {
+    return expandVariants(person, {});
   }
 
   function syncTakenCount(order) {
@@ -201,9 +221,7 @@ function statusDetail(order) {
 
   function ensureSheetOrder(next, person, raw, at, actor) {
     const existing = next.orders[person.code];
-    const variants = existing && existing.variants && Object.keys(existing.variants).length
-      ? structuredClone(existing.variants)
-      : sheetVariants(person);
+    const variants = expandVariants(person, existing && existing.variants ? existing.variants : {});
     next.orders[person.code] = {
       orderId: person.code,
       fullNumber: person.full,
@@ -400,7 +418,8 @@ function statusDetail(order) {
     }
     const next = structuredClone(ready(book) ? book : emptyBook());
     const placed = ensureSheetOrder(next, person, person.full, at, actor);
-    const key = Object.keys(placed.order.variants).find((id) => id.startsWith(`item:${itemIndex}:`));
+    const unit = options && Number.isFinite(Number(options.unit)) ? Number(options.unit) : 0;
+    const key = Object.keys(placed.order.variants).find((id) => id.startsWith(`item:${itemIndex}:${unit}:`));
     if (!key) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
     const item = placed.order.variants[key];
     if (item.taken) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(placed.order)) };
@@ -494,14 +513,20 @@ function statusDetail(order) {
       .sort((left, right) => String(right.code).localeCompare(String(left.code)))
       .map((person) => {
         const saved = (book.orders || {})[person.code];
-        const items = (person.items || []).map((item, index) => {
-          const stored = saved && saved.variants && saved.variants[`item:${index}:${item.name}`];
-          return { ...item, taken: Boolean(stored && stored.taken) };
+        const items = [];
+        (person.items || []).forEach((item, index) => {
+          const qty = Math.max(1, Number(item.qty) || 1);
+          const legacy = saved && saved.variants && saved.variants[`item:${index}:${item.name}`];
+          for (let unit = 0; unit < qty; unit += 1) {
+            const stored = saved && saved.variants && saved.variants[`item:${index}:${unit}:${item.name}`];
+            const taken = stored ? Boolean(stored.taken) : Boolean(legacy && legacy.taken);
+            items.push({ ...item, qty: 1, taken });
+          }
         });
         const pending = items.filter((item) => !item.taken);
         const picked = items.filter((item) => item.taken);
-        const utilized = picked.reduce((sum, item) => sum + (item.qty || 1), 0);
-        const total = items.reduce((sum, item) => sum + (item.qty || 1), 0);
+        const utilized = picked.length;
+        const total = items.length;
         const seen = Boolean(saved && saved.scannedAt);
         let status = "Not seen";
         if (seen && items.length && pending.length === 0) status = "Taken completely";
@@ -651,6 +676,7 @@ function statusDetail(order) {
     activityFor,
     cleanSheetBook,
     exportRows,
+    expandVariants,
     exportCsv,
     sheetPhrase,
     markItem,

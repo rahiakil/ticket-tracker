@@ -325,6 +325,14 @@ function activeOrders() {
   return (window.TicketCatalog && window.TicketCatalog.orders) || {};
 }
 
+function catalogMatches(raw) {
+  const exact = catalogPerson(raw);
+  if (exact) return [exact];
+  const query = String(raw || "").trim().toLowerCase();
+  if (query.length < 2) return [];
+  return Object.values(activeOrders()).filter((person) => `${person.name} ${person.email}`.toLowerCase().includes(query));
+}
+
 function catalogPerson(raw) {
   const orders = activeOrders();
   const text = String(raw || "").trim();
@@ -374,9 +382,28 @@ function paintQr(code, box) {
 
 function storedItems(person) {
   const stored = currentBook.orders[person.code];
-  if (!stored) return person.items.map((item) => ({ id: item.name, qty: item.qty, lane: item.lane, tone: item.tone, taken: false }));
-  const row = TicketLedger.summary({ schemaVersion: 1, lines: [], log: [], orders: { [person.code]: stored } })[0];
-  return row ? row.variants : [];
+  const variants = TicketLedger.expandVariants(person, stored && stored.variants ? stored.variants : {});
+  return Object.values(variantEntries(variants));
+}
+
+function variantEntries(variants) {
+  return Object.keys(variants).sort((left, right) => {
+    const leftParts = String(left).split(":");
+    const rightParts = String(right).split(":");
+    const byIndex = Number(leftParts[1]) - Number(rightParts[1]);
+    if (byIndex) return byIndex;
+    return Number(leftParts[2]) - Number(rightParts[2]);
+  }).map((id) => ({
+    id: variants[id].name || id,
+    index: Number(String(id).split(":")[1]) || 0,
+    unit: Number(variants[id].unit) || 0,
+    parts: variants[id].parts || 1,
+    qty: 1,
+    lane: variants[id].lane || "",
+    tone: variants[id].tone || "",
+    taken: Boolean(variants[id].taken),
+    takenBy: variants[id].takenBy || "",
+  }));
 }
 
 function orderView(person) {
@@ -409,11 +436,11 @@ function paintDemo() {
   }
 }
 
-function markOne(person, index) {
+function markOne(person, index, unit) {
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode });
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit });
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
       : next.blocked
@@ -477,10 +504,10 @@ function itemButtons(person) {
       const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
       const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
       const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
-      const label = `${item.id} x ${item.qty || 1}`;
+      const label = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
       button.textContent = [icon, label, note].filter(Boolean).join("\n");
       if (locked || state !== "ready") button.disabled = true;
-      else button.addEventListener("click", () => markOne(person, index));
+      else button.addEventListener("click", () => markOne(person, item.index, item.unit));
       list.append(button);
     }
     board.append(heading, list);
@@ -588,18 +615,31 @@ function runLane(person, lane) {
 
 function searchOrder() {
   const raw = document.querySelector("#order-query").value.trim();
-  const person = catalogPerson(raw);
+  const matches = catalogMatches(raw);
   const search = document.querySelector("#search-result");
-  if (!person) {
+  const list = document.querySelector("#name-matches");
+  if (list) list.replaceChildren();
+  if (!matches.length) {
     openedCode = "";
     document.querySelector("#qr-box").replaceChildren();
-    const openOrder = document.querySelector("#open-order");
-    if (openOrder) openOrder.replaceChildren();
-    search.textContent = "That order number is not on the sheet.";
+    search.textContent = "No order or name matched.";
     search.className = "result invalid";
     return;
   }
-  paintOpen(person);
+  if (matches.length === 1) {
+    paintOpen(matches[0]);
+    return;
+  }
+  search.textContent = `${matches.length} names. Pick one.`;
+  search.className = "result pending";
+  for (const person of matches.slice(0, 20)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary";
+    button.textContent = `${person.name} · ${person.code} · ${person.email}`;
+    button.addEventListener("click", () => paintOpen(person));
+    if (list) list.append(button);
+  }
 }
 
 function submitAttempt() {
@@ -718,13 +758,20 @@ function laneBreakdown(people) {
   return { entryDone, foodNotTaken, complete };
 }
 
-function listedPeople(filter) {
-  const catalog = activeOrders();
+let flowTab = "waiting";
+
+function wasScanned(person) {
+  const saved = currentBook.orders[person.code];
+  return Boolean(saved && saved.scannedAt);
+}
+
+function listedPeople(filter, tab) {
   const query = filter.trim().toLowerCase();
-  if (query) {
-    return Object.values(catalog).filter((person) => `${person.name} ${person.email} ${person.full} ${person.code}`.toLowerCase().includes(query));
-  }
-  return Object.keys(currentBook.orders || {}).map((code) => catalog[code]).filter(Boolean);
+  return Object.values(activeOrders()).filter((person) => {
+    if (tab === "scanned" ? !wasScanned(person) : wasScanned(person)) return false;
+    if (!query) return true;
+    return `${person.name} ${person.email} ${person.full} ${person.code}`.toLowerCase().includes(query);
+  }).sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function fillCount(id, value) {
@@ -738,8 +785,20 @@ function fillVariantCounts(elementId) {
   variantList.replaceChildren();
 }
 
+function paintFlowTabs() {
+  const everyone = Object.values(activeOrders());
+  const waiting = everyone.filter((person) => !wasScanned(person)).length;
+  const scanned = everyone.filter((person) => wasScanned(person)).length;
+  document.querySelectorAll("[data-flow]").forEach((button) => {
+    const tab = button.getAttribute("data-flow");
+    button.className = flowTab === tab ? "btn-teal" : "btn-quiet";
+    button.textContent = tab === "scanned" ? `Already scanned (${scanned})` : `Not scanned (${waiting})`;
+  });
+}
+
 function renderOrders() {
-  const scanned = listedPeople("");
+  paintFlowTabs();
+  const scanned = listedPeople("", "scanned");
   const breakdown = laneBreakdown(scanned);
   const breakdownText = `(${breakdown.entryDone} entry done) (${breakdown.foodNotTaken} food not taken) (${breakdown.complete} taken completely)`;
   fillCount("#people-count", scanned.length);
@@ -752,17 +811,18 @@ function renderOrders() {
   const siteHeading = document.querySelector("#site-order-heading");
   const orderBreakdown = document.querySelector("#order-breakdown");
   const siteBreakdown = document.querySelector("#site-order-breakdown");
-  if (heading) heading.textContent = `Orders (${scanned.length})`;
-  if (siteHeading) siteHeading.textContent = `Orders (${scanned.length})`;
+  const title = flowTab === "scanned" ? "Already scanned" : "Not scanned";
+  if (heading) heading.textContent = `${title} (${listedPeople("", flowTab).length})`;
+  if (siteHeading) siteHeading.textContent = `${title} (${listedPeople("", flowTab).length})`;
   if (orderBreakdown) orderBreakdown.textContent = breakdownText;
   if (siteBreakdown) siteBreakdown.textContent = breakdownText;
   const orders = document.querySelector("#orders");
   const filter = document.querySelector("#orders-search");
-  const people = listedPeople(filter ? filter.value : "");
+  const people = listedPeople(filter ? filter.value : "", flowTab);
   orders.replaceChildren();
   if (!people.length) {
     const empty = document.createElement("p");
-    empty.textContent = filter && filter.value.trim() ? "No matching orders." : "No orders scanned yet.";
+    empty.textContent = filter && filter.value.trim() ? "No matching names." : flowTab === "scanned" ? "No one scanned yet." : "Everyone here is already scanned.";
     orders.append(empty);
   } else {
     for (const person of people) orders.append(orderCard(person));
@@ -891,7 +951,7 @@ function renderRecent() {
   if (!recent) return;
   recent.replaceChildren();
   const filter = document.querySelector("#site-orders-search");
-  const people = listedPeople(filter ? filter.value : "").slice(0, 40);
+  const people = listedPeople(filter ? filter.value : "", flowTab).slice(0, 80);
   if (!people.length) {
     const empty = document.createElement("p");
     empty.textContent = filter && filter.value.trim() ? "No matching orders." : "No recent scans.";
@@ -1060,6 +1120,12 @@ document.querySelector("#counter-food").addEventListener("click", () => {
 });
 document.querySelector("#log-search").addEventListener("input", () => { renderLog(); });
 document.querySelector("#site-log-search").addEventListener("input", () => { renderLog(); });
+document.querySelectorAll("[data-flow]").forEach((button) => {
+  button.addEventListener("click", () => {
+    flowTab = button.getAttribute("data-flow") || "waiting";
+    renderOrders();
+  });
+});
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#main-page").addEventListener("click", closeTicket);

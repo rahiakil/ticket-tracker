@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 <div class="app-shell">
@@ -80,11 +80,12 @@
       <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
       <p class="note">Both counters show every ticket, split into Friday, Saturday, and Sunday. The button you pick is only the desk name written on the log.</p>
       <div id="qr-box"></div>
-      <label>Order number
-        <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Last 5 digits or full order number">
+      <label>Name or order number
+        <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, email, or order number">
       </label>
       <button id="search-order" class="btn-orange" type="button">Search</button>
       <p id="search-result" class="result" role="status"></p>
+      <div id="name-matches"></div>
       <div id="open-order"></div>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -98,6 +99,10 @@
     </section>
 
     <section class="panel">
+      <div class="flow-tabs">
+        <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
+        <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
+      </div>
       <h2 id="order-heading">Orders (0)</h2>
       <p id="order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
       <label>Search orders
@@ -168,6 +173,10 @@
       <button id="admin-logout" class="text-button" type="button">Log out</button>
     </header>
     <section class="panel">
+      <div class="flow-tabs">
+        <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
+        <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
+      </div>
       <h1 id="site-order-heading">Orders (0)</h1>
       <p id="site-order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
       <label>Search orders
@@ -231,9 +240,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=3"></script>
-  <script src="ledger.js?v=26"></script>
+  <script src="ledger.js?v=27"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=40"></script>
+  <script src="app.js?v=41"></script>
 </body>
 </html>
