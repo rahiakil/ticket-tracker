@@ -441,41 +441,48 @@ function revertOne(person) {
   renderOrders();
 }
 
-function tileOrder(items) {
-  const foodCounter = activeCounter() === "food";
-  return items.map((item, index) => ({ item, index })).sort((left, right) => {
-    const leftFood = left.item.lane === "food" ? 0 : 1;
-    const rightFood = right.item.lane === "food" ? 0 : 1;
-    if (foodCounter) return leftFood - rightFood;
-    return rightFood - leftFood;
-  });
+function dayBucket(name) {
+  return TicketLedger.itemDay(name) || "other";
 }
 
 function itemButtons(person) {
   const view = orderView(person);
-  const foodCounter = activeCounter() === "food";
   const now = new Date();
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
-  const list = document.createElement("div");
-  list.className = "item-pills";
-  for (const { item, index } of tileOrder(view.items)) {
-    const button = document.createElement("button");
-    button.type = "button";
-    const kind = TicketLedger.couponKind(item.id, item.lane);
-    const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now);
-    const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
-    const otherLane = !demoMode && (foodCounter ? item.lane !== "food" : item.lane !== "entry");
-    const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : otherLane ? "other-lane" : "ready";
-    button.className = `item-pill coupon-${kind} ${state}`;
-    if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
-    const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
-    button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
-    if (locked || state !== "ready") button.disabled = true;
-    else button.addEventListener("click", () => markOne(person, index));
-    list.append(button);
+  const groups = [
+    ["Friday", "friday"],
+    ["Saturday", "saturday"],
+    ["Sunday", "sunday"],
+    ["Other", "other"],
+  ];
+  const board = document.createElement("div");
+  for (const [label, bucket] of groups) {
+    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket);
+    if (!rows.length) continue;
+    const heading = document.createElement("p");
+    heading.className = "day-heading";
+    heading.textContent = label;
+    const list = document.createElement("div");
+    list.className = "item-pills";
+    for (const { item, index } of rows) {
+      const button = document.createElement("button");
+      button.type = "button";
+      const kind = TicketLedger.couponKind(item.id, item.lane);
+      const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now);
+      const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
+      const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
+      button.className = `item-pill coupon-${kind} ${state}`;
+      if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
+      const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
+      button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
+      if (locked || state !== "ready") button.disabled = true;
+      else button.addEventListener("click", () => markOne(person, index));
+      list.append(button);
+    }
+    board.append(heading, list);
   }
-  return list;
+  return board;
 }
 
 function itemBoard(person) {
