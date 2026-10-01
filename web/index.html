@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=35">
+  <link rel="stylesheet" href="styles.css?v=36">
 </head>
 <body>
 <div class="app-shell">
@@ -127,6 +127,7 @@
     <section class="panel sheet-panel">
       <h2>Sheet</h2>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
+      <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
       <div class="sheet-frame-wrap" hidden>
         <iframe class="google-sheet-frame" title="Live Google Sheet"></iframe>
@@ -192,6 +193,9 @@
       <button id="print-ticket" class="btn-teal" type="button">Print</button>
       <button id="bluetooth-print" class="btn-quiet" type="button">Bluetooth</button>
       <button id="share-ticket" class="btn-orange" type="button">Share QR</button>
+      <button id="screenshot-qr" class="btn-teal" type="button">Save QR image</button>
+      <button id="whatsapp-share" class="btn-quiet" type="button">WhatsApp</button>
+      <button id="email-share" class="btn-orange" type="button">Email QR</button>
     </header>
     <section class="panel">
       <div id="ticket-body"></div>
@@ -241,6 +245,7 @@
     <section class="panel sheet-panel">
       <h2>Sheet</h2>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
+      <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
       <div class="sheet-frame-wrap" hidden>
         <iframe class="google-sheet-frame" title="Live Google Sheet"></iframe>
@@ -279,6 +284,6 @@
   <script src="ledger.js?v=29"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=43"></script>
+  <script src="app.js?v=44"></script>
 </body>
 </html>

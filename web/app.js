@@ -295,7 +295,10 @@ async function flushWrites() {
       if (applied.message) message = applied.message;
     }
     working.baseWriteId = book.lastWriteId || "";
-    if (write) working.statusGrid = statusGrid(working);
+    if (write) {
+      working.statusGrid = statusGrid(working);
+      working.onSiteGrid = onSiteGrid(working);
+    }
     return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
   });
   flushing = false;
@@ -331,12 +334,26 @@ function activeOrders() {
   return { ...catalogSource(), ...(currentBook.walkups || {}) };
 }
 
+function normalized(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function looksLikeCode(value) {
+  const text = String(value || "").trim();
+  return /UTT\d+/i.test(text) || /order-\d+/i.test(text) || /^walk\d+$/i.test(text) || /^\d{5}$/.test(text);
+}
+
 function catalogMatches(raw) {
-  const exact = catalogPerson(raw);
-  if (exact) return [exact];
-  const query = String(raw || "").trim().toLowerCase();
-  if (query.length < 2) return [];
-  return Object.values(activeOrders()).filter((person) => `${person.name} ${person.email}`.toLowerCase().includes(query));
+  if (looksLikeCode(raw)) {
+    const exact = catalogPerson(raw);
+    return exact ? [exact] : [];
+  }
+  const tokens = normalized(raw).split(" ").filter((token) => token.length > 1);
+  if (!tokens.length) return [];
+  return Object.values(activeOrders()).filter((person) => {
+    const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
+    return tokens.every((token) => hay.includes(token));
+  });
 }
 
 function catalogPerson(raw) {
@@ -807,12 +824,13 @@ function wasScanned(person) {
 }
 
 function listedPeople(filter, tab) {
-  const query = filter.trim().toLowerCase();
-  return Object.values(activeOrders()).filter((person) => {
-    if (tab === "scanned" ? !wasScanned(person) : wasScanned(person)) return false;
-    if (!query) return true;
-    return `${person.name} ${person.email} ${person.full} ${person.code}`.toLowerCase().includes(query);
-  }).sort((left, right) => left.name.localeCompare(right.name));
+  const tokens = normalized(filter).split(" ").filter((token) => token.length > 1);
+  const people = Object.values(activeOrders()).filter((person) => {
+    if (!tokens.length) return tab === "scanned" ? wasScanned(person) : !wasScanned(person);
+    const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
+    return tokens.every((token) => hay.includes(token));
+  });
+  return people.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function fillCount(id, value) {
@@ -1041,14 +1059,75 @@ async function bluetoothPrint() {
   }
 }
 
-async function shareTicket() {
+function qrSvg() {
+  return document.querySelector("#ticket-body svg");
+}
+
+async function qrImageFile() {
+  const svg = qrSvg();
+  const person = catalogPerson(openedCode);
+  if (!svg || !person) return null;
+  if (!svg.getAttribute("xmlns")) svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const xml = new XMLSerializer().serializeToString(svg);
+  const image = new Image();
+  const url = URL.createObjectURL(new Blob([xml], { type: "image/svg+xml" }));
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = reject;
+    image.src = url;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 760;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fffaf4";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 70, 40, 500, 500);
+  ctx.fillStyle = "#1c140c";
+  ctx.textAlign = "center";
+  ctx.font = "700 36px sans-serif";
+  ctx.fillText(person.name, 320, 600);
+  ctx.font = "28px sans-serif";
+  ctx.fillText(person.code, 320, 650);
+  URL.revokeObjectURL(url);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  return new File([blob], `uttaron-${person.code}.png`, { type: "image/png" });
+}
+
+async function saveQrImage() {
+  const file = await qrImageFile();
+  if (!file) return;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(file);
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  showMessage("QR image saved to Downloads.", "pending");
+}
+
+async function shareQrImage(kind) {
   const person = catalogPerson(openedCode);
   if (!person) return;
   const text = `Uttoron order ${person.code} for ${person.name}`;
-  if (navigator.share) {
-    try { await navigator.share({ title: "Uttoron ticket", text }); return; } catch (error) { if (error && error.name === "AbortError") return; }
+  const file = await qrImageFile();
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: "Uttoron ticket", text });
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+    }
   }
-  showMessage(text, "pending");
+  const link = document.createElement("a");
+  if (kind === "whatsapp") link.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  else link.href = `mailto:?subject=${encodeURIComponent("Uttoron ticket")}&body=${encodeURIComponent(text)}`;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.click();
+}
+
+async function shareTicket() {
+  await shareQrImage("whatsapp");
 }
 
 let sheetPublishTried = false;
@@ -1070,6 +1149,11 @@ function renderLiveSheet() {
       const preview = String(url).replace(/\/edit.*$/, "/preview");
       if (frame.getAttribute("src") !== preview) frame.setAttribute("src", preview);
     }
+    const sales = panel.querySelector(".google-sales-link");
+    if (sales && currentBook.salesSheetUrl) {
+      sales.hidden = false;
+      sales.href = currentBook.salesSheetUrl;
+    }
     if (!table) return;
     table.replaceChildren();
     const head = document.createElement("thead");
@@ -1084,6 +1168,16 @@ function renderLiveSheet() {
     head.append(headRow);
     const body = document.createElement("tbody");
     rows.slice(1).forEach((row) => {
+      if (row[0] === "On site sales") {
+        const line = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = (rows[0] || []).length || 1;
+        cell.textContent = "On site sales";
+        cell.className = "sheet-break";
+        line.append(cell);
+        body.append(line);
+        return;
+      }
       const line = document.createElement("tr");
       row.forEach((value, index) => {
         const cell = document.createElement("td");
@@ -1238,12 +1332,30 @@ async function refreshOrders() {
   renderOrders();
 }
 
+function sheetHeader() {
+  return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+}
+
+function sheetLine(row) {
+  return [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt];
+}
+
 function statusGrid(book) {
-  const rows = TicketLedger.exportRows(book || currentBook, activeOrders());
-  return [
-    ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"],
-    ...rows.map((row) => [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
-  ];
+  const source = book || currentBook;
+  const main = TicketLedger.exportRows(source, catalogSource());
+  const sales = TicketLedger.exportRows(source, source.walkups || {});
+  const rows = [sheetHeader(), ...main.map(sheetLine)];
+  if (sales.length) {
+    rows.push(["On site sales"]);
+    rows.push(...sales.map(sheetLine));
+  }
+  return rows;
+}
+
+function onSiteGrid(book) {
+  const source = book || currentBook;
+  const sales = TicketLedger.exportRows(source, source.walkups || {});
+  return [sheetHeader(), ...sales.map(sheetLine)];
 }
 
 function statusFile() {
@@ -1438,6 +1550,9 @@ document.querySelector("#sale-submit").addEventListener("click", submitSale);
 document.querySelector("#print-ticket").addEventListener("click", printTicket);
 document.querySelector("#bluetooth-print").addEventListener("click", () => { bluetoothPrint(); });
 document.querySelector("#share-ticket").addEventListener("click", () => { shareTicket(); });
+document.querySelector("#screenshot-qr").addEventListener("click", () => { saveQrImage(); });
+document.querySelector("#whatsapp-share").addEventListener("click", () => { shareQrImage("whatsapp"); });
+document.querySelector("#email-share").addEventListener("click", () => { shareQrImage("email"); });
 
 const legend = document.querySelector(".legend");
 if (legend) {

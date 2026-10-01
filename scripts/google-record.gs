@@ -5,6 +5,8 @@ function doGet(e) {
   var book = readBook_();
   var url = liveSheetUrl_();
   if (url) book.sheetUrl = url;
+  var salesId = PropertiesService.getScriptProperties().getProperty("SALES_SHEET_ID");
+  if (salesId) book.salesSheetUrl = "https://docs.google.com/spreadsheets/d/" + salesId + "/edit?usp=sharing";
   var body = JSON.stringify(book);
   var callback = e && e.parameter ? e.parameter.callback : "";
   if (callback && /^[A-Za-z0-9_]+$/.test(callback)) {
@@ -69,12 +71,45 @@ function publishLiveSheet_(book) {
     sheet.getRange(1, 1, 1, width).setFontWeight("bold");
     sheet.setFrozenRows(1);
     book.sheetUrl = ss.getUrl();
+    writeGrid_(ensureSalesBook_().getSheets()[0], book.onSiteGrid || []);
+    book.salesSheetUrl = "https://docs.google.com/spreadsheets/d/" + PropertiesService.getScriptProperties().getProperty("SALES_SHEET_ID") + "/edit?usp=sharing";
   } catch (err) {
     book.sheetUrl = liveSheetUrl_();
   }
   delete book.statusGrid;
+  delete book.onSiteGrid;
   delete book.publishSheet;
   return book;
+}
+
+function writeGrid_(sheet, grid) {
+  if (!grid || !grid.length) return;
+  var width = 1;
+  grid.forEach(function (row) { if (row.length > width) width = row.length; });
+  var values = grid.map(function (row) {
+    var copy = row.slice();
+    while (copy.length < width) copy.push("");
+    return copy;
+  });
+  sheet.clear();
+  sheet.getRange(1, 1, values.length, width).setValues(values);
+  sheet.getRange(1, 1, 1, width).setFontWeight("bold");
+  sheet.setFrozenRows(1);
+}
+
+function ensureSalesBook_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("SALES_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (err) {}
+  }
+  var ss = SpreadsheetApp.create("Uttoron on site sales");
+  var file = DriveApp.getFileById(ss.getId());
+  file.moveTo(DriveApp.getFolderById(FOLDER_ID));
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err2) {}
+  props.setProperty("SALES_SHEET_ID", ss.getId());
+  ss.getSheets()[0].setName("On site sales");
+  return ss;
 }
 
 function keepSheet_(current, incoming) {
