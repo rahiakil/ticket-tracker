@@ -11,6 +11,7 @@ const ACCOUNTS = {
   admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
 };
 const SESSION_KEY = "ticket-tracker-session";
+const ALIAS_KEY = "ticket-tracker-alias";
 const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 
 const gate = document.querySelector("#gate");
@@ -80,27 +81,39 @@ function sameText(left, right) {
 function readSession() {
   try {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now() || !saved.displayName) return null;
+    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
     return saved;
   } catch {
     return null;
   }
 }
 
+function readAlias() {
+  return sessionStorage.getItem(ALIAS_KEY) || "";
+}
+
 function enterApp() {
   const session = readSession();
   if (!session) return showGate();
+  if (!readAlias()) {
+    document.querySelector("#username").value = session.username;
+    document.querySelector("#login-error").hidden = false;
+    document.querySelector("#login-error").textContent = "Enter your name for this visit. It is not saved on the account.";
+    show(login);
+    document.querySelector("#display-name").focus();
+    return;
+  }
   if (config.recordUrl) {
     document.querySelector("#record-link").closest("label").hidden = true;
     document.querySelector("#save-link").hidden = true;
   }
   if (session.role === "records") {
-    document.querySelector("#admin-who").textContent = `Signed in as ${session.displayName} (siteadmin)`;
+    document.querySelector("#admin-who").textContent = `Signed in as ${readAlias()} (siteadmin)`;
     show(adminScreen);
     refreshOrders();
     return;
   }
-  document.querySelector("#who").textContent = `Signed in as ${session.displayName} (${session.username})`;
+  document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
   paintCounter();
   refreshOrders();
@@ -130,22 +143,26 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   const password = document.querySelector("#password").value;
   const displayName = document.querySelector("#display-name").value.trim();
   document.querySelector("#password").value = "";
+  document.querySelector("#display-name").value = "";
   if (!displayName) {
     error.hidden = false;
-    error.textContent = "Enter your name so the ticket log shows who did it.";
+    error.textContent = "Enter your name for this visit. It is not saved on the account.";
     button.disabled = false;
     return;
   }
   try {
-    const digest = await sha256(password);
+    const digest = password ? await sha256(password) : "";
     const account = ACCOUNTS[username];
-    const accepted = account && sameText(digest, account.hash);
-    if (!accepted) {
+    const current = readSession();
+    const accepted = account && password && sameText(digest, account.hash);
+    const sameVisit = current && current.username === username && !password;
+    if (!accepted && !sameVisit) {
       error.hidden = false;
       error.textContent = "Incorrect username or password.";
       return;
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, displayName, role: account.role, exp: Date.now() + SESSION_MS }));
+    if (accepted) localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, exp: Date.now() + SESSION_MS }));
+    sessionStorage.setItem(ALIAS_KEY, displayName);
     enterApp();
   } catch {
     error.hidden = false;
@@ -157,6 +174,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
 
 function logout() {
   localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(ALIAS_KEY);
   showGate();
 }
 
@@ -448,7 +466,7 @@ function deviceId() {
 
 function holderNow() {
   const session = readSession();
-  return { holder: deviceId(), actor: (session && session.displayName) || session?.username || "admin", at: new Date().toISOString() };
+  return { holder: deviceId(), actor: readAlias() || (session && session.username) || "admin", at: new Date().toISOString() };
 }
 
 let demoMode = false;
