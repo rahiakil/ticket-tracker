@@ -173,7 +173,12 @@ h2 { font-size: 1.25rem; }
 .qr-view { display: flex; justify-content: center; margin: 8px 0 12px; }
 .qr-view svg { width: 180px; height: 180px; background: #fff; }
 .day-heading { margin: 14px 0 0; font-size: 14px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-dark); }
-.flow-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.flow-tabs, .page-tabs, .qr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.page-tabs { grid-template-columns: 1fr 1fr 1fr; }
+.qr-actions { grid-template-columns: 1fr; }
+.stat-bar { display: grid; grid-template-columns: 7rem 1fr 2rem; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+.stat-bar span:nth-child(2) { display: block; height: 14px; background: #efe4d4; border-radius: 7px; overflow: hidden; }
+.stat-bar i { display: block; height: 100%; background: var(--teal); }
 .item-pills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .item-pill {
   width: 100%;

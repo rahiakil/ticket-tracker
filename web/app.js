@@ -298,6 +298,7 @@ async function flushWrites() {
     if (write) {
       working.statusGrid = statusGrid(working);
       working.onSiteGrid = onSiteGrid(working);
+      working.statsGrid = statsGrid();
     }
     return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
   });
@@ -894,6 +895,7 @@ function renderOrders() {
   renderRecent();
   renderLiveSheet();
   renderDisputes();
+  renderStats();
 }
 
 function renderDisputes() {
@@ -1332,6 +1334,86 @@ async function refreshOrders() {
   renderOrders();
 }
 
+function scanMoments() {
+  return (currentBook.log || [])
+    .map((item) => ({ at: Date.parse(item.at), text: String(item.text || "") }))
+    .filter((item) => Number.isFinite(item.at) && /scanned/.test(item.text));
+}
+
+function countSince(ms) {
+  const cutoff = Date.now() - ms;
+  return scanMoments().filter((item) => item.at >= cutoff).length;
+}
+
+function dailyScans() {
+  const days = new Map();
+  scanMoments().forEach((item) => {
+    const label = new Date(item.at).toLocaleDateString();
+    days.set(label, (days.get(label) || 0) + 1);
+  });
+  return [...days.entries()];
+}
+
+function statsGrid() {
+  const rows = [
+    ["Metric", "Value"],
+    ["Last 15 minutes", countSince(15 * 60 * 1000)],
+    ["Last 1 hour", countSince(60 * 60 * 1000)],
+    ["Last 6 hours", countSince(6 * 60 * 60 * 1000)],
+    ["Day", "Scans"],
+  ];
+  dailyScans().forEach(([day, count]) => rows.push([day, count]));
+  return rows;
+}
+
+function renderStats() {
+  const recent = countSince(15 * 60 * 1000);
+  const hour = countSince(60 * 60 * 1000);
+  const hours = countSince(6 * 60 * 60 * 1000);
+  const desk = document.querySelector("#desk-stats");
+  if (desk) desk.textContent = `Scanned ${recent} in 15 minutes, ${hour} in the last hour, ${hours} in 6 hours.`;
+  const map = [["#stats-15", recent], ["#stats-hour", hour], ["#stats-hours", hours]];
+  map.forEach(([id, value]) => {
+    const node = document.querySelector(id);
+    if (node) node.textContent = String(value);
+  });
+  const chart = document.querySelector("#stats-chart");
+  if (!chart) return;
+  const days = dailyScans();
+  const peak = Math.max(1, ...days.map((item) => item[1]));
+  chart.replaceChildren();
+  if (!days.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No scans yet.";
+    chart.append(empty);
+    return;
+  }
+  days.forEach(([day, count]) => {
+    const row = document.createElement("p");
+    row.className = "stat-bar";
+    const label = document.createElement("span");
+    label.textContent = day;
+    const track = document.createElement("span");
+    const bar = document.createElement("i");
+    bar.style.width = `${Math.round((count / peak) * 100)}%`;
+    track.append(bar);
+    const total = document.createElement("span");
+    total.textContent = String(count);
+    row.append(label, track, total);
+    chart.append(row);
+  });
+}
+
+function exportStats() {
+  const csv = statsGrid().map((row) => row.join(",")).join("\r\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  link.download = `uttaron-stats-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  sayExport("Stats file saved to Downloads. The same counts are written to the Drive sheet.");
+}
+
 function sheetHeader() {
   return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
 }
@@ -1535,6 +1617,21 @@ setInterval(() => {
   refreshOrders();
 }, 20000);
 
+document.querySelectorAll("[data-page]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const page = button.getAttribute("data-page");
+    document.querySelectorAll("[data-page]").forEach((item) => {
+      item.className = item.getAttribute("data-page") === page ? "btn-teal" : "btn-quiet";
+    });
+    document.querySelectorAll("[data-page-panel]").forEach((panel) => {
+      panel.hidden = panel.getAttribute("data-page-panel") !== page;
+    });
+  });
+});
+document.querySelector("#home-save-qr").addEventListener("click", () => { saveQrImage(); });
+document.querySelector("#home-whatsapp").addEventListener("click", () => { shareQrImage("whatsapp"); });
+document.querySelector("#home-email-qr").addEventListener("click", () => { shareQrImage("email"); });
+document.querySelector("#export-stats").addEventListener("click", exportStats);
 document.querySelector("#new-sale").addEventListener("click", openSale);
 document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
 document.querySelector("#sale-add").addEventListener("click", () => {

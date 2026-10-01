@@ -71,6 +71,9 @@ function publishLiveSheet_(book) {
     sheet.getRange(1, 1, 1, width).setFontWeight("bold");
     sheet.setFrozenRows(1);
     book.sheetUrl = ss.getUrl();
+    var statsSheet = ss.getSheetByName("Stats");
+    if (!statsSheet) statsSheet = ss.insertSheet("Stats");
+    writeGrid_(statsSheet, book.statsGrid || []);
     writeGrid_(ensureSalesBook_().getSheets()[0], book.onSiteGrid || []);
     book.salesSheetUrl = "https://docs.google.com/spreadsheets/d/" + PropertiesService.getScriptProperties().getProperty("SALES_SHEET_ID") + "/edit?usp=sharing";
   } catch (err) {
@@ -78,6 +81,7 @@ function publishLiveSheet_(book) {
   }
   delete book.statusGrid;
   delete book.onSiteGrid;
+  delete book.statsGrid;
   delete book.publishSheet;
   return book;
 }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=36">
+  <link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
 <div class="app-shell">
@@ -79,22 +79,33 @@
       <button id="logout" class="text-button" type="button">Log out</button>
     </header>
 
-    <section class="panel">
-      <h1>Hey, scan the QR code.</h1>
-      <div class="counter-switch">
-        <button id="counter-entry" class="primary" type="button">Entry counter</button>
-        <button id="counter-food" class="secondary" type="button">Food counter</button>
-      </div>
-      <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
-      <p class="note">Entry shows only entry. Food shows only food. A later day stays unavailable until that day. Hold a ticket to send it to the dispute bucket.</p>
-      <button id="new-sale" class="btn-orange" type="button">New sale</button>
-      <div id="qr-box"></div>
+    <div class="page-tabs">
+      <button type="button" data-page="desk" class="btn-teal">Desk</button>
+      <button type="button" data-page="stats" class="btn-quiet">Stats</button>
+      <button type="button" data-page="admin" class="btn-quiet">Admin functions</button>
+    </div>
+
+    <section class="panel" data-page-panel="desk">
+      <h1>Find a ticket</h1>
       <label>Name or order number
         <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, email, or order number">
       </label>
       <button id="search-order" class="btn-orange" type="button">Search</button>
+      <div class="qr-actions">
+        <button id="home-save-qr" class="btn-teal" type="button">Save QR image</button>
+        <button id="home-whatsapp" class="btn-quiet" type="button">WhatsApp</button>
+        <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
+      </div>
       <p id="search-result" class="result" role="status"></p>
       <div id="name-matches"></div>
+      <button id="new-sale" class="btn-orange" type="button">New sale</button>
+      <div class="counter-switch">
+        <button id="counter-entry" class="primary" type="button">Entry counter</button>
+        <button id="counter-food" class="secondary" type="button">Food counter</button>
+      </div>
+      <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
+      <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
+      <div id="qr-box"></div>
       <div id="open-order"></div>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -107,7 +118,7 @@
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-page-panel="desk">
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -118,13 +129,31 @@
         <input id="orders-search" autocomplete="off" placeholder="Name, email, or order number">
       </label>
       <button id="refresh" class="secondary" type="button">Refresh</button>
-      <button id="export-csv" class="secondary" type="button">Download CSV</button>
-      <button id="email-csv" class="secondary" type="button">Email CSV</button>
       <p id="admin-message" class="result" role="status" hidden></p>
       <div id="orders"></div>
     </section>
 
-    <section class="panel sheet-panel">
+    <section class="panel" data-page-panel="stats" hidden>
+      <h2>Stats</h2>
+      <p id="stats-15" class="people-count">0</p>
+      <p class="note">Scanned in the last 15 minutes</p>
+      <p id="stats-hour" class="people-count">0</p>
+      <p class="note">Scanned in the last hour</p>
+      <p id="stats-hours" class="people-count">0</p>
+      <p class="note">Scanned in the last 6 hours</p>
+      <h2>By day</h2>
+      <div id="stats-chart"></div>
+      <button id="export-stats" class="btn-teal" type="button">Export stats</button>
+    </section>
+
+    <section class="panel" data-page-panel="admin" hidden>
+      <h2>Admin functions</h2>
+      <button id="export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="email-csv" class="secondary" type="button">Email CSV</button>
+      <p class="note">Orders and stats are saved in the Ticket Tracker Google Drive folder.</p>
+    </section>
+
+    <section class="panel sheet-panel" data-page-panel="admin" hidden>
       <h2>Sheet</h2>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
@@ -137,7 +166,7 @@
       </div>
     </section>
 
-    <section class="panel" id="count-panel">
+    <section class="panel" id="count-panel" data-page-panel="admin" hidden>
       <button id="show-totals" class="secondary" type="button">Show totals</button>
       <div id="count-body" hidden>
         <p id="people-count" class="people-count">0</p>
@@ -148,14 +177,14 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-page-panel="admin" hidden>
       <label>Google record link
         <input id="record-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
       </label>
       <button id="save-link" class="secondary" type="button">Save link on this phone</button>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-page-panel="admin" hidden>
       <h2>Log</h2>
       <label>Search log
         <input id="log-search" autocomplete="off" placeholder="Name, email, or order number">
@@ -284,6 +313,6 @@
   <script src="ledger.js?v=29"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=44"></script>
+  <script src="app.js?v=45"></script>
 </body>
 </html>
