@@ -26,6 +26,8 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Upload order sheet/);
   assert.match(html, /Search log/);
   assert.match(html, />Demo</);
+  assert.match(html, /aria-label="Color key"/);
+  assert.match(css, /\.legend /);
   assert.match(css, /\.log-scroll/);
   assert.match(html, /Release all locks/);
   assert.match(html, /Entry counter/);

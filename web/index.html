@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=25">
 </head>
 <body>
+<div class="app-shell">
+<div class="app-main">
   <header class="brand-bar">
     <img src="logo.png" alt="Uttoron">
     <div>
@@ -161,6 +163,35 @@
     </section>
   </main>
 
+</div>
+<aside class="legend" aria-label="Color key">
+  <h2>Colors</h2>
+  <p class="legend-label">Entry</p>
+  <ul>
+    <li><span class="swatch coupon-entry-friday"></span>Friday</li>
+    <li><span class="swatch coupon-entry-saturday"></span>Saturday</li>
+    <li><span class="swatch coupon-entry-sunday"></span>Sunday</li>
+    <li><span class="swatch swatch-entry-other"></span>Other entry</li>
+  </ul>
+  <p class="legend-label">Food</p>
+  <ul>
+    <li><span class="swatch coupon-veg"></span>Vegetarian</li>
+    <li><span class="swatch coupon-paneer"></span>Paneer</li>
+    <li><span class="swatch coupon-snack"></span>Snacks</li>
+    <li><span class="swatch coupon-nonveg"></span>Non-veg</li>
+    <li><span class="swatch coupon-mutton"></span>Mutton</li>
+    <li><span class="swatch coupon-chicken"></span>Chicken</li>
+    <li><span class="swatch coupon-fish"></span>Fish</li>
+  </ul>
+  <p class="legend-label">Status</p>
+  <ul>
+    <li><span class="swatch swatch-semi"></span>Demo marked</li>
+    <li><span class="swatch swatch-picked"></span>Taken</li>
+    <li><span class="swatch swatch-quiet"></span>Other counter</li>
+    <li><span class="swatch swatch-later"></span>Not yet</li>
+  </ul>
+</aside>
+</div>
   <div id="dialog" class="backdrop" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <h2 id="dialog-title"></h2>
