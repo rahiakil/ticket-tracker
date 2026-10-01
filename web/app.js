@@ -748,7 +748,26 @@ async function refreshOrders() {
     return;
   }
   currentBook = loaded.book;
+  const preview = TicketLedger.cleanSheetBook(loaded.book);
+  if (preview.changed) {
+    queueWrite((book) => {
+      const next = TicketLedger.cleanSheetBook(book);
+      return { write: next.changed, book: next.book, message: "Cleaned old scans" };
+    });
+  }
   renderOrders();
+}
+
+function exportStatus() {
+  const catalog = window.TicketCatalog && window.TicketCatalog.orders;
+  const csv = TicketLedger.exportCsv(currentBook, catalog || {});
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ticket-status-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 document.querySelector("#save-link").addEventListener("click", () => {
@@ -799,6 +818,8 @@ document.querySelector("#order-query").addEventListener("keydown", (event) => {
 });
 document.querySelector("#refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
+document.querySelector("#export-csv").addEventListener("click", exportStatus);
+document.querySelector("#admin-export-csv").addEventListener("click", exportStatus);
 
 show(gate);
 if (readSession()) enterApp();

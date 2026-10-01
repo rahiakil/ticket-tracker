@@ -258,6 +258,88 @@ function statusDetail(order) {
     return (book.log || []).filter((item) => item && String(item.text).includes(String(code)));
   }
 
+  function isSheetOrder(order) {
+    const variants = Object.values(order && order.variants || {});
+    return variants.length > 0 && variants.every((item) => item && (item.lane === "entry" || item.lane === "food"));
+  }
+
+  function cleanSheetBook(book) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    let removed = 0;
+    for (const id of Object.keys(next.orders || {})) {
+      if (isSheetOrder(next.orders[id])) continue;
+      delete next.orders[id];
+      removed += 1;
+    }
+    if (removed) {
+      const kept = new Set(Object.keys(next.orders));
+      next.lines = (next.lines || []).filter((line) => {
+        const match = String(line).match(/order (\d+)/);
+        return Boolean(match && kept.has(match[1]));
+      });
+      next.log = (next.log || []).filter((item) => {
+        const match = String(item && item.text).match(/\b(\d{5})\b/);
+        return Boolean(match && kept.has(match[1]));
+      });
+    }
+    return { book: pruneBook(next), changed: removed > 0, removed };
+  }
+
+  function csvCell(value) {
+    const text = String(value ?? "");
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  function exportRows(book, catalogOrders) {
+    return Object.values(catalogOrders || {})
+      .sort((left, right) => String(right.code).localeCompare(String(left.code)))
+      .map((person) => {
+        const saved = (book.orders || {})[person.code];
+        const items = (person.items || []).map((item, index) => {
+          const stored = saved && saved.variants && saved.variants[`item:${index}:${item.name}`];
+          return { ...item, taken: Boolean(stored && stored.taken) };
+        });
+        const pending = items.filter((item) => !item.taken);
+        const picked = items.filter((item) => item.taken);
+        const seen = Boolean(saved && saved.scannedAt);
+        let status = "Not seen";
+        if (seen && items.length && pending.length === 0) status = "Taken completely";
+        else if (seen && picked.length === 0) status = "Scanned only";
+        else if (seen || picked.length) status = "Taken partially";
+        const names = (list) => list.map((item) => `${item.name} x ${item.qty}`).join("; ");
+        return {
+          full: person.full,
+          code: person.code,
+          name: person.name,
+          email: person.email,
+          seen: seen ? "Seen" : "Not seen",
+          status,
+          entryPending: pending.filter((item) => item.lane === "entry").length,
+          foodPending: pending.filter((item) => item.lane === "food").length,
+          pendingCount: pending.length,
+          pendingItems: names(pending),
+          pickedItems: names(picked),
+          scannedAt: saved && saved.scannedAt ? saved.scannedAt : "",
+        };
+      });
+  }
+
+  function exportCsv(book, catalogOrders) {
+    const rows = exportRows(book, catalogOrders);
+    const seen = rows.filter((row) => row.seen === "Seen").length;
+    const pendingItems = rows.reduce((sum, row) => sum + row.pendingCount, 0);
+    const header = ["Order number", "Code", "Name", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+    const lines = [
+      ["Seen", seen],
+      ["Not seen", rows.length - seen],
+      ["Pending items", pendingItems],
+      [],
+      header,
+      ...rows.map((row) => [row.full, row.code, row.name, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
+    ];
+    return lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
+  }
+
   function summary(book) {
     return Object.values(book.orders || {})
       .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))
@@ -364,6 +446,8 @@ function statusDetail(order) {
     rememberSheet,
     markLane,
     activityFor,
+    cleanSheetBook,
+    exportCsv,
     markTaken,
     countsOf,
     pruneBook,

@@ -112,6 +112,38 @@ test("a sheet order uses the last 5 digits and turns food gray when picked up", 
   assert.equal(repeat.changed, false);
 });
 
+test("old variant scans are removed and the sheet exports one CSV line per order", () => {
+  const book = ledger.emptyBook();
+  book.orders["12196"] = {
+    orderId: "12196",
+    scannedAt: "2026-09-30T02:42:08.353Z",
+    variants: { "992": { taken: false, takenAt: null } },
+  };
+  book.lines = ["2026-09-30T02:42:08.353Z order 12196 scanned but not taken"];
+  book.log = [{ at: "2026-09-30T02:42:08.353Z", text: "scanned order 12196" }];
+  const cleaned = ledger.cleanSheetBook(book);
+  assert.equal(cleaned.removed, 1);
+  assert.equal(Object.keys(cleaned.book.orders).length, 0);
+  assert.equal(cleaned.book.lines.length, 0);
+  const catalog = {
+    "12166": {
+      code: "12166",
+      full: "UTT20260900012166",
+      name: "barna NA",
+      email: "barna_c@yahoo.com",
+      items: [
+        { name: "Saturday Lunch Vegetarian", qty: 1, lane: "food" },
+        { name: "Regular Member Entry", qty: 1, lane: "entry" },
+      ],
+    },
+  };
+  const csv = ledger.exportCsv(cleaned.book, catalog);
+  assert.match(csv, /Not seen,1/);
+  assert.match(csv, /barna NA/);
+  assert.match(csv, /Saturday Lunch Vegetarian x 1; Regular Member Entry x 1/);
+  assert.match(csv, /Pending items,2/);
+});
+
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {
   const book = ledger.emptyBook();
   book.orders.old = { orderId: "old", updatedAt: "2020-01-01T00:00:00.000Z", scannedAt: "2020-01-01T00:00:00.000Z", variants: {} };
