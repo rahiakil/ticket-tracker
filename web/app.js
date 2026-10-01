@@ -1132,5 +1132,16 @@ setInterval(() => {
   refreshOrders();
 }, 20000);
 
+const legend = document.querySelector(".legend");
+if (legend) {
+  let swipeStart = 0;
+  legend.addEventListener("pointerdown", (event) => { swipeStart = event.clientX; });
+  legend.addEventListener("pointerup", (event) => {
+    const moved = event.clientX - swipeStart;
+    if (moved > 36) legend.classList.add("is-open");
+    if (moved < -36) legend.classList.remove("is-open");
+  });
+}
+
 show(gate);
 if (readSession()) enterApp();

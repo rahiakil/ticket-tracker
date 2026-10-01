@@ -244,28 +244,49 @@ h2 { font-size: 1.25rem; }
 #show-totals, #show-site-totals, label.file-btn { background: #fff; color: var(--teal-dark); border-color: var(--teal); }
 .note { color: #5c4632; }
 .app-shell { min-height: 100dvh; }
-.app-main { margin-left: 188px; min-width: 0; max-width: calc(100% - 188px); overflow-x: hidden; }
+.app-main { margin-left: 104px; min-width: 0; max-width: calc(100% - 104px); overflow-x: hidden; }
+.legend.is-open ~ .app-main { margin-left: min(300px, 74vw); max-width: calc(100% - min(300px, 74vw)); }
 .legend {
   position: fixed;
   left: 0;
   top: 0;
-  width: 188px;
+  width: 104px;
   height: 100dvh;
   z-index: 5;
   overflow-x: hidden;
   overflow-y: auto;
   background: #fffaf4;
   border-right: 4px solid var(--orange);
-  padding: 16px 12px 24px;
-  font-size: 16px;
-  line-height: 1.3;
+  padding: 8px;
+  touch-action: pan-y;
+  transition: width .2s ease;
 }
-.legend h2 { margin: 0 0 8px; font-size: 18px; }
-.legend-label { margin: 10px 0 4px; font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-dark); }
-.legend ul { list-style: none; margin: 0; padding: 0; }
-.legend li { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0; }
-.legend li span:last-child { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
-.swatch { width: 16px; height: 16px; border-radius: 4px; flex: 0 0 16px; border: 1px solid rgba(0,0,0,.12); }
+.legend.is-open { width: min(300px, 74vw); }
+.legend-stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.legend-tile {
+  width: 100%;
+  aspect-ratio: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 12px;
+  padding: 6px;
+  color: #fff;
+  font-weight: 750;
+  font-size: 13px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.legend.is-open .legend-tile { font-size: 26px; padding: 12px; }
+.legend-tile.coupon-paneer,
+.legend-tile.coupon-snack,
+.legend-tile.coupon-chicken,
+.legend-tile.coupon-fish,
+.legend-tile.swatch-semi,
+.legend-tile.swatch-picked,
+.legend-tile.swatch-quiet { color: #1f2937; }
 .swatch-entry-other { background: hsl(210 48% 36%); }
 .swatch-semi { background: #8d8d8d; }
 .swatch-picked { background: #9ca3af; }
@@ -279,10 +300,12 @@ h2 { font-size: 1.25rem; }
 .google-sheet-link { font-weight: 750; color: var(--teal-dark); }
 .sheet-name { width: auto; min-height: 0; padding: 0; font-size: 12px; color: var(--teal-dark); text-align: left; }
 @media (max-width: 820px), (pointer: coarse) {
-  .legend { width: 128px; font-size: 14px; padding: 12px 8px; }
-  .app-main { margin-left: 128px; max-width: calc(100% - 128px); }
-  .legend h2 { font-size: 16px; }
-  .swatch { width: 12px; height: 12px; flex-basis: 12px; }
+  .legend { width: 88px; }
+  .app-main { margin-left: 88px; max-width: calc(100% - 88px); }
+  .legend-tile { font-size: 11px; }
+  .legend.is-open { width: min(280px, 78vw); }
+  .legend.is-open ~ .app-main { margin-left: min(280px, 78vw); max-width: calc(100% - min(280px, 78vw)); }
+  .legend.is-open .legend-tile { font-size: 22px; }
 }
 .log-scroll {
   max-height: 220px;
