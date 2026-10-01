@@ -367,7 +367,7 @@ function catalogMatches(raw) {
     const exact = catalogPerson(raw);
     return exact ? [exact] : [];
   }
-  const tokens = normalized(raw).split(" ").filter((token) => token.length > 1);
+  const tokens = normalized(raw).split(" ").filter(Boolean);
   if (!tokens.length) return [];
   return Object.values(activeOrders()).filter((person) => {
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
@@ -843,7 +843,7 @@ function wasScanned(person) {
 }
 
 function listedPeople(filter, tab) {
-  const tokens = normalized(filter).split(" ").filter((token) => token.length > 1);
+  const tokens = normalized(filter).split(" ").filter(Boolean);
   const people = Object.values(activeOrders()).filter((person) => {
     if (!tokens.length) return tab === "scanned" ? wasScanned(person) : !wasScanned(person);
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
@@ -890,13 +890,15 @@ function renderOrders() {
   const orderBreakdown = document.querySelector("#order-breakdown");
   const siteBreakdown = document.querySelector("#site-order-breakdown");
   const title = flowTab === "scanned" ? "Already scanned" : "Not scanned";
-  if (heading) heading.textContent = `${title} (${listedPeople("", flowTab).length})`;
-  if (siteHeading) siteHeading.textContent = `${title} (${listedPeople("", flowTab).length})`;
   if (orderBreakdown) orderBreakdown.textContent = breakdownText;
   if (siteBreakdown) siteBreakdown.textContent = breakdownText;
   const orders = document.querySelector("#orders");
   const filter = document.querySelector("#orders-search");
+  const siteFilter = document.querySelector("#site-orders-search");
   const people = listedPeople(filter ? filter.value : "", flowTab);
+  const sitePeople = listedPeople(siteFilter ? siteFilter.value : "", flowTab);
+  if (heading) heading.textContent = `${title} (${people.length})`;
+  if (siteHeading) siteHeading.textContent = `${title} (${sitePeople.length})`;
   orders.replaceChildren();
   if (!people.length) {
     const empty = document.createElement("p");
@@ -905,7 +907,7 @@ function renderOrders() {
   } else {
     for (const person of people) orders.append(orderCard(person));
   }
-  if (openedCode) {
+  if (openedCode && ticketScreen && !ticketScreen.hidden) {
     const person = catalogPerson(openedCode);
     if (person) paintOpen(person);
   }
@@ -1553,8 +1555,27 @@ document.querySelectorAll("[data-flow]").forEach((button) => {
     renderOrders();
   });
 });
+function runListSearch(inputId) {
+  const input = document.querySelector(inputId);
+  const query = input ? input.value.trim() : "";
+  const matches = query ? catalogMatches(query) : [];
+  if (matches.length === 1) {
+    paintOpen(matches[0]);
+    return;
+  }
+  renderOrders();
+  if (matches.length > 1 && input) input.focus();
+}
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
+document.querySelector("#orders-search-btn").addEventListener("click", () => { runListSearch("#orders-search"); });
+document.querySelector("#site-orders-search-btn").addEventListener("click", () => { runListSearch("#site-orders-search"); });
+document.querySelector("#orders-search").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") runListSearch("#orders-search");
+});
+document.querySelector("#site-orders-search").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") runListSearch("#site-orders-search");
+});
 document.querySelector("#main-page").addEventListener("click", closeTicket);
 document.querySelectorAll(".demo-toggle").forEach((button) => {
   button.addEventListener("click", () => {
