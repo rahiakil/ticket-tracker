@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -41,15 +41,18 @@
     </header>
 
     <section class="panel">
-      <h2 id="order-heading">Orders (0)</h2>
-      <p id="order-breakdown" class="note">(0 scanned only) (0 taken partially) (0 taken completely)</p>
-      <button id="refresh" class="secondary" type="button">Refresh</button>
-      <p id="admin-message" class="result" role="status" hidden></p>
-      <div id="orders"></div>
-    </section>
-
-    <section class="panel">
       <h1>Hey, scan the QR code.</h1>
+      <div class="counter-switch">
+        <button id="counter-entry" class="primary" type="button">Entry counter</button>
+        <button id="counter-food" class="secondary" type="button">Food counter</button>
+      </div>
+      <div id="qr-box"></div>
+      <label>Order number
+        <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Last 5 digits or full order number">
+      </label>
+      <button id="search-order" class="primary" type="button">Search</button>
+      <p id="search-result" class="result" role="status"></p>
+      <div id="open-order"></div>
       <button id="scan-btn" class="primary" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <div id="reader" hidden></div>
@@ -59,7 +62,14 @@
       <div id="file-reader" hidden></div>
       <p id="result" class="result" role="status" aria-live="polite"></p>
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
-      <p class="note">Each person is one row. Open it to see the variants. Enter how many line items were picked up, then save.</p>
+    </section>
+
+    <section class="panel">
+      <h2 id="order-heading">Orders (0)</h2>
+      <p id="order-breakdown" class="note">(0 scanned only) (0 taken partially) (0 taken completely)</p>
+      <button id="refresh" class="secondary" type="button">Refresh</button>
+      <p id="admin-message" class="result" role="status" hidden></p>
+      <div id="orders"></div>
     </section>
 
     <section class="panel" id="count-panel">
@@ -127,9 +137,10 @@
 
   <script src="config.js?v=13"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="ledger.js?v=14"></script>
+  <script src="catalog.js?v=1"></script>
+  <script src="ledger.js?v=15"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

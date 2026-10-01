@@ -158,11 +158,114 @@ function statusDetail(order) {
     return { peopleScanned: orders.length, itemTotal, ticketsTaken, variants };
   }
 
+  function variantList(order) {
+    return Object.keys(order.variants || {}).sort((left, right) => {
+      const leftIndex = Number(String(left).split(":")[1]);
+      const rightIndex = Number(String(right).split(":")[1]);
+      if (Number.isFinite(leftIndex) && Number.isFinite(rightIndex) && leftIndex !== rightIndex) return leftIndex - rightIndex;
+      const byNumber = Number(left) - Number(right);
+      return Number.isFinite(byNumber) && byNumber !== 0 ? byNumber : String(left).localeCompare(String(right));
+    }).map((id) => ({
+      id: order.variants[id].name || id,
+      key: id,
+      qty: order.variants[id].qty || 1,
+      lane: order.variants[id].lane || "",
+      tone: order.variants[id].tone || "",
+      taken: Boolean(order.variants[id].taken),
+      takenAt: order.variants[id].takenAt,
+    }));
+  }
+
+  function sheetVariants(person) {
+    const variants = {};
+    person.items.forEach((item, index) => {
+      variants[`item:${index}:${item.name}`] = {
+        taken: false,
+        takenAt: null,
+        name: item.name,
+        qty: item.qty,
+        lane: item.lane,
+        tone: item.tone,
+      };
+    });
+    return variants;
+  }
+
+  function syncTakenCount(order) {
+    order.takenCount = Object.values(order.variants || {}).filter((item) => item.taken).length;
+  }
+
+  function ensureSheetOrder(next, person, raw, at, actor) {
+    const existing = next.orders[person.code];
+    const variants = existing && existing.variants && Object.keys(existing.variants).length
+      ? structuredClone(existing.variants)
+      : sheetVariants(person);
+    next.orders[person.code] = {
+      orderId: person.code,
+      fullNumber: person.full,
+      name: person.name,
+      email: person.email,
+      raw: existing?.raw || raw,
+      scannedAt: existing?.scannedAt || at,
+      updatedAt: existing?.updatedAt || at,
+      actor: existing?.actor || actor,
+      takenCount: existing?.takenCount || 0,
+      variants,
+    };
+    return { order: next.orders[person.code], existing: Boolean(existing) };
+  }
+
+  function rememberSheet(book, person, raw, at, actor, counter) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const placed = ensureSheetOrder(next, person, raw, at, actor);
+    const label = counter === "food" ? "food" : "entry";
+    const note = placed.existing
+      ? `${person.code} scanned again at the ${label} counter`
+      : `${person.code} scanned at the ${label} counter`;
+    if (!placed.existing) addLine(next, at, `order ${person.code} scanned but not taken`);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: note });
+    if (!placed.existing) placed.order.updatedAt = at;
+    return { book: pruneBook(next), changed: true, already: placed.existing, orderId: person.code };
+  }
+
+  function markLane(book, person, raw, lane, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const placed = ensureSheetOrder(next, person, raw, at, actor);
+    let newlyTaken = 0;
+    for (const item of Object.values(placed.order.variants)) {
+      if (item.lane !== lane || item.taken) continue;
+      item.taken = true;
+      item.takenAt = at;
+      newlyTaken += 1;
+    }
+    syncTakenCount(placed.order);
+    placed.order.updatedAt = at;
+    placed.order.actor = actor || placed.order.actor;
+    const text = lane === "entry"
+      ? `${person.code} checked in at the entry counter`
+      : `${person.code} food picked up at the food counter`;
+    const changed = newlyTaken > 0 || !placed.existing;
+    if (changed) {
+      addLine(next, at, text);
+      if (!Array.isArray(next.log)) next.log = [];
+      next.log.push({ at, text });
+    }
+    return { book: pruneBook(next), changed, already: !changed, orderId: person.code };
+  }
+
+  function activityFor(book, code) {
+    return (book.log || []).filter((item) => item && String(item.text).includes(String(code)));
+  }
+
   function summary(book) {
     return Object.values(book.orders || {})
       .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))
       .map((order) => ({
         orderId: order.orderId,
+        fullNumber: order.fullNumber || order.orderId,
+        name: order.name || "",
+        email: order.email || "",
         raw: order.raw,
         scannedAt: order.scannedAt,
         updatedAt: order.updatedAt,
@@ -171,11 +274,7 @@ function statusDetail(order) {
         detail: statusDetail(order),
         taken: takenNumbers(order).taken,
         total: takenNumbers(order).total,
-        variants: Object.keys(order.variants).sort((left, right) => Number(left) - Number(right)).map((id) => ({
-          id,
-          taken: Boolean(order.variants[id].taken),
-          takenAt: order.variants[id].takenAt,
-        })),
+        variants: variantList(order),
       }));
   }
 
@@ -262,6 +361,9 @@ function statusDetail(order) {
     setTakenCount,
     deleteOrder,
     rememberScan,
+    rememberSheet,
+    markLane,
+    activityFor,
     markTaken,
     countsOf,
     pruneBook,

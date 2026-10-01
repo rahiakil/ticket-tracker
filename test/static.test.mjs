@@ -21,6 +21,11 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
   assert.match(app, /Save picked up/);
+  assert.match(html, /Entry counter/);
+  assert.match(html, /Food counter/);
+  assert.match(html, /id="search-order"/);
+  assert.match(app, /Mark food picked up/);
+  assert.match(app, /Already seen/);
   assert.equal(app.includes("FormData"), false);
   assert.equal(app.includes("location.href"), false);
   assert.match(app, /facingMode:\s*"environment"/);

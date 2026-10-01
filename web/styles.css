@@ -165,6 +165,21 @@ h2 { font-size: 1.25rem; }
 .taken-row input { width: 5.5rem; flex: 0 0 auto; margin-top: 0; }
 .variant-list { margin: 8px 0 0; color: #4d463d; word-break: break-word; }
 .taken-variant { color: var(--good); font-weight: 750; }
+.counter-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qr-view { display: flex; justify-content: center; margin: 8px 0 12px; }
+.qr-view svg { width: 180px; height: 180px; background: #fff; }
+.item-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
+.item-pill { display: inline-block; margin: 0; padding: 8px 12px; border-radius: 999px; color: #fff; font-weight: 750; }
+.tone-entry { background: #1d4ed8; }
+.tone-sat-veg { background: #7c3aed; }
+.tone-sat-nonveg { background: #4c1d95; }
+.tone-sun-veg { background: #15803d; }
+.tone-sun-nonveg { background: #0f766e; }
+.tone-veg { background: #c2410c; }
+.tone-nonveg { background: #b91c1c; }
+.tone-other { background: #64748b; }
+.item-pill.picked { background: #9ca3af; color: #1f2937; }
+.item-pill.checked { outline: 3px solid #111; }
 .note { color: #4d463d; }
 .row-buttons { display: grid; gap: 10px; margin: 10px 0; }
 

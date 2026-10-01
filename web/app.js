@@ -30,6 +30,7 @@ let scanGeneration = 0;
 let camera = null;
 let cameraOn = false;
 let lastAttempt = null;
+let openedCode = "";
 let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
@@ -86,6 +87,7 @@ function enterApp() {
   }
   document.querySelector("#who").textContent = `Signed in as ${session.username}`;
   show(workspace);
+  paintCounter();
   refreshOrders();
 }
 
@@ -290,8 +292,160 @@ async function flushWrites() {
   if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
 }
 
+function catalogPerson(raw) {
+  const catalog = window.TicketCatalog;
+  if (!catalog || typeof catalog.lookup !== "function") return null;
+  return catalog.lookup(raw);
+}
+
+function activeCounter() {
+  return localStorage.getItem("ticket-tracker-counter") === "food" ? "food" : "entry";
+}
+
+function paintCounter() {
+  const food = activeCounter() === "food";
+  document.querySelector("#counter-entry").className = food ? "secondary" : "primary";
+  document.querySelector("#counter-food").className = food ? "primary" : "secondary";
+}
+
+function clockText(at) {
+  const when = new Date(at);
+  if (Number.isNaN(when.getTime())) return String(at || "");
+  return when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function paintQr(code) {
+  const box = document.querySelector("#qr-box");
+  if (!box) return;
+  box.replaceChildren();
+  if (!code || typeof qrcode !== "function") return;
+  try {
+    const drawing = qrcode(0, "M");
+    drawing.addData(String(code));
+    drawing.make();
+    const view = document.createElement("div");
+    view.className = "qr-view";
+    view.innerHTML = drawing.createSvgTag(6, 2);
+    box.append(view);
+  } catch {
+    box.replaceChildren();
+  }
+}
+
+function storedItems(person) {
+  const stored = currentBook.orders[person.code];
+  if (!stored) return person.items.map((item) => ({ id: item.name, qty: item.qty, lane: item.lane, tone: item.tone, taken: false }));
+  const row = TicketLedger.summary({ schemaVersion: 1, lines: [], log: [], orders: { [person.code]: stored } })[0];
+  return row ? row.variants : [];
+}
+
+function itemPills(person) {
+  const list = document.createElement("div");
+  list.className = "item-pills";
+  for (const item of storedItems(person)) {
+    const pill = document.createElement("span");
+    const foodDone = item.lane === "food" && item.taken;
+    const entryDone = item.lane === "entry" && item.taken;
+    pill.className = `item-pill tone-${item.tone || "other"}${foodDone ? " picked" : ""}${entryDone ? " checked" : ""}`;
+    pill.textContent = `${item.id} x ${item.qty || 1}`;
+    list.append(pill);
+  }
+  return list;
+}
+
+function paintOpen(person) {
+  openedCode = person.code;
+  paintQr(person.code);
+  const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
+  const search = document.querySelector("#search-result");
+  search.textContent = `${seen ? "Already seen" : "Not seen yet"}. ${person.name}. ${person.email}.`;
+  search.className = seen ? "result already_seen" : "result pending";
+  const host = document.querySelector("#open-order");
+  host.replaceChildren();
+  const card = document.createElement("article");
+  card.className = "card";
+  const title = document.createElement("p");
+  title.textContent = `${person.name} · ${person.full}`;
+  const mail = document.createElement("p");
+  mail.textContent = person.email;
+  const eventLine = document.createElement("p");
+  eventLine.textContent = `${person.event} · ${person.date} · ${person.amount}`;
+  const action = document.createElement("button");
+  action.type = "button";
+  action.className = "primary";
+  if (activeCounter() === "food") {
+    action.textContent = "Mark food picked up";
+    action.addEventListener("click", () => runLane(person, "food"));
+  } else {
+    action.textContent = "Check in";
+    action.addEventListener("click", () => runLane(person, "entry"));
+  }
+  const activity = document.createElement("div");
+  const logs = TicketLedger.activityFor(currentBook, person.code);
+  if (!logs.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No activity for this order yet.";
+    activity.append(empty);
+  } else {
+    for (const item of [...logs].reverse()) {
+      const line = document.createElement("p");
+      line.textContent = `${clockText(item.at)} — ${item.text}`;
+      activity.append(line);
+    }
+  }
+  card.append(title, mail, eventLine, itemPills(person), action, activity);
+  host.append(card);
+}
+
+function runLane(person, lane) {
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.markLane(book, person, person.full, lane, at, actor);
+    const message = lane === "entry"
+      ? (next.already ? `Already checked in. ${person.name}. ${person.email}.` : `Checked in. ${person.name}. ${person.email}.`)
+      : (next.already ? `Food already picked up. ${person.name}. ${person.email}.` : `Food picked up. ${person.name}. ${person.email}.`);
+    return { write: next.changed, book: next.book, message };
+  });
+  const already = String(applied.message || "").startsWith("Already") || String(applied.message || "").startsWith("Food already");
+  showMessage(applied.message, already ? "already_seen" : "pending");
+  paintOpen(person);
+  renderOrders();
+}
+
+function searchOrder() {
+  const raw = document.querySelector("#order-query").value.trim();
+  const person = catalogPerson(raw);
+  const search = document.querySelector("#search-result");
+  if (!person) {
+    openedCode = "";
+    document.querySelector("#qr-box").replaceChildren();
+    document.querySelector("#open-order").replaceChildren();
+    search.textContent = "That order number is not on the sheet.";
+    search.className = "result invalid";
+    return;
+  }
+  paintOpen(person);
+}
+
 function submitAttempt() {
   if (!lastAttempt) return;
+  const person = catalogPerson(lastAttempt.raw);
+  if (person) {
+    const at = new Date().toISOString();
+    const actor = readSession()?.username || "admin";
+    const applied = queueWrite((book) => {
+      const next = TicketLedger.rememberSheet(book, person, lastAttempt.raw, at, actor, activeCounter());
+      const message = next.already
+        ? `Already seen. ${person.name}. ${person.email}.`
+        : `${person.name}. ${person.email}.`;
+      return { write: next.changed, book: next.book, message };
+    });
+    showMessage(applied.message, String(applied.message).startsWith("Already") ? "already_seen" : "pending");
+    paintOpen(person);
+    renderOrders();
+    return;
+  }
   const parsed = TicketLedger.parseQr(lastAttempt.raw);
   if (!parsed) {
     showMessage("Invalid QR", "invalid");
@@ -430,9 +584,13 @@ function renderOrders() {
     const empty = document.createElement("p");
     empty.textContent = "No orders scanned yet.";
     orders.append(empty);
-    return;
+  } else {
+    for (const order of rows) orders.append(orderCard(order));
   }
-  for (const order of rows) orders.append(orderCard(order));
+  if (openedCode) {
+    const person = catalogPerson(openedCode);
+    if (person) paintOpen(person);
+  }
   renderLog();
   renderRecent();
 }
@@ -453,11 +611,18 @@ function variantLine(variants) {
 function orderCard(order) {
   const card = document.createElement("article");
   card.className = "card";
+  const person = catalogPerson(order.fullNumber || order.orderId) || catalogPerson(order.orderId);
   const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "secondary order-toggle";
-  toggle.textContent = `Order ${order.orderId} (${order.total}) ${kind}`;
+  const who = person ? person.name : (order.name || "Order");
+  toggle.textContent = `${who} ${order.orderId} (${order.total}) ${kind}`;
+  if (person) {
+    toggle.addEventListener("click", () => paintOpen(person));
+    card.append(toggle);
+    return card;
+  }
   const box = document.createElement("div");
   box.hidden = true;
   const status = document.createElement("p");
@@ -490,38 +655,44 @@ function orderCard(order) {
 }
 
 function renderRecent() {
-  const box = document.querySelector("#recent-orders");
-  if (!box) return;
-  box.replaceChildren();
+  const recent = document.querySelector("#recent-orders");
+  if (!recent) return;
+  recent.replaceChildren();
   const rows = TicketLedger.summary(currentBook).slice(0, 30);
   if (!rows.length) {
     const empty = document.createElement("p");
     empty.textContent = "No recent scans.";
-    box.append(empty);
+    recent.append(empty);
     return;
   }
   for (const order of rows) {
     const card = document.createElement("article");
     card.className = "card";
+    const person = catalogPerson(order.fullNumber || order.orderId) || catalogPerson(order.orderId);
     const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "secondary order-toggle";
-    toggle.textContent = `Order ${order.orderId} (${order.total}) ${kind}`;
-    const box = document.createElement("div");
-    box.hidden = true;
+    const who = person ? person.name : (order.name || "Order");
+    toggle.textContent = `${who} ${order.orderId} (${order.total}) ${kind}`;
+    const details = document.createElement("div");
+    details.hidden = true;
     const status = document.createElement("p");
-    status.textContent = `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
-    box.append(status, variantLine(order.variants));
+    status.textContent = person
+      ? `${person.name}. ${person.email}. ${order.detail || order.status}`
+      : `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
+    details.append(status);
+    if (person) details.append(itemPills(person));
+    else details.append(variantLine(order.variants));
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary";
     button.textContent = "Delete";
     button.addEventListener("click", () => deleteRecent(order.orderId));
-    box.append(button);
-    toggle.addEventListener("click", () => { box.hidden = !box.hidden; });
-    card.append(toggle, box);
-    box.append(card);
+    details.append(button);
+    toggle.addEventListener("click", () => { details.hidden = !details.hidden; });
+    card.append(toggle, details);
+    recent.append(card);
   }
 }
 
@@ -610,6 +781,22 @@ document.querySelector("#show-site-totals").addEventListener("click", (event) =>
   toggleBox(event.currentTarget, "#site-count-body", "Show totals");
 });
 
+document.querySelector("#counter-entry").addEventListener("click", () => {
+  localStorage.setItem("ticket-tracker-counter", "entry");
+  paintCounter();
+  const person = catalogPerson(openedCode);
+  if (person) paintOpen(person);
+});
+document.querySelector("#counter-food").addEventListener("click", () => {
+  localStorage.setItem("ticket-tracker-counter", "food");
+  paintCounter();
+  const person = catalogPerson(openedCode);
+  if (person) paintOpen(person);
+});
+document.querySelector("#search-order").addEventListener("click", searchOrder);
+document.querySelector("#order-query").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") searchOrder();
+});
 document.querySelector("#refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
 

@@ -79,6 +79,39 @@ test("saving a new order retries a GitHub SHA conflict and keeps the text record
   assert.equal(puts, 2);
 });
 
+test("a sheet order uses the last 5 digits and turns food gray when picked up", () => {
+  const person = {
+    code: "12166",
+    full: "UTT20260900012166",
+    name: "barna NA",
+    email: "barna_c@yahoo.com",
+    items: [
+      { name: "Saturday Lunch Vegetarian", qty: 1, lane: "food", tone: "sat-veg" },
+      { name: "Sunday Lunch Non-Vegetarian", qty: 1, lane: "food", tone: "sun-nonveg" },
+      { name: "Regular Member Entry", qty: 1, lane: "entry", tone: "entry" },
+      { name: "Chinese Non-Veg Combo", qty: 1, lane: "food", tone: "nonveg" },
+    ],
+  };
+  const scanned = ledger.rememberSheet(ledger.emptyBook(), person, "12166", "2026-09-30T17:20:00.000Z", "admin", "entry");
+  assert.equal(scanned.already, false);
+  assert.equal(scanned.book.orders["12166"].name, "barna NA");
+  assert.equal(ledger.statusOf(scanned.book.orders["12166"]), "Scanned but not taken");
+  const again = ledger.rememberSheet(scanned.book, person, "12166", "2026-09-30T17:21:00.000Z", "admin", "entry");
+  assert.equal(again.already, true);
+  assert.match(again.book.log.map((item) => item.text).join(" "), /12166 scanned again at the entry counter/);
+  const entered = ledger.markLane(again.book, person, person.full, "entry", "2026-09-30T17:22:00.000Z", "admin");
+  assert.equal(entered.book.orders["12166"].variants["item:2:Regular Member Entry"].taken, true);
+  assert.equal(entered.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, false);
+  const fed = ledger.markLane(entered.book, person, person.full, "food", "2026-09-30T17:30:00.000Z", "admin");
+  assert.equal(fed.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, true);
+  assert.equal(fed.book.orders["12166"].variants["item:1:Sunday Lunch Non-Vegetarian"].taken, true);
+  assert.equal(fed.book.orders["12166"].variants["item:3:Chinese Non-Veg Combo"].taken, true);
+  assert.equal(ledger.statusOf(fed.book.orders["12166"]), "Taken");
+  const repeat = ledger.markLane(fed.book, person, person.full, "food", "2026-09-30T17:31:00.000Z", "admin");
+  assert.equal(repeat.already, true);
+  assert.equal(repeat.changed, false);
+});
+
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {
   const book = ledger.emptyBook();
   book.orders.old = { orderId: "old", updatedAt: "2020-01-01T00:00:00.000Z", scannedAt: "2020-01-01T00:00:00.000Z", variants: {} };
