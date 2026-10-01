@@ -500,6 +500,8 @@ function statusDetail(order) {
         });
         const pending = items.filter((item) => !item.taken);
         const picked = items.filter((item) => item.taken);
+        const utilized = picked.reduce((sum, item) => sum + (item.qty || 1), 0);
+        const total = items.reduce((sum, item) => sum + (item.qty || 1), 0);
         const seen = Boolean(saved && saved.scannedAt);
         let status = "Not seen";
         if (seen && items.length && pending.length === 0) status = "Taken completely";
@@ -507,6 +509,8 @@ function statusDetail(order) {
         else if (seen || picked.length) status = "Taken partially";
         const names = (list) => list.map((item) => `${item.name} x ${item.qty}`).join("; ");
         return {
+          utilized,
+          total,
           full: person.full,
           code: person.code,
           name: person.name,
@@ -527,14 +531,14 @@ function statusDetail(order) {
     const rows = exportRows(book, catalogOrders);
     const seen = rows.filter((row) => row.seen === "Seen").length;
     const pendingItems = rows.reduce((sum, row) => sum + row.pendingCount, 0);
-    const header = ["Order number", "Code", "Name", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+    const header = ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
     const lines = [
       ["Seen", seen],
       ["Not seen", rows.length - seen],
       ["Pending items", pendingItems],
       [],
       header,
-      ...rows.map((row) => [row.full, row.code, row.name, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
+      ...rows.map((row) => [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
     ];
     return lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
   }

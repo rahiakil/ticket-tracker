@@ -492,7 +492,14 @@ function itemBoard(person) {
   return wrap;
 }
 
-function paintOpen(person) {
+function ordersForPerson(person) {
+  const email = String(person.email || "").trim().toLowerCase();
+  const orders = Object.values(activeOrders());
+  const matches = orders.filter((item) => email ? String(item.email || "").trim().toLowerCase() === email : item.name === person.name);
+  return matches.length ? matches : [person];
+}
+
+function paintOpen(person, options) {
   if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
   const who = holderNow();
@@ -527,10 +534,12 @@ function paintOpen(person) {
   const activity = document.createElement("div");
   activity.className = "log-scroll";
   const heading = document.createElement("p");
-  heading.textContent = "This order, one by one";
+  const allActivity = Boolean(options && options.allActivity);
+  const related = allActivity ? ordersForPerson(person) : [person];
+  heading.textContent = allActivity ? `All activity for ${person.name}` : "This order, one by one";
   activity.append(heading);
-  const logs = TicketLedger.activityFor(currentBook, person.code)
-    .slice()
+  const logs = related
+    .flatMap((item) => TicketLedger.activityFor(currentBook, item.code))
     .sort((left, right) => String(left.at).localeCompare(String(right.at)));
   if (!logs.length) {
     const empty = document.createElement("p");
@@ -780,6 +789,8 @@ function renderLiveSheet() {
     table.replaceChildren();
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
+    const nameIndex = (rows[0] || []).indexOf("Name");
+    const codeIndex = (rows[0] || []).indexOf("Code");
     (rows[0] || []).forEach((label) => {
       const cell = document.createElement("th");
       cell.textContent = label;
@@ -789,9 +800,21 @@ function renderLiveSheet() {
     const body = document.createElement("tbody");
     rows.slice(1).forEach((row) => {
       const line = document.createElement("tr");
-      row.forEach((value) => {
+      row.forEach((value, index) => {
         const cell = document.createElement("td");
-        cell.textContent = value;
+        if (index === nameIndex) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "text-button sheet-name";
+          button.textContent = value;
+          button.addEventListener("click", () => {
+            const person = catalogPerson(row[codeIndex]);
+            if (person) paintOpen(person, { allActivity: true });
+          });
+          cell.append(button);
+        } else {
+          cell.textContent = value;
+        }
         line.append(cell);
       });
       body.append(line);
@@ -933,8 +956,8 @@ async function refreshOrders() {
 function statusGrid(book) {
   const rows = TicketLedger.exportRows(book || currentBook, activeOrders());
   return [
-    ["Order number", "Code", "Name", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"],
-    ...rows.map((row) => [row.full, row.code, row.name, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
+    ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"],
+    ...rows.map((row) => [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
   ];
 }
 
