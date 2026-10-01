@@ -474,8 +474,11 @@ function itemButtons(person) {
       const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
       button.className = `item-pill coupon-${kind} ${state}`;
       if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
+      const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑" };
+      const icon = icons[kind] || "";
       const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
-      button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
+      const label = `${item.id} x ${item.qty || 1}`;
+      button.textContent = [icon, label, note].filter(Boolean).join("\n");
       if (locked || state !== "ready") button.disabled = true;
       else button.addEventListener("click", () => markOne(person, index));
       list.append(button);

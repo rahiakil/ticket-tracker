@@ -321,7 +321,7 @@ function statusDetail(order) {
     if (/\bpaneer\b/.test(text)) return "paneer";
     if (/\bmutton\b/.test(text)) return "mutton";
     if (/\bchicken\b/.test(text)) return "chicken";
-    if (/\bfish\b|\bmachh/.test(text)) return "fish";
+    if (/\bfish\b|\bmachh|\bmaach/.test(text)) return "fish";
     if (/non-?veg/.test(text)) return "nonveg";
     if (/\bvegetarian\b|\bveg\b/.test(text)) return "veg";
     return "food-other";
