@@ -17,6 +17,7 @@ const gate = document.querySelector("#gate");
 const login = document.querySelector("#login");
 const workspace = document.querySelector("#workspace");
 const adminScreen = document.querySelector("#admin-screen");
+const ticketScreen = document.querySelector("#ticket-screen");
 const resultEl = document.querySelector("#result");
 const retryButton = document.querySelector("#retry");
 const reader = document.querySelector("#reader");
@@ -31,6 +32,7 @@ let camera = null;
 let cameraOn = false;
 let lastAttempt = null;
 let openedCode = "";
+let ticketReturn = null;
 let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
@@ -43,6 +45,14 @@ function show(view) {
   login.hidden = view !== login;
   workspace.hidden = view !== workspace;
   adminScreen.hidden = view !== adminScreen;
+  if (ticketScreen) ticketScreen.hidden = view !== ticketScreen;
+}
+
+function closeTicket() {
+  openedCode = "";
+  const body = document.querySelector("#ticket-body");
+  if (body) body.replaceChildren();
+  show(ticketReturn || workspace);
 }
 
 function showGate() {
@@ -314,8 +324,8 @@ function clockText(at) {
   return when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function paintQr(code) {
-  const box = document.querySelector("#qr-box");
+function paintQr(code, box) {
+  box = box || document.querySelector("#qr-box");
   if (!box) return;
   box.replaceChildren();
   if (!code || typeof qrcode !== "function") return;
@@ -422,16 +432,23 @@ function itemBoard(person) {
 }
 
 function paintOpen(person) {
+  if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
+  if (ticketScreen) show(ticketScreen);
   paintQr(person.code);
   const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
   const search = document.querySelector("#search-result");
-  search.textContent = `${seen ? "Already seen" : "Not seen yet"}. ${person.name}. ${person.email}.`;
-  search.className = seen ? "result already_seen" : "result pending";
-  const host = document.querySelector("#open-order");
+  if (search) {
+    search.textContent = `${seen ? "Already seen" : "Not seen yet"}. ${person.name}. ${person.email}.`;
+    search.className = seen ? "result already_seen" : "result pending";
+  }
+  const host = document.querySelector("#ticket-body");
   host.replaceChildren();
   const view = orderView(person);
   const card = document.createElement("article");
+  const qrHost = document.createElement("div");
+  paintQr(person.code, qrHost);
+  card.append(qrHost);
   card.className = `card ${view.allTaken ? "complete" : view.noneTaken ? "untaken" : "partial"}`;
   const title = document.createElement("p");
   title.textContent = `${person.name} · ${person.full}`;
@@ -440,6 +457,9 @@ function paintOpen(person) {
   const eventLine = document.createElement("p");
   eventLine.textContent = `${person.event} · ${person.date} · ${person.amount}`;
   const activity = document.createElement("div");
+  const heading = document.createElement("h2");
+  heading.textContent = "This order";
+  activity.append(heading);
   const logs = TicketLedger.activityFor(currentBook, person.code);
   if (!logs.length) {
     const empty = document.createElement("p");
@@ -481,7 +501,8 @@ function searchOrder() {
   if (!person) {
     openedCode = "";
     document.querySelector("#qr-box").replaceChildren();
-    document.querySelector("#open-order").replaceChildren();
+    const openOrder = document.querySelector("#open-order");
+    if (openOrder) openOrder.replaceChildren();
     search.textContent = "That order number is not on the sheet.";
     search.className = "result invalid";
     return;
@@ -811,6 +832,7 @@ document.querySelector("#counter-food").addEventListener("click", () => {
 });
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
+document.querySelector("#main-page").addEventListener("click", closeTicket);
 document.querySelector("#search-order").addEventListener("click", searchOrder);
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchOrder();

@@ -385,7 +385,8 @@ function statusDetail(order) {
   }
 
   function activityFor(book, code) {
-    return (book.log || []).filter((item) => item && String(item.text).includes(String(code)));
+    const needle = new RegExp(`\\b${String(code).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+    return (book.log || []).filter((item) => item && needle.test(String(item.text)));
   }
 
   function isSheetOrder(order) {
