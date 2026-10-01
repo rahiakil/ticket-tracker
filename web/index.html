@@ -5,10 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=28">
+  <link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body>
 <div class="app-shell">
+<aside class="legend" aria-label="Color key">
+  <h2>Colors</h2>
+  <p class="legend-label">Entry</p>
+  <ul>
+    <li><span class="swatch coupon-entry-friday"></span><span>Friday</span></li>
+    <li><span class="swatch coupon-entry-saturday"></span><span>Saturday</span></li>
+    <li><span class="swatch coupon-entry-sunday"></span><span>Sunday</span></li>
+    <li><span class="swatch swatch-entry-other"></span><span>Other entry</span></li>
+  </ul>
+  <p class="legend-label">Food</p>
+  <ul>
+    <li><span class="swatch coupon-veg"></span><span>Vegetarian</span></li>
+    <li><span class="swatch coupon-paneer"></span><span>Paneer</span></li>
+    <li><span class="swatch coupon-snack"></span><span>Snacks</span></li>
+    <li><span class="swatch coupon-nonveg"></span><span>Non-veg</span></li>
+    <li><span class="swatch coupon-mutton"></span><span>Mutton</span></li>
+    <li><span class="swatch coupon-chicken"></span><span>Chicken</span></li>
+    <li><span class="swatch coupon-fish"></span><span>Fish</span></li>
+  </ul>
+  <p class="legend-label">Status</p>
+  <ul>
+    <li><span class="swatch swatch-semi"></span><span>Demo marked</span></li>
+    <li><span class="swatch swatch-picked"></span><span>Taken</span></li>
+    <li><span class="swatch swatch-quiet"></span><span>Other counter</span></li>
+    <li><span class="swatch swatch-later"></span><span>Not yet</span></li>
+  </ul>
+</aside>
 <div class="app-main">
   <header class="brand-bar">
     <img src="logo.png" alt="Uttoron">
@@ -194,33 +221,6 @@
   </main>
 
 </div>
-<aside class="legend" aria-label="Color key">
-  <h2>Colors</h2>
-  <p class="legend-label">Entry</p>
-  <ul>
-    <li><span class="swatch coupon-entry-friday"></span>Friday</li>
-    <li><span class="swatch coupon-entry-saturday"></span>Saturday</li>
-    <li><span class="swatch coupon-entry-sunday"></span>Sunday</li>
-    <li><span class="swatch swatch-entry-other"></span>Other entry</li>
-  </ul>
-  <p class="legend-label">Food</p>
-  <ul>
-    <li><span class="swatch coupon-veg"></span>Vegetarian</li>
-    <li><span class="swatch coupon-paneer"></span>Paneer</li>
-    <li><span class="swatch coupon-snack"></span>Snacks</li>
-    <li><span class="swatch coupon-nonveg"></span>Non-veg</li>
-    <li><span class="swatch coupon-mutton"></span>Mutton</li>
-    <li><span class="swatch coupon-chicken"></span>Chicken</li>
-    <li><span class="swatch coupon-fish"></span>Fish</li>
-  </ul>
-  <p class="legend-label">Status</p>
-  <ul>
-    <li><span class="swatch swatch-semi"></span>Demo marked</li>
-    <li><span class="swatch swatch-picked"></span>Taken</li>
-    <li><span class="swatch swatch-quiet"></span>Other counter</li>
-    <li><span class="swatch swatch-later"></span>Not yet</li>
-  </ul>
-</aside>
 </div>
   <div id="dialog" class="backdrop" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
