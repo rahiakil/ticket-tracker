@@ -209,6 +209,16 @@ h2 { font-size: 1.25rem; }
 .item-pill.picked { background: #9ca3af; color: #1f2937; }
 .item-pill.checked { outline: 3px solid #111; }
 .note { color: #4d463d; }
+.log-scroll {
+  max-height: 220px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.25;
+  padding-right: 4px;
+}
+.log-scroll p { margin: 3px 0; font-size: 12px; word-break: break-word; }
 .row-buttons { display: grid; gap: 10px; margin: 10px 0; }
 
 .result { min-height: 1.2em; margin: 12px 0 0; padding: 10px 12px; border-left: 6px solid transparent; }

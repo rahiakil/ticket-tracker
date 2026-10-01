@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -96,7 +96,10 @@
 
     <section class="panel">
       <h2>Log</h2>
-      <div id="activity-log"></div>
+      <label>Search log
+        <input id="log-search" autocomplete="off" placeholder="Name, email, or order number">
+      </label>
+      <div id="activity-log" class="log-scroll"></div>
     </section>
   </main>
 
@@ -142,7 +145,10 @@
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
       <h2>Log</h2>
-      <div id="site-log"></div>
+      <label>Search log
+        <input id="site-log-search" autocomplete="off" placeholder="Name, email, or order number">
+      </label>
+      <div id="site-log" class="log-scroll"></div>
     </section>
   </main>
 
@@ -165,6 +171,6 @@
   <script src="ledger.js?v=21"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>

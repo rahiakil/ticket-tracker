@@ -507,18 +507,21 @@ function paintOpen(person) {
   const eventLine = document.createElement("p");
   eventLine.textContent = `${person.event} · ${person.date} · ${person.amount}`;
   const activity = document.createElement("div");
-  const heading = document.createElement("h2");
-  heading.textContent = "This order";
+  activity.className = "log-scroll";
+  const heading = document.createElement("p");
+  heading.textContent = "This order, one by one";
   activity.append(heading);
-  const logs = TicketLedger.activityFor(currentBook, person.code);
+  const logs = TicketLedger.activityFor(currentBook, person.code)
+    .slice()
+    .sort((left, right) => String(left.at).localeCompare(String(right.at)));
   if (!logs.length) {
     const empty = document.createElement("p");
     empty.textContent = "No activity for this order yet.";
     activity.append(empty);
   } else {
-    for (const item of [...logs].reverse()) {
+    for (const item of logs) {
       const line = document.createElement("p");
-      line.textContent = `${clockText(item.at)} — ${item.text}`;
+      line.textContent = logLine(item, person);
       activity.append(line);
     }
   }
@@ -613,24 +616,51 @@ function readNotes() {
   }
 }
 
+function personForLog(text) {
+  const match = String(text || "").match(/\b(\d{5})\b/);
+  if (!match) return null;
+  return activeOrders()[match[1]] || null;
+}
+
+function logLine(item, person) {
+  const when = new Date(item.at);
+  const clock = Number.isNaN(when.getTime()) ? item.at : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const who = person || personForLog(item.text);
+  const name = who ? `${who.name} · ${who.code}` : "";
+  return name ? `${clock} — ${name} — ${item.text}` : `${clock} — ${item.text}`;
+}
+
+function logMatches(item, query) {
+  const text = query.trim().toLowerCase();
+  if (!text) return true;
+  const person = personForLog(item.text);
+  const hay = [item.text, person && person.name, person && person.email, person && person.full, person && person.code].join(" ").toLowerCase();
+  return hay.includes(text);
+}
+
 function renderLog() {
-  const boxes = [document.querySelector("#activity-log"), document.querySelector("#site-log")].filter(Boolean);
+  const boxes = [
+    ["#activity-log", "#log-search"],
+    ["#site-log", "#site-log-search"],
+  ];
   const rows = [...(currentBook.log || []), ...readNotes()]
-    .sort((left, right) => String(right.at).localeCompare(String(left.at)))
-    .slice(0, 30);
-  for (const box of boxes) {
+    .sort((left, right) => String(right.at).localeCompare(String(left.at)));
+  for (const [boxId, inputId] of boxes) {
+    const box = document.querySelector(boxId);
+    if (!box) continue;
+    const input = document.querySelector(inputId);
+    const query = input ? input.value : "";
+    const shown = rows.filter((item) => logMatches(item, query)).slice(0, 400);
     box.replaceChildren();
-    if (!rows.length) {
+    if (!shown.length) {
       const empty = document.createElement("p");
-      empty.textContent = "No log entries yet.";
+      empty.textContent = query.trim() ? "No matching log lines." : "No log entries yet.";
       box.append(empty);
       continue;
     }
-    for (const item of rows) {
+    for (const item of shown) {
       const line = document.createElement("p");
-      const when = new Date(item.at);
-      const clock = Number.isNaN(when.getTime()) ? item.at : when.toLocaleString();
-      line.textContent = `${clock} — ${item.text}`;
+      line.textContent = logLine(item);
       box.append(line);
     }
   }
@@ -881,6 +911,8 @@ document.querySelector("#counter-food").addEventListener("click", () => {
   paintCounter();
   renderOrders();
 });
+document.querySelector("#log-search").addEventListener("input", () => { renderLog(); });
+document.querySelector("#site-log-search").addEventListener("input", () => { renderLog(); });
 document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
