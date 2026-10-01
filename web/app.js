@@ -849,7 +849,68 @@ function listedPeople(filter, tab) {
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
     return tokens.every((token) => hay.includes(token));
   });
-  return people.sort((left, right) => left.name.localeCompare(right.name));
+  return people.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
+}
+
+function renderNameList(box, people, searching) {
+  const token = (box.renderToken || 0) + 1;
+  box.renderToken = token;
+  box.replaceChildren();
+  if (!people.length) {
+    const empty = document.createElement("p");
+    empty.textContent = searching ? "No matching names." : "No names in this list.";
+    box.append(empty);
+    return;
+  }
+  const started = Date.now();
+  const status = document.createElement("p");
+  status.className = "spinner-row";
+  status.innerHTML = `<span class="spinner"></span><span class="load-timer">Loading names… 0s</span>`;
+  box.append(status);
+  const timer = window.setInterval(() => {
+    const label = status.querySelector(".load-timer");
+    if (label) label.textContent = `Loading names… ${Math.max(1, Math.round((Date.now() - started) / 1000))}s`;
+  }, 200);
+  const sorted = people.slice();
+  let index = 0;
+  let letter = "";
+  function step() {
+    if (box.renderToken !== token) {
+      window.clearInterval(timer);
+      return;
+    }
+    if (index === 0) status.remove();
+    const slice = sorted.slice(index, index + 30);
+    for (const person of slice) {
+      const initial = (person.name || "").trim().charAt(0).toUpperCase();
+      const key = /[A-Z]/.test(initial) ? initial : "#";
+      if (key !== letter) {
+        letter = key;
+        const head = document.createElement("p");
+        head.className = "letter-heading";
+        head.textContent = letter;
+        box.append(head);
+      }
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary name-row";
+      button.textContent = `${person.name} · ${person.code}`;
+      button.addEventListener("click", () => paintOpen(person));
+      box.append(button);
+      if (box.id === "recent-orders") {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "text-button";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", () => deleteRecent(person.code));
+        box.append(remove);
+      }
+    }
+    index += slice.length;
+    if (index < sorted.length) window.requestAnimationFrame(step);
+    else window.clearInterval(timer);
+  }
+  window.requestAnimationFrame(step);
 }
 
 function fillCount(id, value) {
@@ -899,14 +960,7 @@ function renderOrders() {
   const sitePeople = listedPeople(siteFilter ? siteFilter.value : "", flowTab);
   if (heading) heading.textContent = `${title} (${people.length})`;
   if (siteHeading) siteHeading.textContent = `${title} (${sitePeople.length})`;
-  orders.replaceChildren();
-  if (!people.length) {
-    const empty = document.createElement("p");
-    empty.textContent = filter && filter.value.trim() ? "No matching names." : flowTab === "scanned" ? "No one scanned yet." : "Everyone here is already scanned.";
-    orders.append(empty);
-  } else {
-    for (const person of people) orders.append(orderCard(person));
-  }
+  if (orders) renderNameList(orders, people, Boolean(filter && filter.value.trim()));
   if (openedCode && ticketScreen && !ticketScreen.hidden) {
     const person = catalogPerson(openedCode);
     if (person) paintOpen(person);
@@ -1280,16 +1334,8 @@ function orderCard(person, options = {}) {
 function renderRecent() {
   const recent = document.querySelector("#recent-orders");
   if (!recent) return;
-  recent.replaceChildren();
   const filter = document.querySelector("#site-orders-search");
-  const people = listedPeople(filter ? filter.value : "", flowTab).slice(0, 80);
-  if (!people.length) {
-    const empty = document.createElement("p");
-    empty.textContent = filter && filter.value.trim() ? "No matching orders." : "No recent scans.";
-    recent.append(empty);
-    return;
-  }
-  for (const person of people) recent.append(orderCard(person, { delete: true }));
+  renderNameList(recent, listedPeople(filter ? filter.value : "", flowTab), Boolean(filter && filter.value.trim()));
 }
 
 function saveTaken(orderId, rawCount) {
@@ -1566,8 +1612,25 @@ function runListSearch(inputId) {
   renderOrders();
   if (matches.length > 1 && input) input.focus();
 }
-document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
-document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
+function showNameSpinner() {
+  for (const id of ["#orders", "#recent-orders"]) {
+    const box = document.querySelector(id);
+    if (!box || box.offsetParent === null) continue;
+    box.replaceChildren();
+    const status = document.createElement("p");
+    status.className = "spinner-row";
+    status.innerHTML = `<span class="spinner"></span><span class="load-timer">Loading names… 0s</span>`;
+    box.append(status);
+  }
+}
+document.querySelector("#orders-search").addEventListener("input", () => {
+  showNameSpinner();
+  window.setTimeout(renderOrders, 40);
+});
+document.querySelector("#site-orders-search").addEventListener("input", () => {
+  showNameSpinner();
+  window.setTimeout(renderOrders, 40);
+});
 document.querySelector("#orders-search-btn").addEventListener("click", () => { runListSearch("#orders-search"); });
 document.querySelector("#site-orders-search-btn").addEventListener("click", () => { runListSearch("#site-orders-search"); });
 document.querySelector("#orders-search").addEventListener("keydown", (event) => {
