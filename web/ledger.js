@@ -176,6 +176,7 @@ function statusDetail(order) {
       tone: order.variants[id].tone || "",
       taken: Boolean(order.variants[id].taken),
       takenAt: order.variants[id].takenAt,
+      takenBy: order.variants[id].takenBy || "",
     }));
   }
 
@@ -222,9 +223,10 @@ function statusDetail(order) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     const placed = ensureSheetOrder(next, person, raw, at, actor);
     const label = counter === "food" ? "food" : "entry";
+    const who = actor ? ` by ${actor}` : "";
     const note = placed.existing
-      ? `${person.code} scanned again at the ${label} counter`
-      : `${person.code} scanned at the ${label} counter`;
+      ? `${person.code} scanned again at the ${label} counter${who}`
+      : `${person.code} scanned at the ${label} counter${who}`;
     if (!placed.existing) addLine(next, at, `order ${person.code} scanned but not taken`);
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text: note });
@@ -407,9 +409,10 @@ function statusDetail(order) {
     syncTakenCount(placed.order);
     placed.order.updatedAt = at;
     placed.order.actor = actor || placed.order.actor;
+    item.takenBy = actor || "";
     const text = item.lane === "entry"
-      ? `${person.code} entry done: ${item.name}`
-      : `${person.code} food picked up: ${item.name}`;
+      ? `${person.code} entry done: ${item.name}${actor ? ` by ${actor}` : ""}`
+      : `${person.code} food picked up: ${item.name}${actor ? ` by ${actor}` : ""}`;
     addLine(next, at, text);
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text });
@@ -442,7 +445,7 @@ function statusDetail(order) {
     syncTakenCount(order);
     order.updatedAt = at;
     order.actor = actor || order.actor;
-    const text = `${person.code} reverted ${item.name}`;
+    const text = `${person.code} reverted ${item.name}${actor ? ` by ${actor}` : ""}`;
     addLine(next, at, text);
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text });

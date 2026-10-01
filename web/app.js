@@ -78,7 +78,7 @@ function sameText(left, right) {
 function readSession() {
   try {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
+    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now() || !saved.displayName) return null;
     return saved;
   } catch {
     return null;
@@ -93,12 +93,12 @@ function enterApp() {
     document.querySelector("#save-link").hidden = true;
   }
   if (session.role === "records") {
-    document.querySelector("#admin-who").textContent = "Signed in as siteadmin";
+    document.querySelector("#admin-who").textContent = `Signed in as ${session.displayName} (siteadmin)`;
     show(adminScreen);
     refreshOrders();
     return;
   }
-  document.querySelector("#who").textContent = `Signed in as ${session.username}`;
+  document.querySelector("#who").textContent = `Signed in as ${session.displayName} (${session.username})`;
   show(workspace);
   paintCounter();
   refreshOrders();
@@ -124,9 +124,16 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   error.hidden = true;
   const button = event.target.querySelector("button[type=submit]");
   button.disabled = true;
-  const username = document.querySelector("#username").value.trim();
+    const username = document.querySelector("#username").value.trim();
   const password = document.querySelector("#password").value;
+  const displayName = document.querySelector("#display-name").value.trim();
   document.querySelector("#password").value = "";
+  if (!displayName) {
+    error.hidden = false;
+    error.textContent = "Enter your name so the ticket log shows who did it.";
+    button.disabled = false;
+    return;
+  }
   try {
     const digest = await sha256(password);
     const account = ACCOUNTS[username];
@@ -136,7 +143,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
       error.textContent = "Incorrect username or password.";
       return;
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, exp: Date.now() + SESSION_MS }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, displayName, role: account.role, exp: Date.now() + SESSION_MS }));
     enterApp();
   } catch {
     error.hidden = false;
@@ -389,7 +396,8 @@ function deviceId() {
 }
 
 function holderNow() {
-  return { holder: deviceId(), actor: readSession()?.username || "admin", at: new Date().toISOString() };
+  const session = readSession();
+  return { holder: deviceId(), actor: (session && session.displayName) || session?.username || "admin", at: new Date().toISOString() };
 }
 
 let demoMode = false;
@@ -403,7 +411,7 @@ function paintDemo() {
 
 function markOne(person, index) {
   const at = new Date().toISOString();
-  const actor = readSession()?.username || "admin";
+  const actor = holderNow().actor;
   const applied = queueWrite((book) => {
     const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode });
     const message = next.locked
@@ -420,7 +428,7 @@ function markOne(person, index) {
 
 function revertOne(person) {
   const at = new Date().toISOString();
-  const actor = readSession()?.username || "admin";
+  const actor = holderNow().actor;
   const applied = queueWrite((book) => {
     const next = TicketLedger.revertLast(book, person, at, actor, deviceId());
     const message = next.locked
@@ -461,7 +469,7 @@ function itemButtons(person) {
     const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : otherLane ? "other-lane" : "ready";
     button.className = `item-pill coupon-${kind} ${state}`;
     if (kind === "entry-other" && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
-    const note = item.taken ? "Done" : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
+    const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
     button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
     if (locked || state !== "ready") button.disabled = true;
     else button.addEventListener("click", () => markOne(person, index));
@@ -545,7 +553,7 @@ function paintOpen(person) {
 
 function runLane(person, lane) {
   const at = new Date().toISOString();
-  const actor = readSession()?.username || "admin";
+  const actor = holderNow().actor;
   const applied = queueWrite((book) => {
     const next = TicketLedger.markLane(book, person, person.full, lane, at, actor);
     const message = lane === "entry"
@@ -580,7 +588,7 @@ function submitAttempt() {
   const person = catalogPerson(lastAttempt.raw);
   if (person) {
     const at = new Date().toISOString();
-    const actor = readSession()?.username || "admin";
+    const actor = holderNow().actor;
     const applied = queueWrite((book) => {
       const next = TicketLedger.rememberSheet(book, person, lastAttempt.raw, at, actor, activeCounter());
       const message = next.already
@@ -862,7 +870,7 @@ function renderRecent() {
 
 function saveTaken(orderId, rawCount) {
   const at = new Date().toISOString();
-  const actor = readSession()?.username || "admin";
+  const actor = holderNow().actor;
   const applied = queueWrite((book) => {
     const next = TicketLedger.setTakenCount(book, orderId, rawCount, at, actor);
     const order = next.book.orders[orderId];
