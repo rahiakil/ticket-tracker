@@ -9,6 +9,7 @@ window.addEventListener("resize", markMobile);
 const ACCOUNTS = {
   siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "records" },
   admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
+  volunteer: { hash: "dcbb0f3cafb30402d5ed4cb826e000bcae930c7ce60763e0458665150dffa879", role: "food" },
 };
 const SESSION_KEY = "ticket-tracker-session";
 const ALIAS_KEY = "ticket-tracker-alias";
@@ -115,12 +116,33 @@ function enterApp() {
   }
   document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
+  applyRoleUi();
   paintCounter();
   refreshOrders();
 }
 
+function isVolunteer() {
+  return readSession()?.role === "food";
+}
+
+function applyRoleUi() {
+  const volunteer = isVolunteer();
+  const sale = document.querySelector("#new-sale");
+  const entryDesk = document.querySelector("#counter-entry");
+  if (sale) sale.hidden = volunteer;
+  if (entryDesk) entryDesk.hidden = volunteer;
+  document.querySelectorAll("[data-page='admin'], [data-page='stats']").forEach((button) => { button.hidden = volunteer; });
+  if (volunteer) localStorage.setItem("ticket-tracker-counter", "food");
+}
+
 document.querySelector("#show-login").addEventListener("click", () => {
   document.querySelector("#username").value = "admin";
+  show(login);
+  document.querySelector("#password").focus();
+});
+
+document.querySelector("#show-volunteer").addEventListener("click", () => {
+  document.querySelector("#username").value = "volunteer";
   show(login);
   document.querySelector("#password").focus();
 });
@@ -478,6 +500,15 @@ function paintDemo() {
   }
 }
 
+const volunteerMarks = new Map();
+const VOLUNTEER_REVERT_MS = 2 * 60 * 1000;
+
+function volunteerRevertLeft(code) {
+  const started = volunteerMarks.get(code);
+  if (!started) return 0;
+  return Math.max(0, VOLUNTEER_REVERT_MS - (Date.now() - started));
+}
+
 function markOne(person, index, unit) {
   const at = new Date().toISOString();
   const actor = holderNow().actor;
@@ -491,6 +522,9 @@ function markOne(person, index, unit) {
     return { write: next.changed, book: next.book, message };
   });
   showMessage(applied.message, String(applied.message).startsWith("Already") || String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
+  if (isVolunteer() && !String(applied.message || "").startsWith("Already") && !String(applied.message || "").startsWith("Unavailable") && !String(applied.message || "").startsWith("This line")) {
+    volunteerMarks.set(person.code, Date.now());
+  }
   paintOpen(person);
   renderOrders();
 }
@@ -550,6 +584,13 @@ function itemButtons(person) {
     const heading = document.createElement("p");
     heading.className = "day-heading";
     heading.textContent = label;
+    if (rows.every(({ item }) => item.taken)) {
+      const done = document.createElement("p");
+      done.className = "all-done";
+      done.textContent = "∅";
+      board.append(heading, done);
+      continue;
+    }
     const list = document.createElement("div");
     list.className = "item-pills";
     for (const { item, index } of rows) {
@@ -564,8 +605,20 @@ function itemButtons(person) {
       const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
       const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
       const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
-      const label = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
-      button.textContent = [icon, label, note].filter(Boolean).join("\n");
+      const ticketLabel = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
+      button.textContent = [icon, ticketLabel, note].filter(Boolean).join("\n");
+      if (lane === "food" && state === "ready") {
+        const doneBox = document.createElement("label");
+        doneBox.className = "done-box";
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.addEventListener("click", (event) => event.stopPropagation());
+        check.addEventListener("change", () => {
+          if (check.checked) markOne(person, item.index, item.unit);
+        });
+        doneBox.append(check, document.createTextNode(" Done"));
+        button.append(doneBox);
+      }
       if (locked) button.disabled = true;
       else {
         let holdTimer = 0;
@@ -597,11 +650,17 @@ function itemBoard(person) {
   wrap.append(itemButtons(person));
   const revert = document.createElement("button");
   revert.type = "button";
+  revert.id = "revert-last";
   revert.className = "secondary";
-  revert.textContent = "Revert last";
   const who = holderNow();
-  if (TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at)) revert.disabled = true;
-  revert.addEventListener("click", () => revertOne(person));
+  const lockedOut = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
+  const left = isVolunteer() ? volunteerRevertLeft(person.code) : VOLUNTEER_REVERT_MS;
+  revert.disabled = Boolean(lockedOut) || (isVolunteer() && left <= 0);
+  revert.textContent = isVolunteer() ? (left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed") : "Revert last";
+  revert.addEventListener("click", () => {
+    if (isVolunteer() && volunteerRevertLeft(person.code) <= 0) return;
+    revertOne(person);
+  });
   wrap.append(revert);
   return wrap;
 }
@@ -1763,6 +1822,14 @@ if (legend) {
     if (moved < -36) legend.classList.remove("is-open");
   });
 }
+
+window.setInterval(() => {
+  const button = document.querySelector("#revert-last");
+  if (!button || !openedCode || !isVolunteer()) return;
+  const left = volunteerRevertLeft(openedCode);
+  button.disabled = left <= 0;
+  button.textContent = left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed";
+}, 1000);
 
 show(gate);
 if (readSession()) enterApp();

@@ -11,6 +11,8 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /For you, without login, we will not allow you\./);
   assert.match(html, /name="viewport"/);
   assert.match(html, /href="styles\.css/);
+  assert.match(html, /Volunteer/);
+  assert.match(app, /role: "food"/);
   assert.match(html, /Find a ticket/);
   assert.match(html, /Save QR image/);
   assert.match(html, /Admin functions/);

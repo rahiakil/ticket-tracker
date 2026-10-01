@@ -173,6 +173,9 @@ h2 { font-size: 1.25rem; }
 .qr-view { display: flex; justify-content: center; margin: 8px 0 12px; }
 .qr-view svg { width: 180px; height: 180px; background: #fff; }
 .day-heading { margin: 14px 0 0; font-size: 14px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-dark); }
+.all-done { margin: 8px 0 16px; font-size: 4rem; line-height: 1; color: var(--teal); }
+.done-box { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; font-size: 14px; font-weight: 750; }
+.done-box input { width: 22px; height: 22px; min-height: 0; margin: 0; }
 .flow-tabs, .page-tabs, .qr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .page-tabs { grid-template-columns: 1fr 1fr 1fr; }
 .qr-actions { grid-template-columns: 1fr; }
