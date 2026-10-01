@@ -5,9 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=23">
 </head>
 <body>
+  <header class="brand-bar">
+    <img src="logo.png" alt="Uttoron">
+    <div>
+      <p class="wordmark">Uttoron</p>
+      <p class="eyebrow">Ticket Tracker</p>
+    </div>
+  </header>
   <main id="gate" class="gate">
     <div>
       <p class="gate-message">For you, without login, we will not allow you.</p>
@@ -26,7 +33,7 @@
       <label>Password
         <input id="password" name="password" type="password" autocomplete="current-password" required>
       </label>
-      <button class="primary" type="submit">Log in</button>
+      <button class="btn-orange" type="submit">Log in</button>
       <button id="login-back" class="text-button" type="button">Back</button>
     </form>
   </main>
@@ -50,10 +57,10 @@
       <label>Order number
         <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Last 5 digits or full order number">
       </label>
-      <button id="search-order" class="primary" type="button">Search</button>
+      <button id="search-order" class="btn-orange" type="button">Search</button>
       <p id="search-result" class="result" role="status"></p>
       <div id="open-order"></div>
-      <button id="scan-btn" class="primary" type="button">Scan QR</button>
+      <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <div id="reader" hidden></div>
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
@@ -105,7 +112,7 @@
 
   <main id="ticket-screen" class="screen" hidden>
     <header class="topbar">
-      <button id="main-page" class="secondary" type="button">Main page</button>
+      <button id="main-page" class="btn-orange" type="button">Main page</button>
     </header>
     <section class="panel">
       <div id="ticket-body"></div>
@@ -171,6 +178,6 @@
   <script src="ledger.js?v=21"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>

@@ -1,15 +1,17 @@
 :root {
   color-scheme: light;
   font-size: 18px;
-  --ink: #1d1a16;
-  --paper: #f3efe6;
-  --card: #fffdf8;
-  --line: #d9d1c3;
-  --teal: #0f5f5c;
-  --teal-dark: #0b4442;
-  --warn: #8a4b08;
-  --bad: #8d2a2a;
-  --good: #1e6b38;
+  --ink: #1c140c;
+  --paper: #fff3e6;
+  --card: #fffaf4;
+  --line: #f0c49a;
+  --orange: #e85d04;
+  --orange-dark: #c2410c;
+  --teal: #157a62;
+  --teal-dark: #0e5c4a;
+  --warn: #c2410c;
+  --bad: #9a3412;
+  --good: #157a62;
 }
 
 * { box-sizing: border-box; }
@@ -40,8 +42,10 @@ button, .file-btn {
   touch-action: manipulation;
 }
 
-.primary { background: var(--teal); color: white; }
-.primary:disabled { background: #8aa6a5; }
+.primary, .btn-teal { background: var(--teal); color: white; border-color: var(--teal-dark); }
+.btn-orange { background: var(--orange); color: white; border-color: var(--orange-dark); }
+.btn-quiet { background: #fff7f0; color: var(--ink); border-color: var(--line); }
+.primary:disabled, .btn-teal:disabled, .btn-orange:disabled { background: #c8b8a4; color: #fff; }
 .secondary, .file-btn {
   background: var(--card);
   color: var(--ink);
@@ -208,7 +212,35 @@ h2 { font-size: 1.25rem; }
 .tone-other { background: #64748b; }
 .item-pill.picked { background: #9ca3af; color: #1f2937; }
 .item-pill.checked { outline: 3px solid #111; }
-.note { color: #4d463d; }
+.brand-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  background: linear-gradient(180deg, #ff7a1a, #e85d04);
+  color: #1c140c;
+}
+.brand-bar img {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #ff8a2a;
+  object-fit: cover;
+}
+.wordmark {
+  margin: 0;
+  font-family: "Segoe Script", "Comic Sans MS", cursive;
+  font-size: 2.4rem;
+  line-height: 1;
+  color: #1c140c;
+}
+.brand-bar .eyebrow { color: #1c140c; }
+#search-order, #export-csv, #admin-export-csv, #main-page, #login-form .btn-orange { background: var(--orange); color: #fff; border-color: var(--orange-dark); }
+#scan-btn, #refresh, #admin-refresh, #release-locks { background: var(--teal); color: #fff; border-color: var(--teal-dark); }
+#cleanup-all { background: #9a3412; color: #fff; border-color: #7c2d12; }
+#show-totals, #show-site-totals, label.file-btn { background: #fff; color: var(--teal-dark); border-color: var(--teal); }
+.note { color: #5c4632; }
 .log-scroll {
   max-height: 220px;
   overflow-x: hidden;

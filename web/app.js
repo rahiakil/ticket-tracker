@@ -336,8 +336,8 @@ function activeCounter() {
 
 function paintCounter() {
   const food = activeCounter() === "food";
-  document.querySelector("#counter-entry").className = food ? "secondary" : "primary";
-  document.querySelector("#counter-food").className = food ? "primary" : "secondary";
+  document.querySelector("#counter-entry").className = food ? "btn-quiet" : "btn-teal";
+  document.querySelector("#counter-food").className = food ? "btn-orange" : "btn-quiet";
 }
 
 function clockText(at) {
