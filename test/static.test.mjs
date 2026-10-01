@@ -22,6 +22,8 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /Could not save—retry/);
   assert.match(html, /Search orders/);
   assert.match(html, /Main page/);
+  assert.match(html, /Clean up everything/);
+  assert.match(html, /Release all locks/);
   assert.match(html, /Entry counter/);
   assert.match(html, /Food counter/);
   assert.match(html, /id="search-order"/);

@@ -24,11 +24,43 @@ function doPost(e) {
   return ContentService.createTextOutput("ok").setMimeType(ContentService.MimeType.TEXT);
 }
 
+function lockFresh_(lock) {
+  if (!lock || !lock.holder || !lock.at) return false;
+  var age = Date.now() - Date.parse(lock.at);
+  return age >= 0 && age < 3 * 60 * 1000;
+}
+
 function mergeBook_(current, incoming) {
+  if (!current.locks) current.locks = {};
+  if (incoming && incoming.cleanupAll && incoming.actor === "siteadmin") {
+    current.orders = {};
+    current.lines = incoming.lines || [];
+    current.log = incoming.log || [];
+    current.locks = {};
+    current.cleanupAll = false;
+    current.releaseAllLocks = false;
+    current.baseWriteId = "";
+    current.lastWriteId = incoming.lastWriteId || "";
+    current.counts = countBook_(current);
+    return current;
+  }
+  if (incoming && incoming.releaseAllLocks && incoming.actor === "siteadmin") {
+    current.locks = {};
+    current.releaseAllLocks = false;
+    current.log = mergeLog_(current.log, incoming.log);
+    current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
+    current.counts = countBook_(current);
+    return current;
+  }
   if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
     current.orders = incoming.orders || {};
     current.lines = incoming.lines || [];
     current.log = incoming.log || [];
+    current.locks = incoming.locks || {};
+    (incoming.releasedLocks || []).forEach(function (code) {
+      if (current.locks[code] && current.locks[code].holder === incoming.releasedBy) delete current.locks[code];
+    });
+    current.releasedLocks = [];
     current.baseWriteId = "";
     current.lastWriteId = incoming.lastWriteId || "";
     pruneOld_(current);
@@ -37,6 +69,7 @@ function mergeBook_(current, incoming) {
   }
   var orders = current.orders || {};
   var incomingOrders = incoming.orders || {};
+  var incomingLocks = incoming.locks || {};
   Object.keys(incomingOrders).forEach(function (orderId) {
     var prior = orders[orderId];
     var next = incomingOrders[orderId];
@@ -44,15 +77,38 @@ function mergeBook_(current, incoming) {
       orders[orderId] = next;
       return;
     }
+    var priorLock = current.locks[orderId];
+    var nextLock = incomingLocks[orderId];
+    if (lockFresh_(priorLock) && (!nextLock || nextLock.holder !== priorLock.holder)) return;
     var variants = prior.variants || {};
     Object.keys(next.variants || {}).forEach(function (variantId) {
-      variants[variantId] = next.variants[variantId];
+      var before = variants[variantId];
+      var after = next.variants[variantId];
+      if (before && before.taken && after && !after.taken) {
+        if (next.revertKey !== variantId) return;
+      }
+      if (before && before.taken && after && after.taken) {
+        variants[variantId] = before;
+        return;
+      }
+      variants[variantId] = after;
     });
     prior.variants = variants;
     if (typeof next.takenCount === "number") prior.takenCount = next.takenCount;
     prior.raw = next.raw || prior.raw;
     prior.updatedAt = next.updatedAt || prior.updatedAt;
     orders[orderId] = prior;
+  });
+  Object.keys(incomingLocks).forEach(function (code) {
+    var priorLock = current.locks[code];
+    var nextLock = incomingLocks[code];
+    if (lockFresh_(priorLock) && priorLock.holder !== nextLock.holder) return;
+    current.locks[code] = nextLock;
+  });
+  (incoming.releasedLocks || []).forEach(function (code) {
+    if (current.locks[code] && (!lockFresh_(current.locks[code]) || current.locks[code].holder === incoming.releasedBy)) {
+      delete current.locks[code];
+    }
   });
   current.orders = orders;
   var seenLines = {};

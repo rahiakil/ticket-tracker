@@ -179,6 +179,28 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(ledger.daysAhead("saturday", new Date("2026-10-03T18:00:00.000Z")), 0);
 });
 
+test("a line stays locked so a second phone cannot mark it twice", () => {
+  const person = {
+    code: "12166",
+    full: "UTT20260900012166",
+    name: "barna NA",
+    email: "barna_c@yahoo.com",
+    items: [{ name: "Regular Member Entry", qty: 1, lane: "entry", tone: "entry" }],
+  };
+  const first = ledger.acquireLock(ledger.emptyBook(), "12166", "phone-a", "admin", "2026-10-03T18:00:00.000Z");
+  const marked = ledger.markItem(first.book, person, 0, "2026-10-03T18:00:30.000Z", "admin", "phone-a");
+  assert.equal(marked.changed, true);
+  const second = ledger.acquireLock(marked.book, "12166", "phone-b", "admin", "2026-10-03T18:01:00.000Z");
+  assert.equal(second.locked, true);
+  const blocked = ledger.markItem(marked.book, person, 0, "2026-10-03T18:01:00.000Z", "admin", "phone-b");
+  assert.equal(blocked.locked, true);
+  assert.equal(blocked.changed, false);
+  const cleared = ledger.cleanupAll(marked.book, "2026-10-03T18:02:00.000Z");
+  assert.equal(cleared.book.cleanupAll, true);
+  assert.equal(Object.keys(cleared.book.orders).length, 0);
+  assert.equal(Object.keys(cleared.book.locks).length, 0);
+});
+
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {
   const book = ledger.emptyBook();
   book.orders.old = { orderId: "old", updatedAt: "2020-01-01T00:00:00.000Z", scannedAt: "2020-01-01T00:00:00.000Z", variants: {} };

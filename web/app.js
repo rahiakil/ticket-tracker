@@ -49,6 +49,9 @@ function show(view) {
 }
 
 function closeTicket() {
+  const code = openedCode;
+  const who = holderNow();
+  if (code) queueWrite((book) => TicketLedger.releaseLock(book, code, who.holder, who.at));
   openedCode = "";
   const body = document.querySelector("#ticket-body");
   if (body) body.replaceChildren();
@@ -356,12 +359,27 @@ function orderView(person) {
   return { items, allTaken, noneTaken, phrase: TicketLedger.sheetPhrase(items) || "Not seen" };
 }
 
+function deviceId() {
+  let id = localStorage.getItem("ticket-tracker-device");
+  if (!id) {
+    id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem("ticket-tracker-device", id);
+  }
+  return id;
+}
+
+function holderNow() {
+  return { holder: deviceId(), actor: readSession()?.username || "admin", at: new Date().toISOString() };
+}
+
 function markOne(person, index) {
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor);
-    const message = next.blocked
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId());
+    const message = next.locked
+      ? `This line is locked. ${person.name}. ${person.email}.`
+      : next.blocked
       ? `Unavailable yet. ${person.name}. ${person.email}.`
       : next.already ? `Already picked up. ${person.name}. ${person.email}.` : `${next.phrase}. ${person.name}. ${person.email}.`;
     return { write: next.changed, book: next.book, message };
@@ -375,8 +393,10 @@ function revertOne(person) {
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   const applied = queueWrite((book) => {
-    const next = TicketLedger.revertLast(book, person, at, actor);
-    const message = next.changed ? `Reverted. ${next.phrase}. ${person.name}. ${person.email}.` : `Nothing to revert. ${person.name}. ${person.email}.`;
+    const next = TicketLedger.revertLast(book, person, at, actor, deviceId());
+    const message = next.locked
+    ? `This line is locked. ${person.name}. ${person.email}.`
+    : next.changed ? `Reverted. ${next.phrase}. ${person.name}. ${person.email}.` : `Nothing to revert. ${person.name}. ${person.email}.`;
     return { write: next.changed, book: next.book, message };
   });
   showMessage(applied.message, String(applied.message).startsWith("Nothing") ? "already_seen" : "pending");
@@ -398,6 +418,8 @@ function itemButtons(person) {
   const view = orderView(person);
   const foodCounter = activeCounter() === "food";
   const now = new Date();
+  const who = holderNow();
+  const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const list = document.createElement("div");
   list.className = "item-pills";
   for (const { item, index } of tileOrder(view.items)) {
@@ -412,7 +434,7 @@ function itemButtons(person) {
     if (kind === "entry-other" && state === "ready") button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 48% 36%)`;
     const note = item.taken ? "Done" : future ? "Unavailable yet" : otherLane ? "Greyed out" : "";
     button.textContent = note ? `${item.id} x ${item.qty || 1}\n${note}` : `${item.id} x ${item.qty || 1}`;
-    if (state !== "ready") button.disabled = true;
+    if (locked || state !== "ready") button.disabled = true;
     else button.addEventListener("click", () => markOne(person, index));
     list.append(button);
   }
@@ -426,6 +448,8 @@ function itemBoard(person) {
   revert.type = "button";
   revert.className = "secondary";
   revert.textContent = "Revert last";
+  const who = holderNow();
+  if (TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at)) revert.disabled = true;
   revert.addEventListener("click", () => revertOne(person));
   wrap.append(revert);
   return wrap;
@@ -434,6 +458,13 @@ function itemBoard(person) {
 function paintOpen(person) {
   if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
+  const who = holderNow();
+  const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
+  const mine = currentBook.locks && currentBook.locks[person.code];
+  const mineFresh = mine && mine.holder === who.holder && Date.parse(who.at) - Date.parse(mine.at || 0) < 60000;
+  if (!locked && !mineFresh) {
+    queueWrite((book) => TicketLedger.acquireLock(book, person.code, who.holder, who.actor, who.at));
+  }
   if (ticketScreen) show(ticketScreen);
   paintQr(person.code);
   const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
@@ -473,7 +504,9 @@ function paintOpen(person) {
     }
   }
   const phrase = document.createElement("p");
-  phrase.textContent = orderView(person).phrase;
+  phrase.textContent = locked
+    ? `This line is locked by ${locked.actor}. ${orderView(person).phrase}`
+    : orderView(person).phrase;
   card.append(title, mail, eventLine, phrase, itemBoard(person), activity);
   host.append(card);
 }
@@ -841,6 +874,30 @@ document.querySelector("#refresh").addEventListener("click", () => { refreshOrde
 document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#export-csv").addEventListener("click", exportStatus);
 document.querySelector("#admin-export-csv").addEventListener("click", exportStatus);
+document.querySelector("#release-locks").addEventListener("click", () => {
+  if (!window.confirm("Release every line lock?")) return;
+  const at = new Date().toISOString();
+  const applied = queueWrite((book) => TicketLedger.releaseAllLocks(book, at));
+  const noteBox = document.querySelector("#admin-note");
+  noteBox.hidden = false;
+  noteBox.textContent = applied.write ? "All locks released." : "There were no locks.";
+  renderOrders();
+});
+document.querySelector("#cleanup-all").addEventListener("click", () => {
+  if (!window.confirm("Clean up everything? This clears every scan, lock, and log.")) return;
+  const at = new Date().toISOString();
+  queueWrite((book) => TicketLedger.cleanupAll(book, at));
+  openedCode = "";
+  const noteBox = document.querySelector("#admin-note");
+  noteBox.hidden = false;
+  noteBox.textContent = "Cleanup sent. The status file will be empty after it saves.";
+  renderOrders();
+});
+
+setInterval(() => {
+  if (document.hidden || !readSession() || flushing || pendingWrites.length) return;
+  refreshOrders();
+}, 20000);
 
 show(gate);
 if (readSession()) enterApp();

@@ -10,8 +10,10 @@
     return { orderId: match[1], variants, raw: match[0] };
   }
 
+  const LOCK_MS = 3 * 60 * 1000;
+
   function emptyBook() {
-    return { schemaVersion: 1, lines: [], log: [], orders: {} };
+    return { schemaVersion: 1, lines: [], log: [], orders: {}, locks: {} };
   }
 
   const MAX_ORDERS = 10000;
@@ -19,6 +21,7 @@
   function pruneBook(book) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     if (!Array.isArray(next.log)) next.log = [];
+    if (!next.locks || typeof next.locks !== "object") next.locks = {};
     const oldestFirst = Object.keys(next.orders || {}).sort((left, right) => {
       const leftTime = Date.parse(next.orders[left].updatedAt || next.orders[left].scannedAt || 0);
       const rightTime = Date.parse(next.orders[right].updatedAt || next.orders[right].scannedAt || 0);
@@ -329,7 +332,62 @@ function statusDetail(order) {
     return 165 + (hash % 115);
   }
 
-  function markItem(book, person, itemIndex, at, actor) {
+  function foreignLock(book, code, holder, at) {
+    const lock = book && book.locks && book.locks[code];
+    if (!lock || !lock.holder || !holder || lock.holder === holder) return null;
+    const age = Date.parse(at) - Date.parse(lock.at || "");
+    if (!Number.isFinite(age) || age < 0 || age >= LOCK_MS) return null;
+    return lock;
+  }
+
+  function acquireLock(book, code, holder, actor, at) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!next.locks) next.locks = {};
+    const current = foreignLock(next, code, holder, at);
+    if (current) return { book: pruneBook(next), changed: false, locked: true, lock: current };
+    const previous = next.locks[code];
+    next.locks[code] = { holder, actor, at };
+    const changed = !previous || previous.holder !== holder || previous.at !== at;
+    return { book: pruneBook(next), changed, locked: false, lock: next.locks[code] };
+  }
+
+  function releaseLock(book, code, holder, at) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!next.locks) next.locks = {};
+    const lock = next.locks[code];
+    if (!lock || lock.holder !== holder) return { book: pruneBook(next), changed: false };
+    delete next.locks[code];
+    next.releasedLocks = [code];
+    next.releasedBy = holder;
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${code} lock released` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function releaseAllLocks(book, at) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    next.locks = {};
+    next.releaseAllLocks = true;
+    next.actor = "siteadmin";
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: "siteadmin released all locks" });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function cleanupAll(book, at) {
+    const next = emptyBook();
+    next.lines = [`${at} siteadmin cleaned up everything`];
+    next.log = [{ at, text: "siteadmin cleaned up everything" }];
+    next.cleanupAll = true;
+    next.actor = "siteadmin";
+    return { book: next, changed: true };
+  }
+
+  function markItem(book, person, itemIndex, at, actor, holder) {
+    if (foreignLock(book, person.code, holder, at)) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, locked: true, already: false, phrase: "" };
+    }
     const named = person.items && person.items[itemIndex];
     const when = new Date(at);
     if (named && itemDay(named.name) && daysAhead(itemDay(named.name), when) > 0) {
@@ -356,7 +414,11 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
   }
 
-  function revertLast(book, person, at, actor) {
+  function revertLast(book, person, at, actor, holder) {
+    if (foreignLock(book, person.code, holder, at)) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, locked: true, already: false, phrase: "" };
+    }
     const next = structuredClone(ready(book) ? book : emptyBook());
     const order = next.orders[person.code];
     if (!order) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
@@ -371,6 +433,7 @@ function statusDetail(order) {
       }
     }
     if (!latestKey) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
+    next.revertKey = latestKey;
     const item = order.variants[latestKey];
     item.taken = false;
     item.takenAt = null;
@@ -582,6 +645,12 @@ function statusDetail(order) {
     sheetPhrase,
     markItem,
     revertLast,
+    foreignLock,
+    acquireLock,
+    releaseLock,
+    releaseAllLocks,
+    cleanupAll,
+    LOCK_MS,
     itemDay,
     daysAhead,
     couponKind,
