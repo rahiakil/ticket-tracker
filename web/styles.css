@@ -169,7 +169,14 @@ h2 { font-size: 1.25rem; }
 .qr-view { display: flex; justify-content: center; margin: 8px 0 12px; }
 .qr-view svg { width: 180px; height: 180px; background: #fff; }
 .item-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
-.item-pill { display: inline-block; margin: 0; padding: 8px 12px; border-radius: 999px; color: #fff; font-weight: 750; }
+.item-pill { display: inline-block; width: auto; min-height: 0; margin: 0; padding: 8px 12px; border-radius: 999px; color: #1f2937; font-weight: 750; background: #f6e27a; }
+.item-pill.pending { background: #f6e27a; color: #1f2937; }
+.item-pill.picked { background: #9ca3af; color: #1f2937; }
+.card.complete { background: #1e6b38; color: #fff; }
+.card.untaken { background: #fff4cc; }
+.card.complete .item-pill,
+.card.complete .order-toggle { background: #146b34; color: #fff; border-color: #fff; }
+.card.untaken .order-toggle { background: #f6e27a; color: #1f2937; }
 .tone-entry { background: #1d4ed8; }
 .tone-sat-veg { background: #7c3aed; }
 .tone-sat-nonveg { background: #4c1d95; }

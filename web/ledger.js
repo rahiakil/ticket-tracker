@@ -254,6 +254,52 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed, already: !changed, orderId: person.code };
   }
 
+  function sheetPhrase(items) {
+    const list = items || [];
+    const entry = list.filter((item) => item.lane === "entry");
+    const food = list.filter((item) => item.lane === "food");
+    const done = (group) => group.length > 0 && group.every((item) => item.taken);
+    const none = (group) => group.every((item) => !item.taken);
+    const days = [];
+    if (food.some((item) => /saturday/i.test(item.name || item.id || ""))) days.push("Saturday");
+    if (food.some((item) => /sunday/i.test(item.name || item.id || ""))) days.push("Sunday");
+    const day = days.join(" and ");
+    let entryText = "";
+    if (entry.length) {
+      if (done(entry)) entryText = day ? `Entry done for ${day}` : "Entry done";
+      else if (none(entry)) entryText = "Entry not done";
+      else entryText = "Entry partly done";
+    }
+    let foodText = "";
+    if (food.length) {
+      if (done(food)) foodText = "Food taken";
+      else if (none(food)) foodText = "Food not taken";
+      else foodText = "Food partly taken";
+    }
+    return [entryText, foodText].filter(Boolean).join(". ");
+  }
+
+  function markItem(book, person, itemIndex, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const placed = ensureSheetOrder(next, person, person.full, at, actor);
+    const key = Object.keys(placed.order.variants).find((id) => id.startsWith(`item:${itemIndex}:`));
+    if (!key) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
+    const item = placed.order.variants[key];
+    if (item.taken) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(placed.order)) };
+    item.taken = true;
+    item.takenAt = at;
+    syncTakenCount(placed.order);
+    placed.order.updatedAt = at;
+    placed.order.actor = actor || placed.order.actor;
+    const text = item.lane === "entry"
+      ? `${person.code} entry done: ${item.name}`
+      : `${person.code} food picked up: ${item.name}`;
+    addLine(next, at, text);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text });
+    return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
+  }
+
   function activityFor(book, code) {
     return (book.log || []).filter((item) => item && String(item.text).includes(String(code)));
   }
@@ -448,6 +494,8 @@ function statusDetail(order) {
     activityFor,
     cleanSheetBook,
     exportCsv,
+    sheetPhrase,
+    markItem,
     markTaken,
     countsOf,
     pruneBook,

@@ -339,17 +339,39 @@ function storedItems(person) {
   return row ? row.variants : [];
 }
 
-function itemPills(person) {
+function orderView(person) {
+  const items = storedItems(person);
+  const allTaken = items.length > 0 && items.every((item) => item.taken);
+  const noneTaken = items.every((item) => !item.taken);
+  return { items, allTaken, noneTaken, phrase: TicketLedger.sheetPhrase(items) || "Not seen" };
+}
+
+function markOne(person, index) {
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.markItem(book, person, index, at, actor);
+    const message = next.already ? `Already picked up. ${person.name}. ${person.email}.` : `${next.phrase}. ${person.name}. ${person.email}.`;
+    return { write: next.changed, book: next.book, message };
+  });
+  showMessage(applied.message, String(applied.message).startsWith("Already") ? "already_seen" : "pending");
+  paintOpen(person);
+  renderOrders();
+}
+
+function itemButtons(person) {
+  const view = orderView(person);
   const list = document.createElement("div");
   list.className = "item-pills";
-  for (const item of storedItems(person)) {
-    const pill = document.createElement("span");
-    const foodDone = item.lane === "food" && item.taken;
-    const entryDone = item.lane === "entry" && item.taken;
-    pill.className = `item-pill tone-${item.tone || "other"}${foodDone ? " picked" : ""}${entryDone ? " checked" : ""}`;
-    pill.textContent = `${item.id} x ${item.qty || 1}`;
-    list.append(pill);
-  }
+  view.items.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    const state = view.allTaken ? "complete" : item.taken ? "picked" : "pending";
+    button.className = `item-pill tone-${item.tone || "other"} ${state}`;
+    button.textContent = `${item.id} x ${item.qty || 1}`;
+    button.addEventListener("click", () => markOne(person, index));
+    list.append(button);
+  });
   return list;
 }
 
@@ -362,24 +384,15 @@ function paintOpen(person) {
   search.className = seen ? "result already_seen" : "result pending";
   const host = document.querySelector("#open-order");
   host.replaceChildren();
+  const view = orderView(person);
   const card = document.createElement("article");
-  card.className = "card";
+  card.className = `card ${view.allTaken ? "complete" : view.noneTaken ? "untaken" : "partial"}`;
   const title = document.createElement("p");
   title.textContent = `${person.name} · ${person.full}`;
   const mail = document.createElement("p");
   mail.textContent = person.email;
   const eventLine = document.createElement("p");
   eventLine.textContent = `${person.event} · ${person.date} · ${person.amount}`;
-  const action = document.createElement("button");
-  action.type = "button";
-  action.className = "primary";
-  if (activeCounter() === "food") {
-    action.textContent = "Mark food picked up";
-    action.addEventListener("click", () => runLane(person, "food"));
-  } else {
-    action.textContent = "Check in";
-    action.addEventListener("click", () => runLane(person, "entry"));
-  }
   const activity = document.createElement("div");
   const logs = TicketLedger.activityFor(currentBook, person.code);
   if (!logs.length) {
@@ -393,7 +406,9 @@ function paintOpen(person) {
       activity.append(line);
     }
   }
-  card.append(title, mail, eventLine, itemPills(person), action, activity);
+  const phrase = document.createElement("p");
+  phrase.textContent = orderView(person).phrase;
+  card.append(title, mail, eventLine, phrase, itemButtons(person), activity);
   host.append(card);
 }
 
@@ -446,32 +461,7 @@ function submitAttempt() {
     renderOrders();
     return;
   }
-  const parsed = TicketLedger.parseQr(lastAttempt.raw);
-  if (!parsed) {
-    showMessage("Invalid QR", "invalid");
-    return;
-  }
-  const at = new Date().toISOString();
-  const actor = readSession()?.username || "admin";
-  const applied = queueWrite((book) => {
-    const next = TicketLedger.rememberScan(book, parsed, at, actor);
-    const order = next.book.orders[parsed.orderId];
-    const detail = TicketLedger.statusDetail(order);
-    const numbers = TicketLedger.takenNumbers(order);
-    let message = `Order ${parsed.orderId}. ${detail}`;
-    if (next.already) {
-      const remainingItems = Math.max(0, numbers.total - numbers.taken);
-      message = remainingItems <= 0 ? "Okay this was already picked." : `Okay ${remainingItems} items remain.`;
-    }
-    return {
-      write: next.changed,
-      book: next.book,
-      message,
-    };
-  });
-  const already = String(applied.message || "").includes("already scanned");
-  showMessage(applied.message, already ? "already_seen" : "pending");
-  renderOrders();
+  showMessage(/order-\d+|UTT\d+|^\d{5}$/i.test(lastAttempt.raw.trim()) ? "That order number is not on the sheet." : "Invalid QR", "invalid");
 }
 
 retryButton.addEventListener("click", () => { flushWrites(); });
@@ -527,12 +517,28 @@ function renderLog() {
   }
 }
 
-function statusBreakdown(rows) {
-  return {
-    scanned: rows.filter((order) => order.status === "Scanned but not taken").length,
-    partial: rows.filter((order) => order.status === "Partially taken").length,
-    complete: rows.filter((order) => order.status === "Taken").length,
-  };
+function laneBreakdown(people) {
+  let entryDone = 0;
+  let foodNotTaken = 0;
+  let complete = 0;
+  for (const person of people) {
+    const view = orderView(person);
+    const entry = view.items.filter((item) => item.lane === "entry");
+    const food = view.items.filter((item) => item.lane === "food");
+    if (entry.length && entry.every((item) => item.taken)) entryDone += 1;
+    if (food.some((item) => !item.taken)) foodNotTaken += 1;
+    if (view.allTaken) complete += 1;
+  }
+  return { entryDone, foodNotTaken, complete };
+}
+
+function listedPeople(filter) {
+  const catalog = (window.TicketCatalog && window.TicketCatalog.orders) || {};
+  const query = filter.trim().toLowerCase();
+  if (query) {
+    return Object.values(catalog).filter((person) => `${person.name} ${person.email} ${person.full} ${person.code}`.toLowerCase().includes(query));
+  }
+  return Object.keys(currentBook.orders || {}).map((code) => catalog[code]).filter(Boolean);
 }
 
 function fillCount(id, value) {
@@ -540,52 +546,40 @@ function fillCount(id, value) {
   if (node) node.textContent = String(value);
 }
 
-function fillVariantCounts(elementId, counts) {
+function fillVariantCounts(elementId) {
   const variantList = document.querySelector(elementId);
   if (!variantList) return;
   variantList.replaceChildren();
-  const variantIds = Object.keys(counts.variants).sort((left, right) => Number(left) - Number(right));
-  if (!variantIds.length) {
-    const empty = document.createElement("p");
-    empty.textContent = "No variant IDs yet.";
-    variantList.append(empty);
-    return;
-  }
-  for (const id of variantIds) {
-    const item = counts.variants[id];
-    const line = document.createElement("p");
-    line.textContent = `Variant ${id}: ${item.orders} QR codes, ${item.taken} taken, ${item.notTaken} not taken`;
-    variantList.append(line);
-  }
 }
 
 function renderOrders() {
-  const counts = TicketLedger.countsOf(currentBook);
-  fillCount("#people-count", counts.peopleScanned);
-  fillCount("#site-people-count", counts.peopleScanned);
-  fillCount("#item-count", counts.itemTotal);
-  fillCount("#site-item-count", counts.itemTotal);
-  fillVariantCounts("#variant-counts", counts);
-  fillVariantCounts("#site-variant-counts", counts);
-  const rows = TicketLedger.summary(currentBook);
-  const breakdown = statusBreakdown(rows);
-  const breakdownText = `(${breakdown.scanned} scanned only) (${breakdown.partial} taken partially) (${breakdown.complete} taken completely)`;
+  const scanned = listedPeople("");
+  const breakdown = laneBreakdown(scanned);
+  const breakdownText = `(${breakdown.entryDone} entry done) (${breakdown.foodNotTaken} food not taken) (${breakdown.complete} taken completely)`;
+  fillCount("#people-count", scanned.length);
+  fillCount("#site-people-count", scanned.length);
+  fillCount("#item-count", breakdown.entryDone);
+  fillCount("#site-item-count", breakdown.entryDone);
+  fillVariantCounts("#variant-counts");
+  fillVariantCounts("#site-variant-counts");
   const heading = document.querySelector("#order-heading");
   const siteHeading = document.querySelector("#site-order-heading");
   const orderBreakdown = document.querySelector("#order-breakdown");
   const siteBreakdown = document.querySelector("#site-order-breakdown");
-  if (heading) heading.textContent = `Orders (${rows.length})`;
-  if (siteHeading) siteHeading.textContent = `Orders (${rows.length})`;
+  if (heading) heading.textContent = `Orders (${scanned.length})`;
+  if (siteHeading) siteHeading.textContent = `Orders (${scanned.length})`;
   if (orderBreakdown) orderBreakdown.textContent = breakdownText;
   if (siteBreakdown) siteBreakdown.textContent = breakdownText;
   const orders = document.querySelector("#orders");
+  const filter = document.querySelector("#orders-search");
+  const people = listedPeople(filter ? filter.value : "");
   orders.replaceChildren();
-  if (!rows.length) {
+  if (!people.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No orders scanned yet.";
+    empty.textContent = filter && filter.value.trim() ? "No matching orders." : "No orders scanned yet.";
     orders.append(empty);
   } else {
-    for (const order of rows) orders.append(orderCard(order));
+    for (const person of people) orders.append(orderCard(person));
   }
   if (openedCode) {
     const person = catalogPerson(openedCode);
@@ -608,48 +602,34 @@ function variantLine(variants) {
   return list;
 }
 
-function orderCard(order) {
+function orderCard(person, options = {}) {
+  const view = orderView(person);
+  const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
   const card = document.createElement("article");
-  card.className = "card";
-  const person = catalogPerson(order.fullNumber || order.orderId) || catalogPerson(order.orderId);
-  const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
+  card.className = `card ${view.allTaken ? "complete" : view.noneTaken ? "untaken" : "partial"}`;
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "secondary order-toggle";
-  const who = person ? person.name : (order.name || "Order");
-  toggle.textContent = `${who} ${order.orderId} (${order.total}) ${kind}`;
-  if (person) {
-    toggle.addEventListener("click", () => paintOpen(person));
-    card.append(toggle);
-    return card;
-  }
+  toggle.textContent = `${person.name} ${person.code} — ${seen ? view.phrase : "Not seen"}`;
   const box = document.createElement("div");
   box.hidden = true;
+  const mail = document.createElement("p");
+  mail.textContent = `${person.email}. ${person.full}.`;
   const status = document.createElement("p");
-  status.className = order.status === "Taken" ? "seen" : "unseen";
-  status.textContent = `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
-  const row = document.createElement("div");
-  row.className = "taken-row";
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.max = String(order.total);
-  input.inputMode = "numeric";
-  input.value = String(order.taken);
-  input.setAttribute("aria-label", `How many picked up for order ${order.orderId}`);
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "primary";
-  button.textContent = "Save picked up";
-  button.addEventListener("click", () => saveTaken(order.orderId, input.value));
-  const complete = document.createElement("button");
-  complete.type = "button";
-  complete.className = "primary";
-  complete.textContent = "Taken completely";
-  complete.addEventListener("click", () => saveTaken(order.orderId, order.total));
-  row.append(input, button);
-  box.append(status, variantLine(order.variants), row, complete);
-  toggle.addEventListener("click", () => { box.hidden = !box.hidden; });
+  status.textContent = seen ? view.phrase : `Not seen yet. ${view.phrase}`;
+  box.append(mail, status, itemButtons(person));
+  if (options.delete) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary";
+    button.textContent = "Delete";
+    button.addEventListener("click", () => deleteRecent(person.code));
+    box.append(button);
+  }
+  toggle.addEventListener("click", () => {
+    box.hidden = !box.hidden;
+    paintOpen(person);
+  });
   card.append(toggle, box);
   return card;
 }
@@ -658,42 +638,15 @@ function renderRecent() {
   const recent = document.querySelector("#recent-orders");
   if (!recent) return;
   recent.replaceChildren();
-  const rows = TicketLedger.summary(currentBook).slice(0, 30);
-  if (!rows.length) {
+  const filter = document.querySelector("#site-orders-search");
+  const people = listedPeople(filter ? filter.value : "").slice(0, 40);
+  if (!people.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No recent scans.";
+    empty.textContent = filter && filter.value.trim() ? "No matching orders." : "No recent scans.";
     recent.append(empty);
     return;
   }
-  for (const order of rows) {
-    const card = document.createElement("article");
-    card.className = "card";
-    const person = catalogPerson(order.fullNumber || order.orderId) || catalogPerson(order.orderId);
-    const kind = order.status === "Taken" ? "taken completely" : order.status === "Partially taken" ? "taken partially" : "scanned only";
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "secondary order-toggle";
-    const who = person ? person.name : (order.name || "Order");
-    toggle.textContent = `${who} ${order.orderId} (${order.total}) ${kind}`;
-    const details = document.createElement("div");
-    details.hidden = true;
-    const status = document.createElement("p");
-    status.textContent = person
-      ? `${person.name}. ${person.email}. ${order.detail || order.status}`
-      : `${order.detail || order.status} ${order.taken} out of ${order.total} already taken.`;
-    details.append(status);
-    if (person) details.append(itemPills(person));
-    else details.append(variantLine(order.variants));
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "secondary";
-    button.textContent = "Delete";
-    button.addEventListener("click", () => deleteRecent(order.orderId));
-    details.append(button);
-    toggle.addEventListener("click", () => { details.hidden = !details.hidden; });
-    card.append(toggle, details);
-    recent.append(card);
-  }
+  for (const person of people) recent.append(orderCard(person, { delete: true }));
 }
 
 function saveTaken(orderId, rawCount) {
@@ -812,6 +765,8 @@ document.querySelector("#counter-food").addEventListener("click", () => {
   const person = catalogPerson(openedCode);
   if (person) paintOpen(person);
 });
+document.querySelector("#orders-search").addEventListener("input", () => { renderOrders(); });
+document.querySelector("#site-orders-search").addEventListener("input", () => { renderOrders(); });
 document.querySelector("#search-order").addEventListener("click", searchOrder);
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchOrder();

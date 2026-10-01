@@ -4402,6 +4402,8 @@ window.TicketCatalog = {
 };
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();
+  const orderCode = text.match(/order-(\d+)/i);
+  if (orderCode) return this.orders[orderCode[1].slice(-5)] || null;
   const utt = text.match(/UTT(\d{8,})/i);
   if (utt) return this.orders[utt[1].slice(-5)] || null;
   if (/^\d{5}$/.test(text)) return this.orders[text] || null;

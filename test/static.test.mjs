@@ -20,11 +20,11 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(css, /html\.is-mobile #login\.screen/);
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
-  assert.match(app, /Save picked up/);
+  assert.match(html, /Search orders/);
   assert.match(html, /Entry counter/);
   assert.match(html, /Food counter/);
   assert.match(html, /id="search-order"/);
-  assert.match(app, /Mark food picked up/);
+  assert.match(app, /item-pill/);
   assert.match(app, /Already seen/);
   assert.match(html, /Export CSV/);
   assert.match(app, /exportStatus/);

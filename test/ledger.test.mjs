@@ -144,6 +144,26 @@ test("old variant scans are removed and the sheet exports one CSV line per order
   assert.match(csv, /Pending items,2/);
 });
 
+test("entry and food get separate status, and one item turns done at a time", () => {
+  const person = {
+    code: "12166",
+    full: "UTT20260900012166",
+    name: "barna NA",
+    email: "barna_c@yahoo.com",
+    items: [
+      { name: "Saturday Lunch Vegetarian", qty: 1, lane: "food", tone: "sat-veg" },
+      { name: "Regular Member Entry", qty: 1, lane: "entry", tone: "entry" },
+    ],
+  };
+  assert.equal(ledger.sheetPhrase(person.items.map((item) => ({ ...item, taken: false }))), "Entry not done. Food not taken");
+  const entered = ledger.markItem(ledger.emptyBook(), person, 1, "2026-09-30T17:20:00.000Z", "admin");
+  assert.equal(entered.phrase, "Entry done for Saturday. Food not taken");
+  assert.equal(entered.book.orders["12166"].variants["item:1:Regular Member Entry"].taken, true);
+  assert.equal(entered.book.orders["12166"].variants["item:0:Saturday Lunch Vegetarian"].taken, false);
+  const fed = ledger.markItem(entered.book, person, 0, "2026-09-30T17:30:00.000Z", "admin");
+  assert.equal(fed.phrase, "Entry done for Saturday. Food taken");
+});
+
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {
   const book = ledger.emptyBook();
   book.orders.old = { orderId: "old", updatedAt: "2020-01-01T00:00:00.000Z", scannedAt: "2020-01-01T00:00:00.000Z", variants: {} };

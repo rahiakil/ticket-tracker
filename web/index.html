@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=19">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
   <main id="gate" class="gate">
@@ -66,7 +66,10 @@
 
     <section class="panel">
       <h2 id="order-heading">Orders (0)</h2>
-      <p id="order-breakdown" class="note">(0 scanned only) (0 taken partially) (0 taken completely)</p>
+      <p id="order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
+      <label>Search orders
+        <input id="orders-search" autocomplete="off" placeholder="Name, email, or order number">
+      </label>
       <button id="refresh" class="secondary" type="button">Refresh</button>
       <button id="export-csv" class="secondary" type="button">Export CSV</button>
       <p id="admin-message" class="result" role="status" hidden></p>
@@ -77,9 +80,9 @@
       <button id="show-totals" class="secondary" type="button">Show totals</button>
       <div id="count-body" hidden>
         <p id="people-count" class="people-count">0</p>
-        <p class="note">QR codes</p>
+        <p class="note">Orders seen</p>
         <p id="item-count" class="people-count">0</p>
-        <p class="note">Individual items</p>
+        <p class="note">Entry done</p>
         <div id="variant-counts"></div>
       </div>
     </section>
@@ -107,14 +110,17 @@
     </header>
     <section class="panel">
       <h1 id="site-order-heading">Orders (0)</h1>
-      <p id="site-order-breakdown" class="note">(0 scanned only) (0 taken partially) (0 taken completely)</p>
+      <p id="site-order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
+      <label>Search orders
+        <input id="site-orders-search" autocomplete="off" placeholder="Name, email, or order number">
+      </label>
       <p class="note">Loaded from the Drive text file. Delete removes that scan from the file.</p>
       <button id="show-site-totals" class="secondary" type="button">Show totals</button>
       <div id="site-count-body" hidden>
         <p id="site-people-count" class="people-count">0</p>
-        <p class="note">QR codes</p>
+        <p class="note">Orders seen</p>
         <p id="site-item-count" class="people-count">0</p>
-        <p class="note">Individual items</p>
+        <p class="note">Entry done</p>
         <div id="site-variant-counts"></div>
       </div>
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
@@ -139,10 +145,10 @@
 
   <script src="config.js?v=13"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="catalog.js?v=1"></script>
-  <script src="ledger.js?v=16"></script>
+  <script src="catalog.js?v=2"></script>
+  <script src="ledger.js?v=17"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
