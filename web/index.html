@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
 <div class="app-shell">
@@ -81,7 +81,8 @@
         <input id="orders-search" autocomplete="off" placeholder="Name, email, or order number">
       </label>
       <button id="refresh" class="secondary" type="button">Refresh</button>
-      <button id="export-csv" class="secondary" type="button">Export CSV</button>
+      <button id="export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="email-csv" class="secondary" type="button">Email CSV</button>
       <p id="admin-message" class="result" role="status" hidden></p>
       <div id="orders"></div>
     </section>
@@ -147,7 +148,8 @@
         <div id="site-variant-counts"></div>
       </div>
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
-      <button id="admin-export-csv" class="secondary" type="button">Export CSV</button>
+      <button id="admin-export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="admin-email-csv" class="secondary" type="button">Email CSV</button>
       <button id="release-locks" class="secondary" type="button">Release all locks</button>
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
       <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
@@ -211,6 +213,6 @@
   <script src="ledger.js?v=22"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=33"></script>
 </body>
 </html>

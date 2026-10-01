@@ -869,15 +869,51 @@ async function refreshOrders() {
   renderOrders();
 }
 
-function exportStatus() {
+function statusFile() {
   const csv = TicketLedger.exportCsv(currentBook, activeOrders());
+  const name = `ticket-status-${new Date().toISOString().slice(0, 10)}.csv`;
+  return { csv, name };
+}
+
+function sayExport(text) {
+  for (const id of ["#admin-message", "#admin-note"]) {
+    const node = document.querySelector(id);
+    if (!node) continue;
+    node.hidden = false;
+    node.textContent = text;
+  }
+}
+
+function exportStatus() {
+  const { csv, name } = statusFile();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `ticket-status-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = name;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  sayExport(`Saved ${name} to your Downloads folder.`);
+}
+
+async function emailStatus() {
+  const { csv, name } = statusFile();
+  const file = new File([csv], name, { type: "text/csv" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: "Uttoron ticket status", text: "Ticket status from Uttoron." });
+      sayExport("Choose Mail to send the CSV from this phone.");
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+    }
+  }
+  const summary = csv.split(/\r?\n/).slice(0, 12).join("\n");
+  const body = `Uttoron ticket status\n\n${summary}\n\nDownload CSV saves the full file in the Downloads folder.`;
+  const link = document.createElement("a");
+  link.href = `mailto:?subject=${encodeURIComponent("Uttoron ticket status")}&body=${encodeURIComponent(body.slice(0, 1600))}`;
+  link.click();
+  sayExport("Opened the mail app with the totals. Download CSV saves the full file.");
 }
 
 document.querySelector("#save-link").addEventListener("click", () => {
@@ -942,6 +978,8 @@ document.querySelector("#refresh").addEventListener("click", () => { refreshOrde
 document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#export-csv").addEventListener("click", exportStatus);
 document.querySelector("#admin-export-csv").addEventListener("click", exportStatus);
+document.querySelector("#email-csv").addEventListener("click", () => { emailStatus(); });
+document.querySelector("#admin-email-csv").addEventListener("click", () => { emailStatus(); });
 document.querySelector("#release-locks").addEventListener("click", () => {
   if (!window.confirm("Release every line lock?")) return;
   const at = new Date().toISOString();

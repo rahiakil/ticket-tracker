@@ -35,7 +35,9 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /id="search-order"/);
   assert.match(app, /item-pill/);
   assert.match(app, /Already seen/);
-  assert.match(html, /Export CSV/);
+  assert.match(html, /Download CSV/);
+  assert.match(html, /Email CSV/);
+  assert.match(app, /mailto:/);
   assert.match(app, /exportStatus/);
   assert.equal(app.includes("FormData"), false);
   assert.equal(app.includes("location.href"), false);

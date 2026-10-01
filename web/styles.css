@@ -239,7 +239,7 @@ h2 { font-size: 1.25rem; }
 }
 .brand-bar .eyebrow { color: #1c140c; }
 #search-order, #export-csv, #admin-export-csv, #main-page, #login-form .btn-orange { background: var(--orange); color: #fff; border-color: var(--orange-dark); }
-#scan-btn, #refresh, #admin-refresh, #release-locks { background: var(--teal); color: #fff; border-color: var(--teal-dark); }
+#scan-btn, #refresh, #admin-refresh, #release-locks, #email-csv, #admin-email-csv { background: var(--teal); color: #fff; border-color: var(--teal-dark); }
 #cleanup-all { background: #9a3412; color: #fff; border-color: #7c2d12; }
 #show-totals, #show-site-totals, label.file-btn { background: #fff; color: var(--teal-dark); border-color: var(--teal); }
 .note { color: #5c4632; }
