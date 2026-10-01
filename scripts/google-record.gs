@@ -3,6 +3,8 @@ var FOLDER_ID = "1r679tCaeKA5-y4sXuUEX3xB2GCxx7Xg7";
 
 function doGet(e) {
   var book = readBook_();
+  var url = liveSheetUrl_();
+  if (url) book.sheetUrl = url;
   var body = JSON.stringify(book);
   var callback = e && e.parameter ? e.parameter.callback : "";
   if (callback && /^[A-Za-z0-9_]+$/.test(callback)) {
@@ -20,8 +22,59 @@ function doPost(e) {
   if (!book || book.schemaVersion !== 1 || !book.orders || !Array.isArray(book.lines)) {
     return ContentService.createTextOutput("bad").setMimeType(ContentService.MimeType.TEXT);
   }
-  writeBook_(mergeBook_(readBook_(), book));
+  var merged = mergeBook_(readBook_(), book);
+  merged = publishLiveSheet_(merged);
+  writeBook_(merged);
   return ContentService.createTextOutput("ok").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function liveSheetUrl_() {
+  var id = PropertiesService.getScriptProperties().getProperty("SHEET_ID");
+  if (!id) return "";
+  return "https://docs.google.com/spreadsheets/d/" + id + "/edit?usp=sharing";
+}
+
+function ensureLiveSheet_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (err) {}
+  }
+  var ss = SpreadsheetApp.create("Uttoron ticket status");
+  var file = DriveApp.getFileById(ss.getId());
+  file.moveTo(DriveApp.getFolderById(FOLDER_ID));
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (err) {}
+  props.setProperty("SHEET_ID", ss.getId());
+  return ss;
+}
+
+function publishLiveSheet_(book) {
+  if (!book || !book.statusGrid || !book.statusGrid.length) return book;
+  try {
+    var ss = ensureLiveSheet_();
+    var sheet = ss.getSheets()[0];
+    sheet.setName("Status");
+    var grid = book.statusGrid;
+    var width = 1;
+    grid.forEach(function (row) { if (row.length > width) width = row.length; });
+    var values = grid.map(function (row) {
+      var copy = row.slice();
+      while (copy.length < width) copy.push("");
+      return copy;
+    });
+    sheet.clear();
+    sheet.getRange(1, 1, values.length, width).setValues(values);
+    sheet.getRange(1, 1, 1, width).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    book.sheetUrl = ss.getUrl();
+  } catch (err) {
+    book.sheetUrl = liveSheetUrl_();
+  }
+  delete book.statusGrid;
+  delete book.publishSheet;
+  return book;
 }
 
 function keepSheet_(current, incoming) {

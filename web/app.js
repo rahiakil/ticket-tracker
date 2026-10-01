@@ -286,6 +286,7 @@ async function flushWrites() {
       if (applied.message) message = applied.message;
     }
     working.baseWriteId = book.lastWriteId || "";
+    if (write) working.statusGrid = statusGrid(working);
     return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
   });
   flushing = false;
@@ -745,6 +746,58 @@ function renderOrders() {
   }
   renderLog();
   renderRecent();
+  renderLiveSheet();
+}
+
+let sheetPublishTried = false;
+
+function renderLiveSheet() {
+  const rows = statusGrid();
+  const url = currentBook.sheetUrl || "";
+  document.querySelectorAll(".sheet-panel").forEach((panel) => {
+    const link = panel.querySelector(".google-sheet-link");
+    const wait = panel.querySelector(".sheet-wait");
+    const wrap = panel.querySelector(".sheet-frame-wrap");
+    const frame = panel.querySelector(".google-sheet-frame");
+    const table = panel.querySelector(".sheet-table");
+    if (url && link && wrap && frame) {
+      link.hidden = false;
+      link.href = url;
+      if (wait) wait.hidden = true;
+      wrap.hidden = false;
+      const preview = String(url).replace(/\/edit.*$/, "/preview");
+      if (frame.getAttribute("src") !== preview) frame.setAttribute("src", preview);
+    }
+    if (!table) return;
+    table.replaceChildren();
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    (rows[0] || []).forEach((label) => {
+      const cell = document.createElement("th");
+      cell.textContent = label;
+      headRow.append(cell);
+    });
+    head.append(headRow);
+    const body = document.createElement("tbody");
+    rows.slice(1).forEach((row) => {
+      const line = document.createElement("tr");
+      row.forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        line.append(cell);
+      });
+      body.append(line);
+    });
+    table.append(head, body);
+  });
+  if (!url && !sheetPublishTried && readSession()) {
+    sheetPublishTried = true;
+    queueWrite((book) => {
+      book.statusGrid = statusGrid(book);
+      book.publishSheet = true;
+      return { write: true, book, message: "" };
+    });
+  }
 }
 
 function variantLine(variants) {
@@ -867,6 +920,14 @@ async function refreshOrders() {
     });
   }
   renderOrders();
+}
+
+function statusGrid(book) {
+  const rows = TicketLedger.exportRows(book || currentBook, activeOrders());
+  return [
+    ["Order number", "Code", "Name", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"],
+    ...rows.map((row) => [row.full, row.code, row.name, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
+  ];
 }
 
 function statusFile() {

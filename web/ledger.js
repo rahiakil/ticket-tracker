@@ -643,6 +643,7 @@ function statusDetail(order) {
     markLane,
     activityFor,
     cleanSheetBook,
+    exportRows,
     exportCsv,
     sheetPhrase,
     markItem,

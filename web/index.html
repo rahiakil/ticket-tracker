@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="stylesheet" href="styles.css?v=27">
 </head>
 <body>
 <div class="app-shell">
@@ -87,6 +87,18 @@
       <div id="orders"></div>
     </section>
 
+    <section class="panel sheet-panel">
+      <h2>Sheet</h2>
+      <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
+      <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
+      <div class="sheet-frame-wrap" hidden>
+        <iframe class="google-sheet-frame" title="Live Google Sheet"></iframe>
+      </div>
+      <div class="sheet-scroll">
+        <table class="sheet-table"></table>
+      </div>
+    </section>
+
     <section class="panel" id="count-panel">
       <button id="show-totals" class="secondary" type="button">Show totals</button>
       <div id="count-body" hidden>
@@ -157,6 +169,19 @@
       <p id="sheet-note" class="note"></p>
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
+    </section>
+    <section class="panel sheet-panel">
+      <h2>Sheet</h2>
+      <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
+      <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
+      <div class="sheet-frame-wrap" hidden>
+        <iframe class="google-sheet-frame" title="Live Google Sheet"></iframe>
+      </div>
+      <div class="sheet-scroll">
+        <table class="sheet-table"></table>
+      </div>
+    </section>
+    <section class="panel">
       <h2>Log</h2>
       <label>Search log
         <input id="site-log-search" autocomplete="off" placeholder="Name, email, or order number">
@@ -210,9 +235,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=3"></script>
-  <script src="ledger.js?v=22"></script>
+  <script src="ledger.js?v=23"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=33"></script>
+  <script src="app.js?v=34"></script>
 </body>
 </html>
