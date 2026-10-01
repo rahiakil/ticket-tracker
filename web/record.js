@@ -16,10 +16,10 @@
       let book;
       try {
         book = await load(url);
-      } catch {
-        return { ok: false, message: "Could not save—retry" };
+      } catch (error) {
+        return { ok: false, message: failMessage(error) };
       }
-      if (!book || book.schemaVersion !== 1 || !book.orders) return { ok: false, message: "Could not save—retry" };
+      if (!book || book.schemaVersion !== 1 || !book.orders) return { ok: false, message: "Could not save—retry. The record file was not readable." };
       const changed = mutate(book);
       if (!changed.write) return { ok: true, message: changed.message, book };
       const writeId = newId();
@@ -37,7 +37,14 @@
       }
       if (confirmed && confirmed.lastWriteId === writeId) return { ok: true, message: changed.message, book: confirmed };
     }
-    return { ok: false, message: "Could not save—retry" };
+    return { ok: false, message: "Could not save—retry. The record did not confirm the save." };
+  }
+
+  function failMessage(error) {
+    const reason = error && error.message;
+    if (reason === "access") return "Could not save—retry. Google refused access. Set Who has access to Anyone.";
+    if (reason === "timeout") return "Could not save—retry. The record link did not answer.";
+    return "Could not save—retry";
   }
 
   function loadWithScript(url) {
@@ -59,7 +66,7 @@
       };
       script.onerror = () => {
         cleanup();
-        reject(new Error("load"));
+        reject(new Error("access"));
       };
       const join = url.includes("?") ? "&" : "?";
       script.src = `${url}${join}callback=${callback}&t=${Date.now()}`;

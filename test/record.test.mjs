@@ -56,6 +56,6 @@ test("a lost write is retried and then reported as not saved", async () => {
     newId: () => "new-write",
   }, (book) => ({ write: true, book, message: "Order 12196. Scanned but not taken" }));
   assert.equal(saved.ok, false);
-  assert.equal(saved.message, "Could not save—retry");
+  assert.match(saved.message, /Could not save—retry/);
   assert.ok(calls >= 2);
 });
