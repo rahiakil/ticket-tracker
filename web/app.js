@@ -18,6 +18,7 @@ const login = document.querySelector("#login");
 const workspace = document.querySelector("#workspace");
 const adminScreen = document.querySelector("#admin-screen");
 const ticketScreen = document.querySelector("#ticket-screen");
+const saleScreen = document.querySelector("#sale-screen");
 const resultEl = document.querySelector("#result");
 const retryButton = document.querySelector("#retry");
 const reader = document.querySelector("#reader");
@@ -46,6 +47,7 @@ function show(view) {
   workspace.hidden = view !== workspace;
   adminScreen.hidden = view !== adminScreen;
   if (ticketScreen) ticketScreen.hidden = view !== ticketScreen;
+  if (saleScreen) saleScreen.hidden = view !== saleScreen;
 }
 
 function closeTicket() {
@@ -313,7 +315,7 @@ async function flushWrites() {
   if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
 }
 
-function activeOrders() {
+function catalogSource() {
   const fromBook = currentBook.sheet && currentBook.sheet.orders;
   if (fromBook && Object.keys(fromBook).length) return fromBook;
   try {
@@ -323,6 +325,10 @@ function activeOrders() {
     /* use the built-in sheet */
   }
   return (window.TicketCatalog && window.TicketCatalog.orders) || {};
+}
+
+function activeOrders() {
+  return { ...catalogSource(), ...(currentBook.walkups || {}) };
 }
 
 function catalogMatches(raw) {
@@ -453,6 +459,19 @@ function markOne(person, index, unit) {
   renderOrders();
 }
 
+function sendDispute(person, itemName) {
+  const note = window.prompt("Send this to the dispute bucket. What should the admin check?", "Needs a check");
+  if (note === null) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  queueWrite((book) => {
+    const next = TicketLedger.addDispute(book, person, itemName, at, actor, note.trim() || "Needs a check");
+    return { write: next.changed, book: next.book, message: next.already ? "Already in the dispute bucket." : "Sent to the dispute bucket." };
+  });
+  showMessage("Sent to the dispute bucket.", "pending");
+  renderOrders();
+}
+
 function revertOne(person) {
   const at = new Date().toISOString();
   const actor = holderNow().actor;
@@ -477,6 +496,7 @@ function itemButtons(person) {
   const now = new Date();
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
+  const desk = activeCounter();
   const groups = [
     ["Friday entry", "friday", "entry"],
     ["Friday food", "friday", "food"],
@@ -486,10 +506,10 @@ function itemButtons(person) {
     ["Sunday food", "sunday", "food"],
     ["Other entry", "other", "entry"],
     ["Other food", "other", "food"],
-  ];
+  ].filter((group) => group[2] === desk);
   const board = document.createElement("div");
   for (const [label, bucket, lane] of groups) {
-    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane);
+    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane).sort((left, right) => Number(left.item.taken) - Number(right.item.taken));
     if (!rows.length) continue;
     const heading = document.createElement("p");
     heading.className = "day-heading";
@@ -510,8 +530,25 @@ function itemButtons(person) {
       const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
       const label = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
       button.textContent = [icon, label, note].filter(Boolean).join("\n");
-      if (locked || state !== "ready") button.disabled = true;
-      else button.addEventListener("click", () => markOne(person, item.index, item.unit));
+      if (locked) button.disabled = true;
+      else {
+        let holdTimer = 0;
+        let held = false;
+        button.addEventListener("pointerdown", () => {
+          held = false;
+          holdTimer = window.setTimeout(() => {
+            held = true;
+            sendDispute(person, `${item.id}${item.parts > 1 ? ` ${item.unit + 1} of ${item.parts}` : ""}`);
+          }, 650);
+        });
+        button.addEventListener("pointerup", () => window.clearTimeout(holdTimer));
+        button.addEventListener("pointerleave", () => window.clearTimeout(holdTimer));
+        button.addEventListener("pointercancel", () => window.clearTimeout(holdTimer));
+        button.addEventListener("click", () => {
+          if (held) { held = false; return; }
+          if (state === "ready") markOne(person, item.index, item.unit);
+        });
+      }
       list.append(button);
     }
     board.append(heading, list);
@@ -838,6 +875,180 @@ function renderOrders() {
   renderLog();
   renderRecent();
   renderLiveSheet();
+  renderDisputes();
+}
+
+function renderDisputes() {
+  const box = document.querySelector("#disputes");
+  if (!box) return;
+  box.replaceChildren();
+  const rows = (currentBook.disputes || []).filter((item) => item.open);
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No open disputes.";
+    box.append(empty);
+    return;
+  }
+  for (const item of rows) {
+    const line = document.createElement("p");
+    line.textContent = `${item.name} · ${item.code} · ${item.item} · ${item.note} · ${item.by}`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary";
+    button.textContent = "Clear dispute";
+    button.addEventListener("click", () => {
+      const at = new Date().toISOString();
+      queueWrite((book) => {
+        const next = TicketLedger.clearDispute(book, item.key, at, holderNow().actor);
+        return { write: next.changed, book: next.book, message: "Dispute cleared." };
+      });
+      renderOrders();
+    });
+    box.append(line, button);
+  }
+}
+
+let cart = [];
+
+function menuItems() {
+  const names = new Map();
+  Object.values(catalogSource()).forEach((person) => {
+    (person.items || []).forEach((item) => {
+      if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: item.lane || "entry", tone: item.tone || "" });
+    });
+  });
+  return [...names.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function openSale() {
+  cart = [];
+  const select = document.querySelector("#sale-item");
+  select.replaceChildren();
+  menuItems().forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.name;
+    option.textContent = item.name;
+    option.dataset.lane = item.lane;
+    select.append(option);
+  });
+  document.querySelector("#sale-name").value = "";
+  document.querySelector("#sale-email").value = "";
+  paintCart();
+  show(saleScreen);
+}
+
+function paintCart() {
+  const box = document.querySelector("#sale-cart");
+  box.replaceChildren();
+  if (!cart.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Cart is empty.";
+    box.append(empty);
+    return;
+  }
+  cart.forEach((item, index) => {
+    const line = document.createElement("p");
+    line.textContent = `${item.name} x ${item.qty}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "text-button";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => { cart.splice(index, 1); paintCart(); });
+    box.append(line, remove);
+  });
+}
+
+function nextWalkCode() {
+  const used = new Set(Object.keys(activeOrders()));
+  let code = 90001;
+  while (used.has(String(code))) code += 1;
+  return String(code);
+}
+
+function submitSale() {
+  const name = document.querySelector("#sale-name").value.trim();
+  const email = document.querySelector("#sale-email").value.trim();
+  const note = document.querySelector("#sale-note");
+  if (!name || !cart.length) {
+    note.textContent = "Add a name and at least one item.";
+    return;
+  }
+  const code = nextWalkCode();
+  const person = {
+    code,
+    full: `WALK${code}`,
+    name,
+    email,
+    event: "On site",
+    date: new Date().toLocaleDateString(),
+    amount: "",
+    items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: item.lane, tone: item.lane === "entry" ? "entry" : "food" })),
+  };
+  const at = new Date().toISOString();
+  queueWrite((book) => {
+    const next = TicketLedger.addWalkup(book, person, at, holderNow().actor);
+    return { write: next.changed, book: next.book, message: `Order ${code} created.` };
+  });
+  cart = [];
+  note.textContent = `Order ${code} is ready to share.`;
+  paintOpen(person);
+}
+
+function receiptText(person) {
+  const view = orderView(person);
+  const lines = [`Uttoron ${person.full}`, person.name, person.email || "", ...view.items.map((item) => `${item.taken ? "DONE" : "OPEN"} ${item.parts > 1 ? `${item.id} ${item.unit + 1}/${item.parts}` : item.id}`)];
+  return lines.filter(Boolean).join("\n");
+}
+
+function printTicket() {
+  const person = catalogPerson(openedCode);
+  if (!person) return;
+  document.body.dataset.print = "ticket";
+  window.print();
+  delete document.body.dataset.print;
+}
+
+async function bluetoothPrint() {
+  const person = catalogPerson(openedCode);
+  if (!person) return;
+  if (!navigator.bluetooth) {
+    showMessage("This browser cannot open Bluetooth. Use Print, and pick a paired Bluetooth printer there.", "invalid");
+    return;
+  }
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ["0000ffe0-0000-1000-8000-00805f9b34fb", "49535343-fe7d-4ae5-8fa9-9fafd205e455"],
+    });
+    const server = await device.gatt.connect();
+    const services = await server.getPrimaryServices();
+    let writer = null;
+    for (const service of services) {
+      const characteristics = await service.getCharacteristics();
+      writer = characteristics.find((item) => item.properties.write || item.properties.writeWithoutResponse);
+      if (writer) break;
+    }
+    if (!writer) {
+      showMessage("The Bluetooth device did not accept a print. Use Print instead.", "invalid");
+      return;
+    }
+    const bytes = new TextEncoder().encode(`${receiptText(person)}\n\n`);
+    await writer.writeValue(bytes);
+    showMessage(`Sent the receipt to ${device.name || "the printer"}.`, "pending");
+  } catch (error) {
+    if (error && error.name === "NotFoundError") return;
+    showMessage("Bluetooth print did not connect. Use Print, and pick a paired printer.", "invalid");
+  }
+}
+
+async function shareTicket() {
+  const person = catalogPerson(openedCode);
+  if (!person) return;
+  const text = `Uttoron order ${person.code} for ${person.name}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Uttoron ticket", text }); return; } catch (error) { if (error && error.name === "AbortError") return; }
+  }
+  showMessage(text, "pending");
 }
 
 let sheetPublishTried = false;
@@ -1211,6 +1422,22 @@ setInterval(() => {
   if (document.hidden || !readSession() || flushing || pendingWrites.length) return;
   refreshOrders();
 }, 20000);
+
+document.querySelector("#new-sale").addEventListener("click", openSale);
+document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
+document.querySelector("#sale-add").addEventListener("click", () => {
+  const select = document.querySelector("#sale-item");
+  const option = select.selectedOptions[0];
+  if (!option) return;
+  const found = cart.find((item) => item.name === option.value);
+  if (found) found.qty += 1;
+  else cart.push({ name: option.value, qty: 1, lane: option.dataset.lane || "entry" });
+  paintCart();
+});
+document.querySelector("#sale-submit").addEventListener("click", submitSale);
+document.querySelector("#print-ticket").addEventListener("click", printTicket);
+document.querySelector("#bluetooth-print").addEventListener("click", () => { bluetoothPrint(); });
+document.querySelector("#share-ticket").addEventListener("click", () => { shareTicket(); });
 
 const legend = document.querySelector(".legend");
 if (legend) {

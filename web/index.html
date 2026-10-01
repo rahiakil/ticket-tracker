@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=34">
+  <link rel="stylesheet" href="styles.css?v=35">
 </head>
 <body>
 <div class="app-shell">
@@ -86,7 +86,8 @@
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
       <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
-      <p class="note">Both counters show every ticket, split into Friday, Saturday, and Sunday. The button you pick is only the desk name written on the log.</p>
+      <p class="note">Entry shows only entry. Food shows only food. A later day stays unavailable until that day. Hold a ticket to send it to the dispute bucket.</p>
+      <button id="new-sale" class="btn-orange" type="button">New sale</button>
       <div id="qr-box"></div>
       <label>Name or order number
         <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, email, or order number">
@@ -162,10 +163,35 @@
     </section>
   </main>
 
+  <main id="sale-screen" class="screen" hidden>
+    <header class="topbar">
+      <button id="sale-back" class="btn-quiet" type="button">Back</button>
+    </header>
+    <section class="panel">
+      <h1>New sale</h1>
+      <label>Name
+        <input id="sale-name" autocomplete="name">
+      </label>
+      <label>Email
+        <input id="sale-email" autocomplete="email">
+      </label>
+      <label>Add an item
+        <select id="sale-item"></select>
+      </label>
+      <button id="sale-add" class="btn-teal" type="button">Add one</button>
+      <div id="sale-cart"></div>
+      <button id="sale-submit" class="btn-orange" type="button">Create QR</button>
+      <p id="sale-note" class="result" role="status"></p>
+    </section>
+  </main>
+
   <main id="ticket-screen" class="screen" hidden>
     <header class="topbar">
       <button id="main-page" class="btn-orange" type="button">Main page</button>
       <button id="demo-mode-ticket" class="demo-toggle btn-orange" type="button">Demo</button>
+      <button id="print-ticket" class="btn-teal" type="button">Print</button>
+      <button id="bluetooth-print" class="btn-quiet" type="button">Bluetooth</button>
+      <button id="share-ticket" class="btn-orange" type="button">Share QR</button>
     </header>
     <section class="panel">
       <div id="ticket-body"></div>
@@ -185,6 +211,8 @@
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
       </div>
+      <h2>Disputes</h2>
+      <div id="disputes"></div>
       <h1 id="site-order-heading">Orders (0)</h1>
       <p id="site-order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
       <label>Search orders
@@ -248,9 +276,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=3"></script>
-  <script src="ledger.js?v=28"></script>
+  <script src="ledger.js?v=29"></script>
   <script src="record.js?v=8"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=42"></script>
+  <script src="app.js?v=43"></script>
 </body>
 </html>

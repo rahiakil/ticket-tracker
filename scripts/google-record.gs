@@ -116,6 +116,8 @@ function mergeBook_(current, incoming) {
     current.lines = incoming.lines || [];
     current.log = incoming.log || [];
     current.locks = incoming.locks || {};
+    current.walkups = incoming.walkups || {};
+    current.disputes = incoming.disputes || [];
     (incoming.releasedLocks || []).forEach(function (code) {
       if (current.locks[code] && current.locks[code].holder === incoming.releasedBy) delete current.locks[code];
     });
@@ -180,6 +182,8 @@ function mergeBook_(current, incoming) {
   });
   current.lines = lines;
   current.log = mergeLog_(current.log, incoming.log);
+  current.walkups = Object.assign({}, current.walkups || {}, incoming.walkups || {});
+  current.disputes = incoming.disputes || current.disputes || [];
   current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
   pruneOld_(current);
   current.counts = countBook_(current);

@@ -13,7 +13,7 @@
   const LOCK_MS = 3 * 60 * 1000;
 
   function emptyBook() {
-    return { schemaVersion: 1, lines: [], log: [], orders: {}, locks: {} };
+    return { schemaVersion: 1, lines: [], log: [], orders: {}, locks: {}, walkups: {}, disputes: [] };
   }
 
   const MAX_ORDERS = 10000;
@@ -22,6 +22,8 @@
     const next = structuredClone(ready(book) ? book : emptyBook());
     if (!Array.isArray(next.log)) next.log = [];
     if (!next.locks || typeof next.locks !== "object") next.locks = {};
+    if (!next.walkups || typeof next.walkups !== "object") next.walkups = {};
+    if (!Array.isArray(next.disputes)) next.disputes = [];
     const oldestFirst = Object.keys(next.orders || {}).sort((left, right) => {
       const leftTime = Date.parse(next.orders[left].updatedAt || next.orders[left].scannedAt || 0);
       const rightTime = Date.parse(next.orders[right].updatedAt || next.orders[right].scannedAt || 0);
@@ -398,6 +400,38 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true };
   }
 
+  function addDispute(book, person, itemName, at, actor, note) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!Array.isArray(next.disputes)) next.disputes = [];
+    const key = `${person.code}|${itemName}`;
+    if (next.disputes.some((item) => item.key === key && item.open)) return { book: pruneBook(next), changed: false, already: true };
+    next.disputes.push({ key, code: person.code, item: itemName, name: person.name, email: person.email, note: note || "Needs a check", at, by: actor, open: true });
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${person.code} dispute: ${itemName} by ${actor}` });
+    return { book: pruneBook(next), changed: true, already: false };
+  }
+
+  function clearDispute(book, key, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const found = (next.disputes || []).find((item) => item.key === key && item.open);
+    if (!found) return { book: pruneBook(next), changed: false };
+    found.open = false;
+    found.closedAt = at;
+    found.closedBy = actor;
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${found.code} dispute closed: ${found.item} by ${actor}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function addWalkup(book, person, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!next.walkups || typeof next.walkups !== "object") next.walkups = {};
+    next.walkups[person.code] = person;
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${person.code} new sale for ${person.name} by ${actor}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
   function cleanupAll(book, at) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
@@ -681,6 +715,9 @@ function statusDetail(order) {
     cleanSheetBook,
     exportRows,
     expandVariants,
+    addDispute,
+    clearDispute,
+    addWalkup,
     exportCsv,
     sheetPhrase,
     markItem,
