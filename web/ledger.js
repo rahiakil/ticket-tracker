@@ -312,20 +312,27 @@ function statusDetail(order) {
     return "";
   }
 
-  function daysAhead(dayName, now) {
+  function daysAhead(dayName, now, dates) {
     const clock = now instanceof Date ? now : new Date(now || Date.now());
+    const mapped = dates && dates[dayName];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(mapped || "")) {
+      const parts = mapped.split("-").map(Number);
+      const target = new Date(parts[0], parts[1] - 1, parts[2]);
+      const today = new Date(clock.getFullYear(), clock.getMonth(), clock.getDate());
+      return Math.round((target.getTime() - today.getTime()) / 86400000);
+    }
     const weekday = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-    let target = weekday[dayName];
-    if (target === undefined) return 0;
+    let targetDay = weekday[dayName];
+    if (targetDay === undefined) return 0;
     const today = clock.getDay();
     if (today === 0) {
-      if (target === 0) return 0;
-      if (target === 6) return -1;
-      if (target === 5) return -2;
-      return target;
+      if (targetDay === 0) return 0;
+      if (targetDay === 6) return -1;
+      if (targetDay === 5) return -2;
+      return targetDay;
     }
-    if (target === 0) target = 7;
-    return target - today;
+    if (targetDay === 0) targetDay = 7;
+    return targetDay - today;
   }
 
   function couponKind(name, lane) {
@@ -435,6 +442,7 @@ function statusDetail(order) {
   function cleanupAll(book, at) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
+    if (book && book.eventDays) next.eventDays = book.eventDays;
     next.lines = [`${at} siteadmin cleaned up everything`];
     next.log = [{ at, text: "siteadmin cleaned up everything" }];
     next.cleanupAll = true;
@@ -450,7 +458,8 @@ function statusDetail(order) {
     const named = person.items && person.items[itemIndex];
     const when = new Date(at);
     const demo = Boolean(options && options.demo);
-    if (!demo && named && itemDay(named.name) && daysAhead(itemDay(named.name), when) > 0) {
+    const dates = options && options.eventDays;
+    if (!demo && named && itemDay(named.name) && daysAhead(itemDay(named.name), when, dates) > 0) {
       const current = structuredClone(ready(book) ? book : emptyBook());
       return { book: pruneBook(current), changed: false, blocked: true, already: false, phrase: "" };
     }

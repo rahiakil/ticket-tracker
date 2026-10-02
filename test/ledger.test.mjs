@@ -183,6 +183,11 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(ledger.activityFor({ log: [{ at: "2026-10-03T18:00:00.000Z", text: "12166 food picked up" }, { at: "2026-10-03T18:01:00.000Z", text: "12222 scanned" }] }, "12166").length, 1);
   assert.equal(ledger.daysAhead("saturday", new Date("2026-09-30T18:00:00.000Z")) > 0, true);
   assert.equal(ledger.daysAhead("saturday", new Date("2026-10-03T18:00:00.000Z")), 0);
+  const eventDays = { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" };
+  assert.equal(ledger.daysAhead("friday", new Date(2026, 9, 8, 12), eventDays), 1);
+  assert.equal(ledger.daysAhead("friday", new Date(2026, 9, 9, 12), eventDays), 0);
+  assert.equal(ledger.daysAhead("saturday", new Date(2026, 9, 9, 12), eventDays), 1);
+  assert.equal(ledger.daysAhead("sunday", new Date(2026, 9, 11, 12), eventDays), 0);
 });
 
 test("a line stays locked so a second phone cannot mark it twice", () => {

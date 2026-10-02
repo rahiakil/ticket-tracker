@@ -1,8 +1,14 @@
 const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
 
+let phoneLayout = null;
 function markMobile() {
   const mobile = window.matchMedia("(max-width: 820px), (pointer: coarse)").matches;
+  const phone = window.matchMedia("(max-width: 820px)").matches;
   document.documentElement.classList.toggle("is-mobile", mobile);
+  document.documentElement.classList.toggle("is-phone", phone);
+  if (phone === phoneLayout) return;
+  phoneLayout = phone;
+  document.querySelectorAll(".more-fold").forEach((node) => { node.open = !phone; });
 }
 markMobile();
 window.addEventListener("resize", markMobile);
@@ -491,13 +497,26 @@ function holderNow() {
   return { holder: deviceId(), actor: readAlias() || (session && session.username) || "admin", at: new Date().toISOString() };
 }
 
-let demoMode = false;
+let demoMode = true;
+const DEFAULT_EVENT_DAYS = { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" };
+
+function eventDates(book) {
+  const saved = book && book.eventDays;
+  const pick = (day) => (/^\d{4}-\d{2}-\d{2}$/.test(saved && saved[day] || "") ? saved[day] : DEFAULT_EVENT_DAYS[day]);
+  return { friday: pick("friday"), saturday: pick("saturday"), sunday: pick("sunday") };
+}
 
 function paintDemo() {
+  const dates = eventDates(currentBook);
+  const summary = `Reality: Friday ${dates.friday}, Saturday ${dates.saturday}, Sunday ${dates.sunday}.`;
   for (const button of document.querySelectorAll(".demo-toggle")) {
-    button.textContent = demoMode ? "Demo on" : "Demo";
+    button.textContent = demoMode ? "Demo on" : "Demo off";
     button.className = demoMode ? "demo-toggle btn-teal" : "demo-toggle btn-orange";
+    button.title = demoMode ? "Demo is on for every ticket" : "Demo is off. Reality dates apply.";
   }
+  document.querySelectorAll(".demo-note").forEach((node) => {
+    node.textContent = demoMode ? "Demo is on for every ticket." : `Demo is off. ${summary}`;
+  });
 }
 
 const volunteerMarks = new Map();
@@ -513,7 +532,7 @@ function markOne(person, index, unit) {
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit });
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit, eventDays: eventDates(book) });
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
       : next.blocked
@@ -561,6 +580,54 @@ function dayBucket(name) {
   return TicketLedger.itemDay(name) || "other";
 }
 
+function ticketPill(person, item, index, lane, locked, now) {
+  const button = document.createElement("button");
+  button.type = "button";
+  const kind = TicketLedger.couponKind(item.id, item.lane);
+  const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now, eventDates(currentBook));
+  const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
+  const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
+  button.className = `item-pill coupon-${kind} ${state}`;
+  if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
+  const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
+  const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
+  const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
+  const ticketLabel = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
+  button.textContent = [icon, ticketLabel, note].filter(Boolean).join("\n");
+  if (lane === "food" && state === "ready") {
+    const doneBox = document.createElement("label");
+    doneBox.className = "done-box";
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.addEventListener("click", (event) => event.stopPropagation());
+    check.addEventListener("change", () => {
+      if (check.checked) markOne(person, item.index, item.unit);
+    });
+    doneBox.append(check, document.createTextNode(" Done"));
+    button.append(doneBox);
+  }
+  if (locked) button.disabled = true;
+  else {
+    let holdTimer = 0;
+    let held = false;
+    button.addEventListener("pointerdown", () => {
+      held = false;
+      holdTimer = window.setTimeout(() => {
+        held = true;
+        sendDispute(person, `${item.id}${item.parts > 1 ? ` ${item.unit + 1} of ${item.parts}` : ""}`);
+      }, 650);
+    });
+    button.addEventListener("pointerup", () => window.clearTimeout(holdTimer));
+    button.addEventListener("pointerleave", () => window.clearTimeout(holdTimer));
+    button.addEventListener("pointercancel", () => window.clearTimeout(holdTimer));
+    button.addEventListener("click", () => {
+      if (held) { held = false; return; }
+      if (state === "ready") markOne(person, item.index, item.unit);
+    });
+  }
+  return button;
+}
+
 function itemButtons(person) {
   const view = orderView(person);
   const now = new Date();
@@ -578,69 +645,36 @@ function itemButtons(person) {
     ["Other food", "other", "food"],
   ].filter((group) => group[2] === desk);
   const board = document.createElement("div");
+  board.className = "ticket-board";
   for (const [label, bucket, lane] of groups) {
-    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane).sort((left, right) => Number(left.item.taken) - Number(right.item.taken));
+    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane);
     if (!rows.length) continue;
+    const openRows = rows.filter(({ item }) => !item.taken);
+    const doneRows = rows.filter(({ item }) => item.taken);
+    const block = document.createElement("section");
+    block.className = openRows.length ? "day-block has-open" : "day-block";
     const heading = document.createElement("p");
     heading.className = "day-heading";
     heading.textContent = label;
-    if (rows.every(({ item }) => item.taken)) {
-      const done = document.createElement("p");
-      done.className = "all-done";
-      done.textContent = "∅";
-      board.append(heading, done);
-      continue;
+    block.append(heading);
+    if (openRows.length) {
+      const list = document.createElement("div");
+      list.className = "item-pills";
+      for (const { item, index } of openRows) list.append(ticketPill(person, item, index, lane, locked, now));
+      block.append(list);
     }
-    const list = document.createElement("div");
-    list.className = "item-pills";
-    for (const { item, index } of rows) {
-      const button = document.createElement("button");
-      button.type = "button";
-      const kind = TicketLedger.couponKind(item.id, item.lane);
-      const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now);
-      const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
-      const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
-      button.className = `item-pill coupon-${kind} ${state}`;
-      if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
-      const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
-      const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
-      const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
-      const ticketLabel = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
-      button.textContent = [icon, ticketLabel, note].filter(Boolean).join("\n");
-      if (lane === "food" && state === "ready") {
-        const doneBox = document.createElement("label");
-        doneBox.className = "done-box";
-        const check = document.createElement("input");
-        check.type = "checkbox";
-        check.addEventListener("click", (event) => event.stopPropagation());
-        check.addEventListener("change", () => {
-          if (check.checked) markOne(person, item.index, item.unit);
-        });
-        doneBox.append(check, document.createTextNode(" Done"));
-        button.append(doneBox);
-      }
-      if (locked) button.disabled = true;
-      else {
-        let holdTimer = 0;
-        let held = false;
-        button.addEventListener("pointerdown", () => {
-          held = false;
-          holdTimer = window.setTimeout(() => {
-            held = true;
-            sendDispute(person, `${item.id}${item.parts > 1 ? ` ${item.unit + 1} of ${item.parts}` : ""}`);
-          }, 650);
-        });
-        button.addEventListener("pointerup", () => window.clearTimeout(holdTimer));
-        button.addEventListener("pointerleave", () => window.clearTimeout(holdTimer));
-        button.addEventListener("pointercancel", () => window.clearTimeout(holdTimer));
-        button.addEventListener("click", () => {
-          if (held) { held = false; return; }
-          if (state === "ready") markOne(person, item.index, item.unit);
-        });
-      }
-      list.append(button);
+    if (doneRows.length) {
+      const tray = document.createElement("aside");
+      tray.className = "done-window";
+      const title = document.createElement("h3");
+      title.textContent = `Done (${doneRows.length})`;
+      const list = document.createElement("div");
+      list.className = "item-pills";
+      for (const { item, index } of doneRows) list.append(ticketPill(person, item, index, lane, locked, now));
+      tray.append(title, list);
+      block.append(tray);
     }
-    board.append(heading, list);
+    board.append(block);
   }
   return board;
 }
@@ -673,6 +707,7 @@ function ordersForPerson(person) {
 }
 
 function paintOpen(person, options) {
+  paintDemo();
   if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
   const who = holderNow();
@@ -898,11 +933,24 @@ let toolTab = "sheet";
 let siteTab = "orders";
 
 function todayEventDay() {
-  return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()];
+  const dates = eventDates(currentBook);
+  const now = new Date();
+  const stamp = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+  return ["friday", "saturday", "sunday"].find((day) => dates[day] === stamp) || "";
+}
+
+function paintEventDays() {
+  const dates = eventDates(currentBook);
+  for (const day of ["friday", "saturday", "sunday"]) {
+    const input = document.querySelector(`#day-${day}`);
+    if (!input || document.activeElement === input) continue;
+    input.value = dates[day];
+  }
 }
 
 function eventDayLabel(day) {
-  const name = day || todayEventDay();
+  const name = day === undefined ? todayEventDay() : day;
+  if (!name) return "";
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
@@ -937,16 +985,14 @@ function letterGroups(people) {
   return [...groups.values()].sort((left, right) => left.letter.localeCompare(right.letter));
 }
 
-function renderLetterBoard(box, people, selected, onPick) {
+function renderLetterBoard(box, people, selected, onPick, shownNames) {
   if (!box) return;
   box.replaceChildren();
   const day = eventDayLabel();
   const live = day === "Friday" || day === "Saturday" || day === "Sunday";
   const hint = document.createElement("p");
-  hint.className = "note";
-  hint.textContent = live
-    ? `Today is ${day}. Each card counts ${day} tickets only. Tap a letter to see those names. Tomorrow starts over.`
-    : "Friday, Saturday, and Sunday tickets are counted on that day only. Tap a letter to see those names.";
+  hint.className = "note letter-hint";
+  hint.textContent = selected ? "Tap the letter to see every card." : (live ? `Today is ${day}. Tap a letter.` : "Tap a letter.");
   box.append(hint);
   const groups = letterGroups(people);
   if (!groups.length) {
@@ -955,9 +1001,10 @@ function renderLetterBoard(box, people, selected, onPick) {
     box.append(empty);
     return;
   }
+  const visible = selected ? groups.filter((group) => group.letter === selected) : groups;
   const grid = document.createElement("div");
-  grid.className = "letter-board";
-  for (const group of groups) {
+  grid.className = selected ? "letter-board is-picked" : "letter-board";
+  for (const group of visible) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = selected === group.letter ? "letter-card is-on" : "letter-card";
@@ -969,10 +1016,16 @@ function renderLetterBoard(box, people, selected, onPick) {
     count.textContent = String(group.total);
     const detail = document.createElement("span");
     detail.className = "letter-card-detail";
-    detail.textContent = `(${group.total} total, ${group.picked} picked up, ${group.partial} incomplete, ${group.waiting} not picked up)`;
+    detail.textContent = `${group.total} total, ${group.picked} done, ${group.partial} part, ${group.waiting} left`;
     button.append(letter, count, detail);
     button.addEventListener("click", () => onPick(selected === group.letter ? "" : group.letter));
     grid.append(button);
+    if (selected === group.letter) {
+      const names = document.createElement("div");
+      names.className = "letter-names";
+      grid.append(names);
+      renderNameList(names, shownNames || [], false);
+    }
   }
   box.append(grid);
 }
@@ -1070,6 +1123,8 @@ function paintFlowTabs() {
 }
 
 function renderOrders() {
+  paintDemo();
+  paintEventDays();
   paintFlowTabs();
   const scanned = listedPeople("", "scanned");
   const breakdown = laneBreakdown(scanned);
@@ -1095,26 +1150,29 @@ function renderOrders() {
   const pool = listedPeople("", flowTab, "");
   const people = listedPeople(query, flowTab, query.trim() ? "" : deskLetter);
   const sitePeople = listedPeople(siteQuery, flowTab, siteQuery.trim() ? "" : siteLetter);
-  renderLetterBoard(document.querySelector("#letter-cards"), pool, query.trim() ? "" : deskLetter, (letter) => {
+  const deskPicked = query.trim() ? "" : deskLetter;
+  const sitePicked = siteQuery.trim() ? "" : siteLetter;
+  renderLetterBoard(document.querySelector("#letter-cards"), pool, deskPicked, (letter) => {
     deskLetter = letter;
     if (letter && filter) filter.value = "";
     renderOrders();
-  });
-  renderLetterBoard(document.querySelector("#site-letter-cards"), listedPeople("", flowTab, ""), siteQuery.trim() ? "" : siteLetter, (letter) => {
+  }, deskPicked ? people : null);
+  renderLetterBoard(document.querySelector("#site-letter-cards"), listedPeople("", flowTab, ""), sitePicked, (letter) => {
     siteLetter = letter;
     if (letter && siteFilter) siteFilter.value = "";
     renderOrders();
-  });
+  }, sitePicked ? sitePeople : null);
   if (heading) heading.textContent = `${title} (${query.trim() || deskLetter ? people.length : pool.length})`;
   if (siteHeading) siteHeading.textContent = `${title} (${siteQuery.trim() || siteLetter ? sitePeople.length : pool.length})`;
   if (orders) {
-    if (!query.trim() && !deskLetter) {
+    if (deskPicked) orders.replaceChildren();
+    else if (!query.trim()) {
       orders.replaceChildren();
       const empty = document.createElement("p");
       empty.className = "note";
       empty.textContent = "Choose a letter to see those names.";
       orders.append(empty);
-    } else renderNameList(orders, people, Boolean(query.trim()));
+    } else renderNameList(orders, people, true);
   }
   if (openedCode && ticketScreen && !ticketScreen.hidden) {
     const person = catalogPerson(openedCode);
@@ -1579,7 +1637,11 @@ function renderRecent() {
   if (!recent) return;
   const filter = document.querySelector("#site-orders-search");
   const query = filter ? filter.value : "";
-  if (!query.trim() && !siteLetter) {
+  if (siteLetter && !query.trim()) {
+    recent.replaceChildren();
+    return;
+  }
+  if (!query.trim()) {
     recent.replaceChildren();
     const empty = document.createElement("p");
     empty.className = "note";
@@ -1587,7 +1649,7 @@ function renderRecent() {
     recent.append(empty);
     return;
   }
-  renderNameList(recent, listedPeople(query, flowTab, query.trim() ? "" : siteLetter), Boolean(query.trim()));
+  renderNameList(recent, listedPeople(query, flowTab, ""), true);
 }
 
 function saveTaken(orderId, rawCount) {
@@ -1934,6 +1996,26 @@ document.querySelectorAll(".print-sheet").forEach((button) => {
   button.addEventListener("click", printSheet);
 });
 document.querySelector("#admin-print").addEventListener("click", printSheet);
+document.querySelector("#save-event-days").addEventListener("click", () => {
+  const friday = document.querySelector("#day-friday").value;
+  const saturday = document.querySelector("#day-saturday").value;
+  const sunday = document.querySelector("#day-sunday").value;
+  const noteBox = document.querySelector("#admin-note");
+  if (![friday, saturday, sunday].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) {
+    noteBox.hidden = false;
+    noteBox.textContent = "Choose a date for Friday, Saturday, and Sunday.";
+    return;
+  }
+  const applied = queueWrite((book) => {
+    book.eventDays = { friday, saturday, sunday };
+    return { write: true, book, message: `Reality dates saved. Friday ${friday}, Saturday ${saturday}, Sunday ${sunday}.` };
+  });
+  noteBox.hidden = false;
+  noteBox.textContent = applied.message;
+  paintDemo();
+  const person = catalogPerson(openedCode);
+  if (person) paintOpen(person);
+});
 function attachVoiceSearch(button, input, after) {
   if (!button || !input) return;
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2101,6 +2183,10 @@ document.querySelector("#screenshot-qr").addEventListener("click", () => { saveQ
 document.querySelector("#whatsapp-share").addEventListener("click", () => { shareQrImage("whatsapp"); });
 document.querySelector("#email-share").addEventListener("click", () => { shareQrImage("email"); });
 
+document.querySelector("#show-colors").addEventListener("click", () => {
+  const key = document.querySelector(".legend");
+  if (key) key.classList.toggle("is-open");
+});
 const legend = document.querySelector(".legend");
 if (legend) {
   let swipeStart = 0;
@@ -2120,5 +2206,6 @@ window.setInterval(() => {
   button.textContent = left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed";
 }, 1000);
 
+paintDemo();
 show(gate);
 if (readSession()) enterApp();

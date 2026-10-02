@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=41">
+  <link rel="stylesheet" href="styles.css?v=46">
 </head>
 <body>
 <div class="app-shell">
@@ -95,30 +95,35 @@
         <button id="voice-search" class="btn-teal mic-btn" type="button" aria-label="Search by voice">Mic</button>
         <button id="search-order" class="btn-orange" type="button">Search</button>
       </div>
-      <div class="qr-actions">
-        <button id="home-save-qr" class="btn-teal" type="button">Save QR image</button>
-        <button id="home-whatsapp" class="btn-quiet" type="button">WhatsApp</button>
-        <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
-      </div>
       <p id="search-result" class="result" role="status"></p>
-      <button id="new-sale" class="btn-orange" type="button">New sale</button>
       <div class="counter-switch">
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
-      <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
-      <button id="demo-mode" class="demo-toggle btn-orange" type="button">Demo</button>
-      <div id="qr-box"></div>
-      <div id="open-order"></div>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
+      <button id="demo-mode" class="demo-toggle btn-teal" type="button">Demo on</button>
+      <p class="note demo-note">Demo is on for every ticket.</p>
+      <button id="show-colors" class="btn-quiet phone-only" type="button">Colors</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <div id="reader" hidden></div>
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
-      <label class="secondary file-btn" for="file-scan">Upload QR image</label>
-      <input id="file-scan" class="visually-hidden" type="file" accept="image/*">
-      <div id="file-reader" hidden></div>
       <p id="result" class="result" role="status" aria-live="polite"></p>
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
+      <details class="more-fold" open>
+        <summary>More</summary>
+        <div class="qr-actions">
+          <button id="home-save-qr" class="btn-teal" type="button">Save QR image</button>
+          <button id="home-whatsapp" class="btn-quiet" type="button">WhatsApp</button>
+          <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
+        </div>
+        <button id="new-sale" class="btn-orange" type="button">New sale</button>
+        <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
+        <div id="qr-box"></div>
+        <div id="open-order"></div>
+        <label class="secondary file-btn" for="file-scan">Upload QR image</label>
+        <input id="file-scan" class="visually-hidden" type="file" accept="image/*">
+        <div id="file-reader" hidden></div>
+      </details>
     </section>
 
     <section class="panel" data-page-panel="desk">
@@ -231,13 +236,16 @@
   <main id="ticket-screen" class="screen" hidden>
     <header class="topbar">
       <button id="main-page" class="btn-orange" type="button">Main page</button>
-      <button id="demo-mode-ticket" class="demo-toggle btn-orange" type="button">Demo</button>
-      <button id="print-ticket" class="btn-teal" type="button">Print</button>
-      <button id="bluetooth-print" class="btn-quiet" type="button">Bluetooth</button>
-      <button id="share-ticket" class="btn-orange" type="button">Share QR</button>
-      <button id="screenshot-qr" class="btn-teal" type="button">Save QR image</button>
-      <button id="whatsapp-share" class="btn-quiet" type="button">WhatsApp</button>
-      <button id="email-share" class="btn-orange" type="button">Email QR</button>
+      <button id="demo-mode-ticket" class="demo-toggle btn-teal" type="button">Demo on</button>
+      <details class="more-fold" open>
+        <summary>More</summary>
+        <button id="print-ticket" class="btn-teal" type="button">Print</button>
+        <button id="bluetooth-print" class="btn-quiet" type="button">Bluetooth</button>
+        <button id="share-ticket" class="btn-orange" type="button">Share QR</button>
+        <button id="screenshot-qr" class="btn-teal" type="button">Save QR image</button>
+        <button id="whatsapp-share" class="btn-quiet" type="button">WhatsApp</button>
+        <button id="email-share" class="btn-orange" type="button">Email QR</button>
+      </details>
     </header>
     <section class="panel">
       <div id="ticket-body"></div>
@@ -260,6 +268,18 @@
       <button type="button" data-site-tab="export" class="btn-quiet">Export</button>
     </div>
     <section class="panel" data-site-panel="orders">
+      <h2>Event days</h2>
+      <p class="note">Reality uses these dates. Demo ignores them and lets every ticket be marked.</p>
+      <label>Friday
+        <input id="day-friday" type="date" value="2026-10-09">
+      </label>
+      <label>Saturday
+        <input id="day-saturday" type="date" value="2026-10-10">
+      </label>
+      <label>Sunday
+        <input id="day-sunday" type="date" value="2026-10-11">
+      </label>
+      <button id="save-event-days" class="btn-teal" type="button">Save event days</button>
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -346,9 +366,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=3"></script>
-  <script src="ledger.js?v=29"></script>
+  <script src="ledger.js?v=30"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=51"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>
