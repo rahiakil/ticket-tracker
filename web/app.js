@@ -751,10 +751,15 @@ function runLane(person, lane) {
 
 function searchOrder() {
   const raw = document.querySelector("#order-query").value.trim();
-  const matches = catalogMatches(raw);
   const search = document.querySelector("#search-result");
-  const list = document.querySelector("#name-matches");
-  if (list) list.replaceChildren();
+  deskLetter = "";
+  renderOrders();
+  if (!raw) {
+    search.textContent = "Choose a letter, or say a name.";
+    search.className = "result pending";
+    return;
+  }
+  const matches = catalogMatches(raw);
   if (!matches.length) {
     openedCode = "";
     document.querySelector("#qr-box").replaceChildren();
@@ -766,16 +771,8 @@ function searchOrder() {
     paintOpen(matches[0]);
     return;
   }
-  search.textContent = `${matches.length} names. Pick one.`;
+  search.textContent = `${matches.length} names. Pick one below.`;
   search.className = "result pending";
-  for (const person of matches.slice(0, 20)) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "secondary";
-    button.textContent = `${person.name} · ${person.code} · ${person.email}`;
-    button.addEventListener("click", () => paintOpen(person));
-    if (list) list.append(button);
-  }
 }
 
 function submitAttempt() {
@@ -895,16 +892,104 @@ function laneBreakdown(people) {
 }
 
 let flowTab = "waiting";
+let deskLetter = "";
+let siteLetter = "";
+let toolTab = "sheet";
+let siteTab = "orders";
+
+function todayEventDay() {
+  return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()];
+}
+
+function eventDayLabel(day) {
+  const name = day || todayEventDay();
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function todayTickets(person) {
+  const day = todayEventDay();
+  return orderView(person).items.filter((item) => TicketLedger.itemDay(item.id) === day);
+}
+
+function todayPickup(person) {
+  const items = todayTickets(person);
+  const taken = items.filter((item) => item.taken).length;
+  return { total: items.length, taken, ratio: items.length ? taken / items.length : 0 };
+}
+
+function nameLetter(person) {
+  const initial = String(person.name || "").trim().charAt(0).toUpperCase();
+  return /[A-Z]/.test(initial) ? initial : "#";
+}
+
+function letterGroups(people) {
+  const groups = new Map();
+  for (const person of people) {
+    const letter = nameLetter(person);
+    if (!groups.has(letter)) groups.set(letter, { letter, total: 0, picked: 0, partial: 0, waiting: 0 });
+    const group = groups.get(letter);
+    group.total += 1;
+    const pickup = todayPickup(person);
+    if (pickup.total && pickup.taken === pickup.total) group.picked += 1;
+    else if (pickup.taken > 0) group.partial += 1;
+    else group.waiting += 1;
+  }
+  return [...groups.values()].sort((left, right) => left.letter.localeCompare(right.letter));
+}
+
+function renderLetterBoard(box, people, selected, onPick) {
+  if (!box) return;
+  box.replaceChildren();
+  const day = eventDayLabel();
+  const live = day === "Friday" || day === "Saturday" || day === "Sunday";
+  const hint = document.createElement("p");
+  hint.className = "note";
+  hint.textContent = live
+    ? `Today is ${day}. Each card counts ${day} tickets only. Tap a letter to see those names. Tomorrow starts over.`
+    : "Friday, Saturday, and Sunday tickets are counted on that day only. Tap a letter to see those names.";
+  box.append(hint);
+  const groups = letterGroups(people);
+  if (!groups.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No names in this list.";
+    box.append(empty);
+    return;
+  }
+  const grid = document.createElement("div");
+  grid.className = "letter-board";
+  for (const group of groups) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = selected === group.letter ? "letter-card is-on" : "letter-card";
+    const letter = document.createElement("span");
+    letter.className = "letter-card-letter";
+    letter.textContent = group.letter;
+    const count = document.createElement("span");
+    count.className = "letter-card-count";
+    count.textContent = String(group.total);
+    const detail = document.createElement("span");
+    detail.className = "letter-card-detail";
+    detail.textContent = `(${group.total} total, ${group.picked} picked up, ${group.partial} incomplete, ${group.waiting} not picked up)`;
+    button.append(letter, count, detail);
+    button.addEventListener("click", () => onPick(selected === group.letter ? "" : group.letter));
+    grid.append(button);
+  }
+  box.append(grid);
+}
 
 function wasScanned(person) {
   const saved = currentBook.orders[person.code];
   return Boolean(saved && saved.scannedAt);
 }
 
-function listedPeople(filter, tab) {
+function listedPeople(filter, tab, letter) {
   const tokens = normalized(filter).split(" ").filter(Boolean);
+  const searching = tokens.length > 0;
   const people = Object.values(activeOrders()).filter((person) => {
-    if (!tokens.length) return tab === "scanned" ? wasScanned(person) : !wasScanned(person);
+    if (!searching && tab === "scanned" && !wasScanned(person)) return false;
+    if (!searching && tab !== "scanned" && wasScanned(person)) return false;
+    if (letter && nameLetter(person) !== letter) return false;
+    if (!searching) return true;
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
     return tokens.every((token) => hay.includes(token));
   });
@@ -931,8 +1016,7 @@ function renderNameList(box, people, searching) {
     if (label) label.textContent = `Loading names… ${Math.max(1, Math.round((Date.now() - started) / 1000))}s`;
   }, 200);
   const sorted = people.slice();
-  let index = 0;
-  let letter = "";
+    let index = 0;
   function step() {
     if (box.renderToken !== token) {
       window.clearInterval(timer);
@@ -941,15 +1025,6 @@ function renderNameList(box, people, searching) {
     if (index === 0) status.remove();
     const slice = sorted.slice(index, index + 30);
     for (const person of slice) {
-      const initial = (person.name || "").trim().charAt(0).toUpperCase();
-      const key = /[A-Z]/.test(initial) ? initial : "#";
-      if (key !== letter) {
-        letter = key;
-        const head = document.createElement("p");
-        head.className = "letter-heading";
-        head.textContent = letter;
-        box.append(head);
-      }
       const button = document.createElement("button");
       button.type = "button";
       button.className = "secondary name-row";
@@ -1013,13 +1088,34 @@ function renderOrders() {
   if (orderBreakdown) orderBreakdown.textContent = breakdownText;
   if (siteBreakdown) siteBreakdown.textContent = breakdownText;
   const orders = document.querySelector("#orders");
-  const filter = document.querySelector("#orders-search");
+  const filter = document.querySelector("#order-query");
   const siteFilter = document.querySelector("#site-orders-search");
-  const people = listedPeople(filter ? filter.value : "", flowTab);
-  const sitePeople = listedPeople(siteFilter ? siteFilter.value : "", flowTab);
-  if (heading) heading.textContent = `${title} (${people.length})`;
-  if (siteHeading) siteHeading.textContent = `${title} (${sitePeople.length})`;
-  if (orders) renderNameList(orders, people, Boolean(filter && filter.value.trim()));
+  const query = filter ? filter.value : "";
+  const siteQuery = siteFilter ? siteFilter.value : "";
+  const pool = listedPeople("", flowTab, "");
+  const people = listedPeople(query, flowTab, query.trim() ? "" : deskLetter);
+  const sitePeople = listedPeople(siteQuery, flowTab, siteQuery.trim() ? "" : siteLetter);
+  renderLetterBoard(document.querySelector("#letter-cards"), pool, query.trim() ? "" : deskLetter, (letter) => {
+    deskLetter = letter;
+    if (letter && filter) filter.value = "";
+    renderOrders();
+  });
+  renderLetterBoard(document.querySelector("#site-letter-cards"), listedPeople("", flowTab, ""), siteQuery.trim() ? "" : siteLetter, (letter) => {
+    siteLetter = letter;
+    if (letter && siteFilter) siteFilter.value = "";
+    renderOrders();
+  });
+  if (heading) heading.textContent = `${title} (${query.trim() || deskLetter ? people.length : pool.length})`;
+  if (siteHeading) siteHeading.textContent = `${title} (${siteQuery.trim() || siteLetter ? sitePeople.length : pool.length})`;
+  if (orders) {
+    if (!query.trim() && !deskLetter) {
+      orders.replaceChildren();
+      const empty = document.createElement("p");
+      empty.className = "note";
+      empty.textContent = "Choose a letter to see those names.";
+      orders.append(empty);
+    } else renderNameList(orders, people, Boolean(query.trim()));
+  }
   if (openedCode && ticketScreen && !ticketScreen.hidden) {
     const person = catalogPerson(openedCode);
     if (person) paintOpen(person);
@@ -1073,42 +1169,110 @@ function menuItems() {
   return [...names.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
+function addSaleItem(item) {
+  const found = cart.find((row) => row.name === item.name);
+  if (found) found.qty += 1;
+  else cart.push({ name: item.name, qty: 1, lane: item.lane, tone: item.tone || "" });
+  paintCart();
+}
+
+function changeSaleQty(name, delta) {
+  const index = cart.findIndex((row) => row.name === name);
+  if (index < 0) return;
+  cart[index].qty += delta;
+  if (cart[index].qty <= 0) cart.splice(index, 1);
+  paintCart();
+}
+
+function paintSaleTiles() {
+  const host = document.querySelector("#sale-tiles");
+  if (!host) return;
+  host.replaceChildren();
+  const groups = [
+    ["Entry", menuItems().filter((item) => item.lane === "entry")],
+    ["Food", menuItems().filter((item) => item.lane !== "entry")],
+  ];
+  for (const [label, items] of groups) {
+    if (!items.length) continue;
+    const heading = document.createElement("h2");
+    heading.className = "day-heading";
+    heading.textContent = label;
+    const grid = document.createElement("div");
+    grid.className = "sale-tiles";
+    for (const item of items) {
+      const button = document.createElement("button");
+      button.type = "button";
+      const kind = TicketLedger.couponKind(item.name, item.lane);
+      button.className = `sale-tile coupon-${kind}`;
+      if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
+      button.dataset.name = item.name;
+      const title = document.createElement("span");
+      title.className = "sale-tile-name";
+      title.textContent = item.name;
+      const badge = document.createElement("span");
+      badge.className = "sale-qty";
+      badge.hidden = true;
+      button.append(title, badge);
+      button.addEventListener("click", () => addSaleItem(item));
+      grid.append(button);
+    }
+    host.append(heading, grid);
+  }
+}
+
 function openSale() {
   cart = [];
-  const select = document.querySelector("#sale-item");
-  select.replaceChildren();
-  menuItems().forEach((item) => {
-    const option = document.createElement("option");
-    option.value = item.name;
-    option.textContent = item.name;
-    option.dataset.lane = item.lane;
-    select.append(option);
-  });
   document.querySelector("#sale-name").value = "";
   document.querySelector("#sale-email").value = "";
+  document.querySelector("#sale-note").textContent = "";
+  paintSaleTiles();
   paintCart();
   show(saleScreen);
 }
 
 function paintCart() {
-  const box = document.querySelector("#sale-cart");
+  document.querySelectorAll(".sale-tile").forEach((button) => {
+    const row = cart.find((item) => item.name === button.dataset.name);
+    const badge = button.querySelector(".sale-qty");
+    const qty = row ? row.qty : 0;
+    if (!badge) return;
+    badge.hidden = qty < 1;
+    badge.textContent = String(qty);
+    button.classList.toggle("is-picked", qty > 0);
+  });
+  const box = document.querySelector("#sale-checkout");
+  if (!box) return;
   box.replaceChildren();
+  const title = document.createElement("h2");
+  title.textContent = "Checkout";
+  const who = document.createElement("p");
+  const saleName = document.querySelector("#sale-name");
+  who.textContent = saleName && saleName.value.trim() ? saleName.value.trim() : "Add a name for this sale.";
+  box.append(title, who);
   if (!cart.length) {
     const empty = document.createElement("p");
-    empty.textContent = "Cart is empty.";
+    empty.textContent = "Tap a tile to add a ticket. Tap it again to add another.";
     box.append(empty);
     return;
   }
-  cart.forEach((item, index) => {
-    const line = document.createElement("p");
-    line.textContent = `${item.name} x ${item.qty}`;
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "text-button";
-    remove.textContent = "Remove";
-    remove.addEventListener("click", () => { cart.splice(index, 1); paintCart(); });
-    box.append(line, remove);
+  const tickets = cart.reduce((sum, item) => sum + item.qty, 0);
+  cart.forEach((item) => {
+    const line = document.createElement("div");
+    line.className = "checkout-line";
+    const label = document.createElement("span");
+    label.textContent = `${item.name} × ${item.qty}`;
+    const fewer = document.createElement("button");
+    fewer.type = "button";
+    fewer.className = "text-button";
+    fewer.textContent = "Minus";
+    fewer.addEventListener("click", () => changeSaleQty(item.name, -1));
+    line.append(label, fewer);
+    box.append(line);
   });
+  const total = document.createElement("p");
+  total.className = "checkout-total";
+  total.textContent = `${tickets} ticket${tickets === 1 ? "" : "s"}`;
+  box.append(total);
 }
 
 function nextWalkCode() {
@@ -1314,6 +1478,15 @@ function renderLiveSheet() {
         return;
       }
       const line = document.createElement("tr");
+      const person = codeIndex >= 0 ? catalogPerson(row[codeIndex]) : null;
+      const pickup = person ? todayPickup(person) : { total: 0, taken: 0, ratio: 0 };
+      if (pickup.ratio > 0) {
+        line.className = "sheet-picked";
+        line.style.setProperty("--pick", `${Math.round(pickup.ratio * 100)}%`);
+        line.title = pickup.ratio === 1
+          ? `Picked up today (${eventDayLabel()})`
+          : `${pickup.taken} of ${pickup.total} ${eventDayLabel()} tickets picked up`;
+      }
       row.forEach((value, index) => {
         const cell = document.createElement("td");
         if (index === nameIndex) {
@@ -1322,10 +1495,16 @@ function renderLiveSheet() {
           button.className = "text-button sheet-name";
           button.textContent = value;
           button.addEventListener("click", () => {
-            const person = catalogPerson(row[codeIndex]);
-            if (person) paintOpen(person, { allActivity: true });
+            const match = catalogPerson(row[codeIndex]);
+            if (match) paintOpen(match, { allActivity: true });
           });
           cell.append(button);
+          if (pickup.total) {
+            const mark = document.createElement("span");
+            mark.className = "today-mark";
+            mark.textContent = pickup.ratio === 1 ? "Picked up today" : `${Math.round(pickup.ratio * 100)}% today`;
+            cell.append(mark);
+          }
         } else {
           cell.textContent = value;
         }
@@ -1335,6 +1514,11 @@ function renderLiveSheet() {
     });
     table.append(head, body);
   });
+  const day = eventDayLabel();
+  const dayText = day === "Friday" || day === "Saturday" || day === "Sunday"
+    ? `Green is ${day} only. A full green row means every ${day} ticket is picked up. A shorter green bar is the share picked up today. The next morning starts over.`
+    : "Green follows that day’s tickets. Friday, Saturday, and Sunday are counted apart, so the next morning starts over.";
+  document.querySelectorAll(".sheet-day-note").forEach((node) => { node.textContent = dayText; });
   if (!url && !sheetPublishTried && readSession()) {
     sheetPublishTried = true;
     queueWrite((book) => {
@@ -1394,7 +1578,16 @@ function renderRecent() {
   const recent = document.querySelector("#recent-orders");
   if (!recent) return;
   const filter = document.querySelector("#site-orders-search");
-  renderNameList(recent, listedPeople(filter ? filter.value : "", flowTab), Boolean(filter && filter.value.trim()));
+  const query = filter ? filter.value : "";
+  if (!query.trim() && !siteLetter) {
+    recent.replaceChildren();
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "Choose a letter to see those names.";
+    recent.append(empty);
+    return;
+  }
+  renderNameList(recent, listedPeople(query, flowTab, query.trim() ? "" : siteLetter), Boolean(query.trim()));
 }
 
 function saveTaken(orderId, rawCount) {
@@ -1580,6 +1773,28 @@ function sayExport(text) {
   }
 }
 
+function downloadExcel() {
+  const rows = statusGrid();
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (typeof XLSX !== "undefined" && XLSX.utils && typeof XLSX.writeFile === "function" && typeof XLSX.utils.book_new === "function") {
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, "Tickets");
+    XLSX.writeFile(book, `ticket-status-${stamp}.xlsx`);
+    sayExport("Excel file saved to Downloads.");
+    return;
+  }
+  const table = rows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("");
+  const html = `<html><head><meta charset="utf-8"></head><body><table>${table}</table></body></html>`;
+  const name = `ticket-status-${stamp}.xls`;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([html], { type: "application/vnd.ms-excel" }));
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  sayExport(`Saved ${name} to your Downloads folder.`);
+}
+
 function exportStatus() {
   const { csv, name } = statusFile();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1682,19 +1897,12 @@ function showNameSpinner() {
     box.append(status);
   }
 }
-document.querySelector("#orders-search").addEventListener("input", () => {
-  showNameSpinner();
-  window.setTimeout(renderOrders, 40);
-});
 document.querySelector("#site-orders-search").addEventListener("input", () => {
+  siteLetter = "";
   showNameSpinner();
   window.setTimeout(renderOrders, 40);
 });
-document.querySelector("#orders-search-btn").addEventListener("click", () => { runListSearch("#orders-search"); });
 document.querySelector("#site-orders-search-btn").addEventListener("click", () => { runListSearch("#site-orders-search"); });
-document.querySelector("#orders-search").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") runListSearch("#orders-search");
-});
 document.querySelector("#site-orders-search").addEventListener("keydown", (event) => {
   if (event.key === "Enter") runListSearch("#site-orders-search");
 });
@@ -1709,13 +1917,73 @@ document.querySelectorAll(".demo-toggle").forEach((button) => {
   });
 });
 document.querySelector("#search-order").addEventListener("click", searchOrder);
+document.querySelector("#order-query").addEventListener("input", () => {
+  deskLetter = "";
+  showNameSpinner();
+  window.setTimeout(renderOrders, 40);
+});
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchOrder();
+});
+function printSheet() {
+  document.body.dataset.print = "sheet";
+  window.print();
+  delete document.body.dataset.print;
+}
+document.querySelectorAll(".print-sheet").forEach((button) => {
+  button.addEventListener("click", printSheet);
+});
+document.querySelector("#admin-print").addEventListener("click", printSheet);
+function attachVoiceSearch(button, input, after) {
+  if (!button || !input) return;
+  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+  button.addEventListener("click", () => {
+    if (!Speech) {
+      const search = document.querySelector("#search-result");
+      const noteBox = document.querySelector("#admin-note");
+      const host = search && !workspace.hidden ? search : noteBox;
+      if (host) {
+        host.hidden = false;
+        host.textContent = "Voice search needs Chrome or Edge, and permission to use the microphone.";
+        host.className = "result pending";
+      }
+      return;
+    }
+    const recognition = new Speech();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+    recognition.onresult = (event) => {
+      const said = event.results && event.results[0] && event.results[0][0] ? event.results[0][0].transcript : "";
+      if (!said) return;
+      input.value = said;
+      if (after) after();
+      else input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    recognition.onend = () => {
+      button.textContent = "Mic";
+      button.classList.remove("is-on");
+    };
+    button.textContent = "Listening…";
+    button.classList.add("is-on");
+    try {
+      recognition.start();
+    } catch {
+      button.textContent = "Mic";
+      button.classList.remove("is-on");
+    }
+  });
+}
+attachVoiceSearch(document.querySelector("#voice-search"), document.querySelector("#order-query"), searchOrder);
+attachVoiceSearch(document.querySelector("#site-voice-search"), document.querySelector("#site-orders-search"), () => {
+  runListSearch("#site-orders-search");
 });
 document.querySelector("#refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#admin-refresh").addEventListener("click", () => { refreshOrders(); });
 document.querySelector("#export-csv").addEventListener("click", exportStatus);
 document.querySelector("#admin-export-csv").addEventListener("click", exportStatus);
+document.querySelector("#download-xlsx").addEventListener("click", downloadExcel);
+document.querySelector("#admin-download-xlsx").addEventListener("click", downloadExcel);
 document.querySelector("#email-csv").addEventListener("click", () => { emailStatus(); });
 document.querySelector("#admin-email-csv").addEventListener("click", () => { emailStatus(); });
 document.querySelector("#release-locks").addEventListener("click", () => {
@@ -1778,15 +2046,44 @@ setInterval(() => {
   refreshOrders();
 }, 20000);
 
+function showWorkspacePage(page) {
+  document.querySelectorAll("[data-page]").forEach((item) => {
+    item.className = item.getAttribute("data-page") === page ? "btn-teal" : "btn-quiet";
+  });
+  document.querySelectorAll("[data-page-panel]").forEach((panel) => {
+    const pageOk = panel.getAttribute("data-page-panel") === page;
+    const tool = panel.getAttribute("data-tool-panel");
+    panel.hidden = !pageOk || Boolean(tool && tool !== toolTab);
+  });
+  document.querySelectorAll("[data-tool]").forEach((item) => {
+    item.className = item.getAttribute("data-tool") === toolTab ? "btn-teal" : "btn-quiet";
+  });
+}
+
+function showSitePage(tab) {
+  siteTab = tab || "orders";
+  document.querySelectorAll("[data-site-tab]").forEach((item) => {
+    item.className = item.getAttribute("data-site-tab") === siteTab ? "btn-teal" : "btn-quiet";
+  });
+  document.querySelectorAll("#admin-screen [data-site-panel]").forEach((panel) => {
+    panel.hidden = panel.getAttribute("data-site-panel") !== siteTab;
+  });
+}
+
 document.querySelectorAll("[data-page]").forEach((button) => {
   button.addEventListener("click", () => {
-    const page = button.getAttribute("data-page");
-    document.querySelectorAll("[data-page]").forEach((item) => {
-      item.className = item.getAttribute("data-page") === page ? "btn-teal" : "btn-quiet";
-    });
-    document.querySelectorAll("[data-page-panel]").forEach((panel) => {
-      panel.hidden = panel.getAttribute("data-page-panel") !== page;
-    });
+    showWorkspacePage(button.getAttribute("data-page"));
+  });
+});
+document.querySelectorAll("[data-tool]").forEach((button) => {
+  button.addEventListener("click", () => {
+    toolTab = button.getAttribute("data-tool") || "sheet";
+    showWorkspacePage("admin");
+  });
+});
+document.querySelectorAll("[data-site-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showSitePage(button.getAttribute("data-site-tab"));
   });
 });
 document.querySelector("#home-save-qr").addEventListener("click", () => { saveQrImage(); });
@@ -1795,15 +2092,7 @@ document.querySelector("#home-email-qr").addEventListener("click", () => { share
 document.querySelector("#export-stats").addEventListener("click", exportStats);
 document.querySelector("#new-sale").addEventListener("click", openSale);
 document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
-document.querySelector("#sale-add").addEventListener("click", () => {
-  const select = document.querySelector("#sale-item");
-  const option = select.selectedOptions[0];
-  if (!option) return;
-  const found = cart.find((item) => item.name === option.value);
-  if (found) found.qty += 1;
-  else cart.push({ name: option.value, qty: 1, lane: option.dataset.lane || "entry" });
-  paintCart();
-});
+document.querySelector("#sale-name").addEventListener("input", paintCart);
 document.querySelector("#sale-submit").addEventListener("click", submitSale);
 document.querySelector("#print-ticket").addEventListener("click", printTicket);
 document.querySelector("#bluetooth-print").addEventListener("click", () => { bluetoothPrint(); });

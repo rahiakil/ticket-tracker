@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=41">
 </head>
 <body>
 <div class="app-shell">
@@ -88,17 +88,19 @@
 
     <section class="panel" data-page-panel="desk">
       <h1>Find a ticket</h1>
-      <label>Name or order number
-        <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, email, or order number">
-      </label>
-      <button id="search-order" class="btn-orange" type="button">Search</button>
+      <div class="search-line">
+        <label>Search orders
+          <input id="order-query" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, email, or order number">
+        </label>
+        <button id="voice-search" class="btn-teal mic-btn" type="button" aria-label="Search by voice">Mic</button>
+        <button id="search-order" class="btn-orange" type="button">Search</button>
+      </div>
       <div class="qr-actions">
         <button id="home-save-qr" class="btn-teal" type="button">Save QR image</button>
         <button id="home-whatsapp" class="btn-quiet" type="button">WhatsApp</button>
         <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
       </div>
       <p id="search-result" class="result" role="status"></p>
-      <div id="name-matches"></div>
       <button id="new-sale" class="btn-orange" type="button">New sale</button>
       <div class="counter-switch">
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
@@ -126,10 +128,7 @@
       </div>
       <h2 id="order-heading">Orders (0)</h2>
       <p id="order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
-      <label>Search orders
-        <input id="orders-search" autocomplete="off" placeholder="Name, email, or order number">
-      </label>
-      <button id="orders-search-btn" class="btn-orange" type="button">Search</button>
+      <div id="letter-cards"></div>
       <button id="refresh" class="secondary" type="button">Refresh</button>
       <p id="admin-message" class="result" role="status" hidden></p>
       <div id="orders"></div>
@@ -148,15 +147,30 @@
       <button id="export-stats" class="btn-teal" type="button">Export stats</button>
     </section>
 
-    <section class="panel" data-page-panel="admin" hidden>
-      <h2>Admin functions</h2>
+    <div class="page-tabs tool-tabs" data-page-panel="admin" hidden>
+      <button type="button" data-tool="sheet" class="btn-teal">Sheet</button>
+      <button type="button" data-tool="download" class="btn-quiet">Download</button>
+      <button type="button" data-tool="export" class="btn-quiet">Export</button>
+      <button type="button" data-tool="more" class="btn-quiet">More</button>
+    </div>
+
+    <section class="panel" data-page-panel="admin" data-tool-panel="download" hidden>
+      <h2>Download</h2>
       <button id="export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="download-xlsx" class="btn-orange" type="button">Download Excel</button>
+      <p class="note">The file lands in your Downloads folder. Excel opens both.</p>
+    </section>
+
+    <section class="panel" data-page-panel="admin" data-tool-panel="export" hidden>
+      <h2>Export</h2>
       <button id="email-csv" class="secondary" type="button">Email CSV</button>
       <p class="note">Orders and stats are saved in the Ticket Tracker Google Drive folder.</p>
     </section>
 
-    <section class="panel sheet-panel" data-page-panel="admin" hidden>
+    <section class="panel sheet-panel" data-page-panel="admin" data-tool-panel="sheet" hidden>
       <h2>Sheet</h2>
+      <button type="button" class="print-sheet btn-teal">Print sheet</button>
+      <p class="note sheet-day-note"></p>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
@@ -168,7 +182,7 @@
       </div>
     </section>
 
-    <section class="panel" id="count-panel" data-page-panel="admin" hidden>
+    <section class="panel" id="count-panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <button id="show-totals" class="secondary" type="button">Show totals</button>
       <div id="count-body" hidden>
         <p id="people-count" class="people-count">0</p>
@@ -179,14 +193,14 @@
       </div>
     </section>
 
-    <section class="panel" data-page-panel="admin" hidden>
+    <section class="panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <label>Google record link
         <input id="record-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
       </label>
       <button id="save-link" class="secondary" type="button">Save link on this phone</button>
     </section>
 
-    <section class="panel" data-page-panel="admin" hidden>
+    <section class="panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <h2>Log</h2>
       <label>Search log
         <input id="log-search" autocomplete="off" placeholder="Name, email, or order number">
@@ -207,11 +221,8 @@
       <label>Email
         <input id="sale-email" autocomplete="email">
       </label>
-      <label>Add an item
-        <select id="sale-item"></select>
-      </label>
-      <button id="sale-add" class="btn-teal" type="button">Add one</button>
-      <div id="sale-cart"></div>
+      <div id="sale-tiles"></div>
+      <article id="sale-checkout" class="checkout-card"></article>
       <button id="sale-submit" class="btn-orange" type="button">Create QR</button>
       <p id="sale-note" class="result" role="status"></p>
     </section>
@@ -239,9 +250,16 @@
         <p class="eyebrow">Site admin</p>
         <p id="admin-who"></p>
       </div>
+      <button id="admin-print" class="btn-teal" type="button">Print sheet</button>
       <button id="admin-logout" class="text-button" type="button">Log out</button>
     </header>
-    <section class="panel">
+    <div class="page-tabs admin-tabs">
+      <button type="button" data-site-tab="orders" class="btn-teal">Orders</button>
+      <button type="button" data-site-tab="sheet" class="btn-quiet">Sheet</button>
+      <button type="button" data-site-tab="download" class="btn-quiet">Download</button>
+      <button type="button" data-site-tab="export" class="btn-quiet">Export</button>
+    </div>
+    <section class="panel" data-site-panel="orders">
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -250,10 +268,14 @@
       <div id="disputes"></div>
       <h1 id="site-order-heading">Orders (0)</h1>
       <p id="site-order-breakdown" class="note">(0 entry done) (0 food not taken) (0 taken completely)</p>
-      <label>Search orders
-        <input id="site-orders-search" autocomplete="off" placeholder="Name, email, or order number">
-      </label>
-      <button id="site-orders-search-btn" class="btn-orange" type="button">Search</button>
+      <div class="search-line">
+        <label>Search orders
+          <input id="site-orders-search" autocomplete="off" placeholder="Name, email, or order number">
+        </label>
+        <button id="site-voice-search" class="btn-teal mic-btn" type="button" aria-label="Search by voice">Mic</button>
+        <button id="site-orders-search-btn" class="btn-orange" type="button">Search</button>
+      </div>
+      <div id="site-letter-cards"></div>
       <p class="note">Loaded from the Drive text file. Delete removes that scan from the file.</p>
       <button id="show-site-totals" class="secondary" type="button">Show totals</button>
       <div id="site-count-body" hidden>
@@ -264,8 +286,6 @@
         <div id="site-variant-counts"></div>
       </div>
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
-      <button id="admin-export-csv" class="secondary" type="button">Download CSV</button>
-      <button id="admin-email-csv" class="secondary" type="button">Email CSV</button>
       <button id="release-locks" class="secondary" type="button">Release all locks</button>
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
       <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
@@ -274,8 +294,21 @@
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
     </section>
-    <section class="panel sheet-panel">
+    <section class="panel" data-site-panel="download" hidden>
+      <h2>Download</h2>
+      <button id="admin-export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="admin-download-xlsx" class="btn-orange" type="button">Download Excel</button>
+      <p class="note">The file lands in your Downloads folder. Excel opens both.</p>
+    </section>
+    <section class="panel" data-site-panel="export" hidden>
+      <h2>Export</h2>
+      <button id="admin-email-csv" class="secondary" type="button">Email CSV</button>
+      <p class="note">Email sends the status file. The live sheet stays in the Ticket Tracker folder.</p>
+    </section>
+    <section class="panel sheet-panel" data-site-panel="sheet" hidden>
       <h2>Sheet</h2>
+      <button type="button" class="print-sheet btn-teal">Print sheet</button>
+      <p class="note sheet-day-note"></p>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
@@ -286,7 +319,7 @@
         <table class="sheet-table"></table>
       </div>
     </section>
-    <section class="panel">
+    <section class="panel" data-site-panel="orders">
       <h2>Log</h2>
       <label>Search log
         <input id="site-log-search" autocomplete="off" placeholder="Name, email, or order number">
@@ -316,6 +349,6 @@
   <script src="ledger.js?v=29"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=49"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>
