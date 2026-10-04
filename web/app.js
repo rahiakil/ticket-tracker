@@ -143,7 +143,7 @@ function applyRoleUi() {
   if (sale) sale.hidden = volunteer;
   if (entryDesk) entryDesk.hidden = volunteer;
   document.querySelectorAll("[data-page='admin'], [data-page='stats']").forEach((button) => { button.hidden = volunteer; });
-  if (volunteer) localStorage.setItem(storeKey("counter"), "food");
+  localStorage.setItem(storeKey("counter"), volunteer ? "food" : "entry");
 }
 
 document.querySelector("#show-login").addEventListener("click", () => {
@@ -633,12 +633,13 @@ function ticketPill(person, item, index, lane, locked, now) {
   return button;
 }
 
-function itemButtons(person) {
+function itemButtons(person, options = {}) {
   const view = orderView(person);
   const now = new Date();
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const desk = activeCounter();
+  const showAll = Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
   const groups = [
     ["Friday entry", "friday", "entry"],
     ["Friday food", "friday", "food"],
@@ -648,7 +649,7 @@ function itemButtons(person) {
     ["Sunday food", "sunday", "food"],
     ["Other entry", "other", "entry"],
     ["Other food", "other", "food"],
-  ].filter((group) => group[2] === desk);
+  ].filter((group) => showAll || group[2] === desk);
   const board = document.createElement("div");
   board.className = "ticket-board";
   for (const [label, bucket, lane] of groups) {
@@ -684,9 +685,9 @@ function itemButtons(person) {
   return board;
 }
 
-function itemBoard(person) {
+function itemBoard(person, options = {}) {
   const wrap = document.createElement("div");
-  wrap.append(itemButtons(person));
+  wrap.append(itemButtons(person, options));
   const revert = document.createElement("button");
   revert.type = "button";
   revert.id = "revert-last";
@@ -769,7 +770,10 @@ function paintOpen(person, options) {
   phrase.textContent = locked
     ? `This line is locked by ${locked.actor}. ${orderView(person).phrase}`
     : orderView(person).phrase;
-  card.append(title, mail, eventLine, phrase, itemBoard(person), activity);
+  const boardOptions = {
+    allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
+  };
+  card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
   host.append(card);
 }
 
@@ -1251,36 +1255,36 @@ function paintSaleTiles() {
   const host = document.querySelector("#sale-tiles");
   if (!host) return;
   host.replaceChildren();
-  const groups = [
-    ["Entry", menuItems().filter((item) => item.lane === "entry")],
-    ["Food", menuItems().filter((item) => item.lane !== "entry")],
-  ];
-  for (const [label, items] of groups) {
-    if (!items.length) continue;
-    const heading = document.createElement("h2");
-    heading.className = "day-heading";
-    heading.textContent = label;
-    const grid = document.createElement("div");
-    grid.className = "sale-tiles";
-    for (const item of items) {
-      const button = document.createElement("button");
-      button.type = "button";
-      const kind = TicketLedger.couponKind(item.name, item.lane);
-      button.className = `sale-tile coupon-${kind}`;
-      if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
-      button.dataset.name = item.name;
-      const title = document.createElement("span");
-      title.className = "sale-tile-name";
-      title.textContent = item.name;
-      const badge = document.createElement("span");
-      badge.className = "sale-qty";
-      badge.hidden = true;
-      button.append(title, badge);
-      button.addEventListener("click", () => addSaleItem(item));
-      grid.append(button);
-    }
-    host.append(heading, grid);
+  const items = menuItems();
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No tickets are available for sale.";
+    host.append(empty);
+    return;
   }
+  const hint = document.createElement("p");
+  hint.className = "note";
+  hint.textContent = "Tap any ticket to add it. Entry and food stay on one card for the QR.";
+  const grid = document.createElement("div");
+  grid.className = "sale-tiles";
+  for (const item of items) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const kind = TicketLedger.couponKind(item.name, item.lane);
+    button.className = `sale-tile coupon-${kind}`;
+    if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
+    button.dataset.name = item.name;
+    const title = document.createElement("span");
+    title.className = "sale-tile-name";
+    title.textContent = item.name;
+    const badge = document.createElement("span");
+    badge.className = "sale-qty";
+    badge.hidden = true;
+    button.append(title, badge);
+    button.addEventListener("click", () => addSaleItem(item));
+    grid.append(button);
+  }
+  host.append(hint, grid);
 }
 
 function openSale() {
@@ -1371,7 +1375,7 @@ function submitSale() {
   });
   cart = [];
   note.textContent = `Order ${code} is ready to share.`;
-  paintOpen(person);
+  paintOpen(person, { allTickets: true });
 }
 
 function receiptText(person) {
@@ -1543,7 +1547,11 @@ function renderLiveSheet() {
       const line = document.createElement("tr");
       const person = codeIndex >= 0 ? catalogPerson(row[codeIndex]) : null;
       const pickup = person ? todayPickup(person) : { total: 0, taken: 0, ratio: 0 };
-      if (pickup.ratio > 0) {
+      const lockedText = codeIndex >= 0 ? lockLabel(row[codeIndex]) : "";
+      if (lockedText) {
+        line.className = "sheet-locked";
+        line.title = lockedText;
+      } else if (pickup.ratio > 0) {
         line.className = "sheet-picked";
         line.style.setProperty("--pick", `${Math.round(pickup.ratio * 100)}%`);
         line.title = pickup.ratio === 1
@@ -1739,6 +1747,65 @@ function dailyScans() {
   return [...days.entries()];
 }
 
+function foodKindLabel(kind) {
+  const labels = {
+    fish: "Fish",
+    chicken: "Chicken",
+    mutton: "Mutton",
+    veg: "Vegetarian",
+    paneer: "Paneer",
+    snack: "Snacks",
+    nonveg: "Non-veg",
+    "food-other": "Other food",
+  };
+  if (labels[kind]) return labels[kind];
+  if (String(kind).startsWith("entry-")) return "Entry";
+  return kind || "Other";
+}
+
+function ticketKindStats() {
+  const groups = new Map();
+  for (const person of Object.values(activeOrders())) {
+    for (const item of orderView(person).items) {
+      const kind = TicketLedger.couponKind(item.id, item.lane);
+      const label = foodKindLabel(kind);
+      if (!groups.has(label)) groups.set(label, { label, total: 0, taken: 0, open: 0 });
+      const row = groups.get(label);
+      row.total += 1;
+      if (item.taken) row.taken += 1;
+      else row.open += 1;
+    }
+  }
+  return [...groups.values()].sort((left, right) => right.total - left.total || left.label.localeCompare(right.label));
+}
+
+function activeLockRows() {
+  const now = Date.now();
+  return Object.entries(currentBook.locks || {})
+    .map(([code, lock]) => {
+      const age = now - Date.parse(lock && lock.at || "");
+      if (!Number.isFinite(age) || age < 0 || age >= TicketLedger.LOCK_MS) return null;
+      const person = catalogPerson(code);
+      return {
+        code,
+        name: person ? person.name : code,
+        actor: lock.actor || "staff",
+        left: Math.max(0, TicketLedger.LOCK_MS - age),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function lockLabel(code) {
+  const now = Date.now();
+  const lock = currentBook.locks && currentBook.locks[code];
+  if (!lock) return "";
+  const age = now - Date.parse(lock.at || "");
+  if (!Number.isFinite(age) || age < 0 || age >= TicketLedger.LOCK_MS) return "";
+  return `Locked by ${lock.actor || "staff"}`;
+}
+
 function statsGrid() {
   const rows = [
     ["Metric", "Value"],
@@ -1748,6 +1815,10 @@ function statsGrid() {
     ["Day", "Scans"],
   ];
   dailyScans().forEach(([day, count]) => rows.push([day, count]));
+  rows.push(["Food kind", "Total", "Taken", "Open"]);
+  ticketKindStats().forEach((row) => rows.push([row.label, row.total, row.taken, row.open]));
+  rows.push(["Locks", "Name", "By", "Seconds left"]);
+  activeLockRows().forEach((row) => rows.push(["Locked", row.name, row.actor, Math.ceil(row.left / 1000)]));
   return rows;
 }
 
@@ -1763,30 +1834,65 @@ function renderStats() {
     if (node) node.textContent = String(value);
   });
   const chart = document.querySelector("#stats-chart");
-  if (!chart) return;
-  const days = dailyScans();
-  const peak = Math.max(1, ...days.map((item) => item[1]));
-  chart.replaceChildren();
-  if (!days.length) {
-    const empty = document.createElement("p");
-    empty.textContent = "No scans yet.";
-    chart.append(empty);
-    return;
+  if (chart) {
+    const days = dailyScans();
+    const peak = Math.max(1, ...days.map((item) => item[1]));
+    chart.replaceChildren();
+    if (!days.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No scans yet.";
+      chart.append(empty);
+    } else {
+      days.forEach(([day, count]) => {
+        const row = document.createElement("p");
+        row.className = "stat-bar";
+        const label = document.createElement("span");
+        label.textContent = day;
+        const track = document.createElement("span");
+        const bar = document.createElement("i");
+        bar.style.width = `${Math.round((count / peak) * 100)}%`;
+        track.append(bar);
+        const total = document.createElement("span");
+        total.textContent = String(count);
+        row.append(label, track, total);
+        chart.append(row);
+      });
+    }
   }
-  days.forEach(([day, count]) => {
-    const row = document.createElement("p");
-    row.className = "stat-bar";
-    const label = document.createElement("span");
-    label.textContent = day;
-    const track = document.createElement("span");
-    const bar = document.createElement("i");
-    bar.style.width = `${Math.round((count / peak) * 100)}%`;
-    track.append(bar);
-    const total = document.createElement("span");
-    total.textContent = String(count);
-    row.append(label, track, total);
-    chart.append(row);
-  });
+  const foodBox = document.querySelector("#stats-food");
+  if (foodBox) {
+    foodBox.replaceChildren();
+    const kinds = ticketKindStats();
+    if (!kinds.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No tickets loaded.";
+      foodBox.append(empty);
+    } else {
+      kinds.forEach((item) => {
+        const row = document.createElement("p");
+        row.className = "food-stat";
+        row.textContent = `${item.label}: ${item.taken} taken / ${item.total} total (${item.open} open)`;
+        foodBox.append(row);
+      });
+    }
+  }
+  const lockBox = document.querySelector("#stats-locks");
+  if (lockBox) {
+    lockBox.replaceChildren();
+    const locks = activeLockRows();
+    if (!locks.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No rows are locked right now.";
+      lockBox.append(empty);
+    } else {
+      locks.forEach((item) => {
+        const row = document.createElement("p");
+        row.className = "lock-stat";
+        row.textContent = `${item.name} · ${item.code} · locked by ${item.actor} · ${Math.ceil(item.left / 1000)}s left`;
+        lockBox.append(row);
+      });
+    }
+  }
 }
 
 function exportStats() {
@@ -1800,11 +1906,11 @@ function exportStats() {
 }
 
 function sheetHeader() {
-  return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+  return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Locked", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
 }
 
 function sheetLine(row) {
-  return [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt];
+  return [row.utilized, row.total, row.name, row.full, row.code, row.email, lockLabel(row.code), row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt];
 }
 
 function statusGrid(book) {

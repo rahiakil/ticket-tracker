@@ -19,6 +19,10 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Save QR image/);
   assert.match(html, /Admin functions/);
   assert.match(html, /Export stats/);
+  assert.match(html, /Food and tickets/);
+  assert.match(html, /Locks now/);
+  assert.match(app, /ticketKindStats/);
+  assert.match(app, /sheet-locked/);
   assert.match(html, /Scan QR/);
   assert.equal(html.includes("/api/scans"), false);
   assert.match(css, /min-height:\s*52px/);

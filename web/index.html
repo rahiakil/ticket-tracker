@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=47">
+  <link rel="stylesheet" href="styles.css?v=48">
 </head>
 <body>
 <div class="app-shell">
@@ -150,6 +150,12 @@
       <p class="note">Scanned in the last 6 hours</p>
       <h2>By day</h2>
       <div id="stats-chart"></div>
+      <h2>Food and tickets</h2>
+      <p class="note">Taken vs still open for each kind.</p>
+      <div id="stats-food"></div>
+      <h2>Locks now</h2>
+      <p class="note">A phone holds a row for up to 3 minutes while it is open.</p>
+      <div id="stats-locks"></div>
       <button id="export-stats" class="btn-teal" type="button">Export stats</button>
     </section>
 
@@ -370,6 +376,6 @@
   <script src="ledger.js?v=30"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>
