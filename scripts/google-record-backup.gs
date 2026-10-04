@@ -42,7 +42,7 @@ function ensureLiveSheet_() {
   if (id) {
     try { return SpreadsheetApp.openById(id); } catch (err) {}
   }
-  var ss = SpreadsheetApp.create("Uttoron ticket status");
+  var ss = SpreadsheetApp.create("Uttoron ticket status backup");
   var file = DriveApp.getFileById(ss.getId());
   file.moveTo(DriveApp.getFolderById(FOLDER_ID));
   try {
@@ -107,7 +107,7 @@ function ensureSalesBook_() {
   if (id) {
     try { return SpreadsheetApp.openById(id); } catch (err) {}
   }
-  var ss = SpreadsheetApp.create("Uttoron on site sales");
+  var ss = SpreadsheetApp.create("Uttoron on site sales backup");
   var file = DriveApp.getFileById(ss.getId());
   file.moveTo(DriveApp.getFolderById(FOLDER_ID));
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err2) {}
