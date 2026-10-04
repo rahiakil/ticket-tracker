@@ -1587,8 +1587,8 @@ function renderLiveSheet() {
   });
   const day = eventDayLabel();
   const dayText = day === "Friday" || day === "Saturday" || day === "Sunday"
-    ? `Green is ${day} only. A full green row means every ${day} ticket is picked up. A shorter green bar is the share picked up today. The next morning starts over.`
-    : "Green follows that day’s tickets. Friday, Saturday, and Sunday are counted apart, so the next morning starts over.";
+    ? `Yellow means locked now. Green is ${day} only. A full green row means every ${day} ticket is picked up. A shorter green bar is the share picked up today.`
+    : "Yellow means locked now. Green follows that day’s tickets. Friday, Saturday, and Sunday are counted apart.";
   document.querySelectorAll(".sheet-day-note").forEach((node) => { node.textContent = dayText; });
   if (!url && !sheetPublishTried && readSession()) {
     sheetPublishTried = true;
