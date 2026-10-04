@@ -30,15 +30,9 @@ The shared folder is https://drive.google.com/drive/folders/1r679tCaeKA5-y4sXuUE
 
 ## Backup page
 
-Use this if the main page or its Drive record is down. The backup page is the same app with its own config and its own scan file.
+Use this if the main GitHub Pages URL is down. It is the same app and uses the **same Google Drive record** (`recordUrl`), so scans and locks stay one source of truth.
 
-1. Open https://script.google.com and create a **new** project (do not reuse the main one).
-2. Paste `scripts/google-record-backup.gs`.
-3. Deploy as a Web app the same way: Execute as Me, Who has access Anyone.
-4. Copy the `/exec` URL into `web/backup/config.js` as `recordUrl`, or paste it on the backup page under Google record link.
-5. Open https://rahiakil.github.io/ticket-tracker/backup/ and sign in as usual.
-
-The backup writes `ticket-tracker-scans-backup.txt` in the TicketTracker folder. It does not share live state with the main page. Switch everyone to the backup page only when the main one is unavailable.
+Open https://rahiakil.github.io/ticket-tracker/backup/ and sign in as usual. The order list comes from the same catalog and the same Drive text file as the main page.
 
 The Drive file is viewable from your Google account. Sharing that file as “anyone with the link can view” lets someone look at the text. Updates from the phones go through the web app link. I did not create the Drive file.
 

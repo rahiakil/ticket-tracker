@@ -1,6 +1,6 @@
 window.TICKET_TRACKER_CONFIG = {
   publicPageUrl: "https://rahiakil.github.io/ticket-tracker/backup/",
-  storagePrefix: "ticket-tracker-backup",
-  // Paste the backup Google web app /exec URL here after deploying scripts/google-record-backup.gs
-  recordUrl: "",
+  storagePrefix: "ticket-tracker",
+  recordUrl: "https://script.google.com/macros/s/AKfycbypUhON7EIGitYZU_7jZgV1gtiunr7B_3NcqBN-AMirtJG4yDEWZ9G-0Bb1OmSCDUy-/exec",
+  primaryPageUrl: "https://rahiakil.github.io/ticket-tracker/",
 };

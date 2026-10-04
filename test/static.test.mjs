@@ -56,6 +56,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /href="backup\/"/);
   assert.match(backupHtml, /Ticket Tracker Backup/);
   assert.match(backupHtml, /src="\.\.\/app\.js/);
-  assert.match(backupConfig, /storagePrefix:\s*"ticket-tracker-backup"/);
+  assert.match(backupConfig, /storagePrefix:\s*"ticket-tracker"/);
+  assert.match(backupConfig, /recordUrl:\s*"https:\/\/script\.google\.com/);
   assert.match(app, /storagePrefix/);
 });

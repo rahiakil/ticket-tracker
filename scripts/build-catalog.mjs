@@ -1,11 +1,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
-function parseTsv(text) {
+function parseTable(text, delimiter) {
   const rows = [];
   let row = [];
   let cell = "";
   let quoted = false;
-  const src = text.replace(/^\uFEFF/, "");
+  const src = String(text || "").replace(/^\uFEFF/, "");
   for (let index = 0; index < src.length; index += 1) {
     const char = src[index];
     if (quoted) {
@@ -16,7 +17,7 @@ function parseTsv(text) {
         } else quoted = false;
       } else cell += char;
     } else if (char === '"') quoted = true;
-    else if (char === "\t") {
+    else if (char === delimiter) {
       row.push(cell);
       cell = "";
     } else if (char === "\n") {
@@ -30,13 +31,13 @@ function parseTsv(text) {
     row.push(cell);
     rows.push(row);
   }
-  return rows.filter((item) => item.some((value) => value.trim()));
+  return rows.filter((item) => item.some((value) => String(value || "").trim()));
 }
 
 function toneOf(name) {
   const text = name.toLowerCase();
   if (text.includes("entry")) return "entry";
-  const nonVeg = /non-veg|non veg|chicken|mutton|fish/.test(text);
+  const nonVeg = /non-veg|non veg|chicken|mutton|fish|machh|maach/.test(text);
   const veg = !nonVeg && /vegetarian|\bveg\b|paneer/.test(text);
   const saturday = text.includes("saturday");
   const sunday = text.includes("sunday");
@@ -53,14 +54,16 @@ function laneOf(name) {
   return name.toLowerCase().includes("entry") ? "entry" : "food";
 }
 
-const source = process.argv[2] || "E:\\Downloads\\order2.txt";
-const rows = parseTsv(readFileSync(source, "utf8"));
+const source = process.argv[2] || "E:\\Downloads\\order_list_10_04_2026_.csv";
+const delimiter = source.toLowerCase().endsWith(".csv") ? "," : "\t";
+const rows = parseTable(readFileSync(source, "utf8"), delimiter);
 const [header, ...body] = rows;
-const index = Object.fromEntries(header.map((name, position) => [name.trim(), position]));
+const index = Object.fromEntries(header.map((name, position) => [String(name || "").trim(), position]));
 const orders = {};
 const itemNames = new Map();
 for (const row of body) {
   const full = (row[index["Order Number"]] || "").trim();
+  if (!full) continue;
   const code = full.slice(-5);
   if (!/^\d{5}$/.test(code)) throw new Error(`Bad order number ${full}`);
   if (orders[code]) throw new Error(`Last 5 digits collide: ${code}`);
@@ -73,7 +76,7 @@ for (const row of body) {
     const qty = Number(match[2]);
     itemNames.set(name, (itemNames.get(name) || 0) + qty);
     items.push({ name, qty, lane: laneOf(name), tone: toneOf(name) });
-    rest = rest.slice(match[0].length);
+    rest = rest.slice(match[0].length).trim();
   }
   orders[code] = {
     code,
@@ -102,6 +105,8 @@ window.TicketCatalog.lookup = function lookup(raw) {
 `;
 writeFileSync(new URL("../web/catalog.js", import.meta.url), out);
 console.log(JSON.stringify({
+  source,
   orders: Object.keys(orders).length,
   items: [...itemNames.entries()].sort((left, right) => right[1] - left[1]),
 }, null, 2));
+void pathToFileURL;
