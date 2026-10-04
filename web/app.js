@@ -1,4 +1,9 @@
 const config = window.TICKET_TRACKER_CONFIG || { publicPageUrl: "" };
+const STORE = String(config.storagePrefix || "ticket-tracker").replace(/[^\w-]/g, "") || "ticket-tracker";
+
+function storeKey(name) {
+  return `${STORE}-${name}`;
+}
 
 let phoneLayout = null;
 function markMobile() {
@@ -17,8 +22,8 @@ const ACCOUNTS = {
   admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
   volunteer: { hash: "dcbb0f3cafb30402d5ed4cb826e000bcae930c7ce60763e0458665150dffa879", role: "food" },
 };
-const SESSION_KEY = "ticket-tracker-session";
-const ALIAS_KEY = "ticket-tracker-alias";
+const SESSION_KEY = storeKey("session");
+const ALIAS_KEY = storeKey("alias");
 const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 
 const gate = document.querySelector("#gate");
@@ -138,7 +143,7 @@ function applyRoleUi() {
   if (sale) sale.hidden = volunteer;
   if (entryDesk) entryDesk.hidden = volunteer;
   document.querySelectorAll("[data-page='admin'], [data-page='stats']").forEach((button) => { button.hidden = volunteer; });
-  if (volunteer) localStorage.setItem("ticket-tracker-counter", "food");
+  if (volunteer) localStorage.setItem(storeKey("counter"), "food");
 }
 
 document.querySelector("#show-login").addEventListener("click", () => {
@@ -301,7 +306,7 @@ document.querySelector("#file-scan").addEventListener("change", async (event) =>
 
 function recordOptions() {
   return {
-    recordUrl: config.recordUrl || localStorage.getItem("ticket-tracker-record-url") || "",
+    recordUrl: config.recordUrl || localStorage.getItem(storeKey("record-url")) || "",
     load: TicketRecord.loadWithScript,
     post: TicketRecord.postWithForm,
   };
@@ -369,7 +374,7 @@ function catalogSource() {
   const fromBook = currentBook.sheet && currentBook.sheet.orders;
   if (fromBook && Object.keys(fromBook).length) return fromBook;
   try {
-    const saved = JSON.parse(localStorage.getItem("ticket-tracker-sheet") || "null");
+    const saved = JSON.parse(localStorage.getItem(storeKey("sheet")) || "null");
     if (saved && saved.orders && Object.keys(saved.orders).length) return saved.orders;
   } catch {
     /* use the built-in sheet */
@@ -417,7 +422,7 @@ function catalogPerson(raw) {
 }
 
 function activeCounter() {
-  return localStorage.getItem("ticket-tracker-counter") === "food" ? "food" : "entry";
+  return localStorage.getItem(storeKey("counter")) === "food" ? "food" : "entry";
 }
 
 function paintCounter() {
@@ -484,10 +489,10 @@ function orderView(person) {
 }
 
 function deviceId() {
-  let id = localStorage.getItem("ticket-tracker-device");
+  let id = localStorage.getItem(storeKey("device"));
   if (!id) {
     id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    localStorage.setItem("ticket-tracker-device", id);
+    localStorage.setItem(storeKey("device"), id);
   }
   return id;
 }
@@ -848,13 +853,13 @@ function note(text) {
   const items = readNotes();
   items.push({ at: new Date().toISOString(), text });
   const kept = items.slice(-200);
-  localStorage.setItem("ticket-tracker-local-log", JSON.stringify(kept));
+  localStorage.setItem(storeKey("local-log"), JSON.stringify(kept));
   renderLog();
 }
 
 function readNotes() {
   try {
-    const items = JSON.parse(localStorage.getItem("ticket-tracker-local-log") || "[]");
+    const items = JSON.parse(localStorage.getItem(storeKey("local-log")) || "[]");
     return Array.isArray(items) ? items : [];
   } catch {
     return [];
@@ -1900,7 +1905,7 @@ document.querySelector("#save-link").addEventListener("click", () => {
       : "Use the Google web app link ending in /exec.";
     return;
   }
-  localStorage.setItem("ticket-tracker-record-url", link);
+  localStorage.setItem(storeKey("record-url"), link);
   document.querySelector("#record-link").value = "";
   message.textContent = "Record link saved on this phone.";
   refreshOrders();
@@ -1920,12 +1925,12 @@ document.querySelector("#show-site-totals").addEventListener("click", (event) =>
 });
 
 document.querySelector("#counter-entry").addEventListener("click", () => {
-  localStorage.setItem("ticket-tracker-counter", "entry");
+  localStorage.setItem(storeKey("counter"), "entry");
   paintCounter();
   renderOrders();
 });
 document.querySelector("#counter-food").addEventListener("click", () => {
-  localStorage.setItem("ticket-tracker-counter", "food");
+  localStorage.setItem(storeKey("counter"), "food");
   paintCounter();
   renderOrders();
 });
@@ -2098,7 +2103,7 @@ async function applySheetFile(file) {
     return;
   }
   const sheet = { orders, fileName: file.name, uploadedAt: new Date().toISOString() };
-  try { localStorage.setItem("ticket-tracker-sheet", JSON.stringify(sheet)); } catch { /* the Drive file still receives it */ }
+  try { localStorage.setItem(storeKey("sheet"), JSON.stringify(sheet)); } catch { /* the Drive file still receives it */ }
   queueWrite((book) => {
     book.sheet = sheet;
     return { write: true, book, message: `Loaded ${Object.keys(orders).length} orders from ${file.name}` };

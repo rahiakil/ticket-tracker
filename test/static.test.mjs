@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const html = await readFile(new URL("../web/index.html", import.meta.url), "utf8");
+const backupHtml = await readFile(new URL("../web/backup/index.html", import.meta.url), "utf8");
+const backupConfig = await readFile(new URL("../web/backup/config.js", import.meta.url), "utf8");
 const css = await readFile(new URL("../web/styles.css", import.meta.url), "utf8");
 const app = await readFile(new URL("../web/app.js", import.meta.url), "utf8");
 
@@ -51,4 +53,9 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /facingMode:\s*"environment"/);
   assert.match(app, /siteadmin/);
   assert.equal(app.includes("not connected"), false);
+  assert.match(html, /href="backup\/"/);
+  assert.match(backupHtml, /Ticket Tracker Backup/);
+  assert.match(backupHtml, /src="\.\.\/app\.js/);
+  assert.match(backupConfig, /storagePrefix:\s*"ticket-tracker-backup"/);
+  assert.match(app, /storagePrefix/);
 });
