@@ -1,11 +1,17 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const source = process.argv[2] || "E:\\Downloads\\order_list_10_06_2026_.csv";
-const outPath = process.argv[3] || "E:\\Downloads\\uttaron-qr-cards-10-06-2026.doc";
+const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")));
+const laneFilter = flags.has("--food-only") ? "food"
+  : flags.has("--entry-only") ? "entry"
+  : null;
+const source = args[0] || "E:\\Downloads\\order_list_10_06_2026_.csv";
+const outPath = args[1] || (laneFilter === "food"
+  ? "E:\\Downloads\\uttaron-qr-cards-food-10-06-2026.doc"
+  : laneFilter === "entry"
+    ? "E:\\Downloads\\uttaron-qr-cards-entry-10-06-2026.doc"
+    : "E:\\Downloads\\uttaron-qr-cards-10-06-2026.doc");
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -128,7 +134,9 @@ for (const row of body) {
     if (!match) break;
     const itemName = match[1].trim();
     const qty = Math.max(1, Number(match[2]) || 1);
+    rest = rest.slice(match[0].length).trim();
     const lane = laneOf(itemName);
+    if (laneFilter && lane !== laneFilter) continue;
     const kind = couponKind(itemName, lane);
     for (let unit = 0; unit < qty; unit += 1) {
       cards.push({
@@ -144,9 +152,7 @@ for (const row of body) {
         color: colorOf(kind, itemName),
         letter: /[A-Z]/i.test(name.charAt(0)) ? name.charAt(0).toUpperCase() : "#",
       });
-    }
-    rest = rest.slice(match[0].length).trim();
-  }
+    }  }
 }
 
 cards.sort((left, right) => {
@@ -199,7 +205,7 @@ const sections = [...groups.entries()].map(([letter, list]) => {
 const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
 <meta charset="utf-8">
-<title>Uttoron QR cards</title>
+<title>Uttoron QR cards${laneFilter ? ` (${laneFilter} only)` : ""}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
   @page { size: letter; margin: 0.45in; }
@@ -220,9 +226,9 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
 </head>
 <body>
 <div class="cover">
-  <h1>Uttoron Sharodotsav QR cards</h1>
+  <h1>Uttoron Sharodotsav QR cards${laneFilter ? ` — ${laneFilter} only` : ""}</h1>
   <p>Source: ${escapeHtml(source)}</p>
-  <p>${cards.length} single-item cards from ${new Set(cards.map((card) => card.code)).size} orders. Grouped A to Z. Each box is one ticket with its own QR (order code).</p>
+  <p>${cards.length} single-item cards from ${new Set(cards.map((card) => card.code)).size} orders${laneFilter ? ` (${laneFilter} only, no ${laneFilter === "food" ? "entry" : "food"})` : ""}. Grouped A to Z. Each box is one ticket with its own QR (order code).</p>
   <p>Print on letter paper. Cut on the box borders for handout.</p>
 </div>
 ${sections}
@@ -230,12 +236,10 @@ ${sections}
 </html>`;
 
 writeFileSync(outPath, html, "utf8");
-const mirror = resolve(here, "../samples/uttaron-qr-cards-10-06-2026.doc");
-writeFileSync(mirror, html, "utf8");
 console.log(JSON.stringify({
   source,
   outPath,
-  mirror,
+  laneFilter: laneFilter || "all",
   orders: new Set(cards.map((card) => card.code)).size,
   cards: cards.length,
   letters: [...groups.keys()],
