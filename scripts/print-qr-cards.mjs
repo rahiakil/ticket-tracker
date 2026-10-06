@@ -222,7 +222,7 @@ const QR_PX = 68;
 const sections = [...groups.entries()].map(([letter, list]) => {
   const cells = list.map((card) => {
     const itemLabel = card.parts > 1 ? `${card.itemName} (${card.unit} of ${card.parts})` : card.itemName;
-    return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};">
+    return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};padding:6pt 8pt 7pt 8pt;">
       <div class="inner">
         <img src="${card.qr}" width="${QR_PX}" height="${QR_PX}" alt="QR ${escapeHtml(card.code)}">
         <div class="meta">
@@ -254,13 +254,13 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
   h2.letter { page-break-before: auto; font-size: 11pt; margin: 8pt 0 4pt; border-bottom: 1pt solid #333; padding-bottom: 2pt; }
   .cover { margin-bottom: 8pt; }
   .grid { border-collapse: separate; border-spacing: 6pt 7pt; width: 100%; table-layout: fixed; }
-  .card { width: 20%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 0; }
+  .card { width: 20%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
   .empty { width: 20%; border: none; }
-  .inner { padding: 5pt 6pt 6pt; text-align: center; }
-  .meta { margin-top: 3pt; padding: 0 2pt; text-align: left; }
-  .name { font-size: 8pt; font-weight: 700; line-height: 1.12; padding: 0 2pt 0 3pt; }
-  .item { font-size: 7pt; font-weight: 650; margin-top: 1pt; line-height: 1.12; padding: 0 2pt 0 3pt; }
-  .code { font-size: 6.5pt; margin-top: 1pt; opacity: 0.92; padding: 0 2pt 0 3pt; }
+  .inner { padding: 0; text-align: center; }
+  .meta { margin-top: 4pt; padding: 0 4pt 0 6pt; text-align: left; mso-padding-alt: 0 4pt 0 6pt; }
+  .name { font-size: 8pt; font-weight: 700; line-height: 1.15; margin: 0 2pt; word-wrap: break-word; }
+  .item { font-size: 7pt; font-weight: 650; margin: 2pt 2pt 0; line-height: 1.15; word-wrap: break-word; }
+  .code { font-size: 6.5pt; margin: 2pt 2pt 0; opacity: 0.92; }
   img { display: block; margin: 0 auto; background: #fff; padding: 2pt; }
 </style>
 </head>
