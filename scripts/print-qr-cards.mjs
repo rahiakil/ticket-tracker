@@ -50,11 +50,28 @@ function laneOf(name) {
   return /\bentry\b/i.test(name) ? "entry" : "food";
 }
 
+function dayOf(name) {
+  const text = String(name || "").toLowerCase();
+  if (/\bfriday\b/.test(text)) return "fri";
+  if (/\bsaturday\b/.test(text)) return "sat";
+  if (/\bsunday\b/.test(text)) return "sun";
+  return "any";
+}
+
+function shouldSkipItem(name, lane) {
+  const text = String(name || "").toLowerCase();
+  // Kids pizza is not handed out on the food QR sheets.
+  if (/\bpizza\b/.test(text) && /\bkids?\b/.test(text)) return true;
+  // Food sheets never include entry (also covered by --food-only).
+  if (laneFilter !== "entry" && (lane === "entry" || /\bentry\b/.test(text))) return true;
+  return false;
+}
+
 function couponKind(name, lane) {
   const text = String(name || "").toLowerCase();
+  const day = dayOf(name);
   const entry = lane === "entry" || /\bentry\b/.test(text);
   if (entry) {
-    const day = /\bfriday\b/.test(text) ? "fri" : /\bsaturday\b/.test(text) ? "sat" : /\bsunday\b/.test(text) ? "sun" : "any";
     const role = /\bkid|\bchild|years old|below\b/.test(text) ? "kids"
       : /\bstudent\b/.test(text) ? "student"
       : /\bsenior\b/.test(text) ? "senior"
@@ -62,26 +79,35 @@ function couponKind(name, lane) {
       : "adult";
     return `entry-${day}-${role}`;
   }
-  if (/\bsnacks?\b/.test(text)) return "snack";
-  if (/\bpaneer\b/.test(text)) return "paneer";
-  if (/\bmutton\b/.test(text)) return "mutton";
-  if (/\bchicken\b/.test(text)) return "chicken";
-  if (/\bfish\b|\bmachh|\bmaach/.test(text)) return "fish";
-  if (/non-?veg/.test(text)) return "nonveg";
-  if (/\bvegetarian\b|\bveg\b/.test(text)) return "veg";
-  return "food-other";
+  if (/\bsnacks?\b/.test(text)) return `snack-${day}`;
+  if (/\bpaneer\b/.test(text)) return `paneer-${day}`;
+  if (/\bmutton\b/.test(text)) return `mutton-${day}`;
+  if (/\bchicken\b/.test(text)) return `chicken-${day}`;
+  if (/\bfish\b|\bmachh|\bmaach/.test(text)) return `fish-${day}`;
+  if (/non-?veg/.test(text)) return `nonveg-${day}`;
+  if (/\bvegetarian\b|\bveg\b/.test(text)) return `veg-${day}`;
+  return `food-other-${day}`;
 }
 
 function colorOf(kind, name) {
+  const text = String(name || "").toLowerCase();
+  const day = dayOf(name);
+  const base = String(kind || "").replace(/-(fri|sat|sun|any)$/, "");
+
+  // Same-day food variants stay clearly different.
+  if (base === "fish") return { bg: "#ea580c", fg: "#ffffff" }; // orange
+  if (base === "nonveg" || base === "mutton" || base === "chicken") {
+    return { bg: "#b91c1c", fg: "#ffffff" }; // red
+  }
+  if (base === "veg" || base === "paneer") {
+    // Saturday veg uses a distinct green vs Sunday veg.
+    if (day === "sat") return { bg: "#65a30d", fg: "#ffffff" }; // lime green
+    return { bg: "#15803d", fg: "#ffffff" }; // forest green
+  }
+  if (base === "snack") return { bg: "#facc15", fg: "#1f2937" };
+  if (base === "food-other") return { bg: "#0f766e", fg: "#ffffff" };
+
   const map = {
-    mutton: { bg: "#7f1d1d", fg: "#ffffff" },
-    chicken: { bg: "#f07167", fg: "#1f2937" },
-    nonveg: { bg: "#b91c1c", fg: "#ffffff" },
-    fish: { bg: "#f97316", fg: "#1f2937" },
-    veg: { bg: "#15803d", fg: "#ffffff" },
-    paneer: { bg: "#f3e6c8", fg: "#3f2e12" },
-    snack: { bg: "#facc15", fg: "#1f2937" },
-    "food-other": { bg: "#0f766e", fg: "#ffffff" },
     "entry-fri-adult": { bg: "#0f766e", fg: "#ffffff" },
     "entry-fri-kids": { bg: "#99f6e4", fg: "#134e4a" },
     "entry-fri-student": { bg: "#14b8a6", fg: "#ffffff" },
@@ -101,7 +127,6 @@ function colorOf(kind, name) {
   if (map[kind]) return map[kind];
   if (String(kind).startsWith("entry-any")) {
     let hash = 0;
-    const text = String(name || "").toLowerCase();
     for (let index = 0; index < text.length; index += 1) hash = (hash * 33 + text.charCodeAt(index)) >>> 0;
     const hue = 165 + (hash % 115);
     return { bg: `hsl(${hue} 42% 36%)`, fg: "#ffffff" };
@@ -121,6 +146,7 @@ const rows = parseTable(readFileSync(source, "utf8"), ",");
 const [header, ...body] = rows;
 const index = Object.fromEntries(header.map((name, position) => [String(name || "").trim(), position]));
 const cards = [];
+const skipped = { entry: 0, pizzaKids: 0 };
 for (const row of body) {
   const full = (row[index["Order Number"]] || "").trim();
   if (!full) continue;
@@ -137,6 +163,11 @@ for (const row of body) {
     rest = rest.slice(match[0].length).trim();
     const lane = laneOf(itemName);
     if (laneFilter && lane !== laneFilter) continue;
+    if (shouldSkipItem(itemName, lane)) {
+      if (lane === "entry" || /\bentry\b/i.test(itemName)) skipped.entry += qty;
+      else skipped.pizzaKids += qty;
+      continue;
+    }
     const kind = couponKind(itemName, lane);
     for (let unit = 0; unit < qty; unit += 1) {
       cards.push({
@@ -152,7 +183,8 @@ for (const row of body) {
         color: colorOf(kind, itemName),
         letter: /[A-Z]/i.test(name.charAt(0)) ? name.charAt(0).toUpperCase() : "#",
       });
-    }  }
+    }
+  }
 }
 
 cards.sort((left, right) => {
@@ -178,6 +210,9 @@ for (const card of cards) {
   groups.get(card.letter).push(card);
 }
 
+const kindCounts = {};
+for (const card of cards) kindCounts[card.kind] = (kindCounts[card.kind] || 0) + 1;
+
 const sections = [...groups.entries()].map(([letter, list]) => {
   const cells = list.map((card) => {
     const itemLabel = card.parts > 1 ? `${card.itemName} (${card.unit} of ${card.parts})` : card.itemName;
@@ -187,7 +222,7 @@ const sections = [...groups.entries()].map(([letter, list]) => {
         <div class="meta">
           <div class="name">${escapeHtml(card.name)}</div>
           <div class="item">${escapeHtml(itemLabel)}</div>
-          <div class="code">${escapeHtml(card.code)} · ${escapeHtml(card.lane)}</div>
+          <div class="code">${escapeHtml(card.code)}</div>
         </div>
       </div>
     </td>`;
@@ -205,31 +240,32 @@ const sections = [...groups.entries()].map(([letter, list]) => {
 const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
 <meta charset="utf-8">
-<title>Uttoron QR cards${laneFilter ? ` (${laneFilter} only)` : ""}</title>
+<title>Uttoron QR cards — food</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-  @page { size: letter; margin: 0.45in; }
+  @page { size: letter; margin: 0.5in; }
   body { font-family: Calibri, Arial, sans-serif; color: #111; }
-  h1.letter { page-break-before: always; font-size: 22pt; margin: 8pt 0 10pt; }
+  h1.letter { page-break-before: always; font-size: 22pt; margin: 8pt 0 12pt; }
   h1.letter:first-of-type { page-break-before: auto; }
   .cover { margin-bottom: 18pt; }
-  .grid { border-collapse: separate; border-spacing: 8pt; width: 100%; }
-  .card { width: 33%; vertical-align: top; border: 1pt solid #111; border-radius: 8pt; padding: 0; }
+  .grid { border-collapse: separate; border-spacing: 16pt 18pt; width: 100%; }
+  .card { width: 33%; vertical-align: top; border: 1.5pt solid #111; border-radius: 10pt; padding: 0; }
   .empty { width: 33%; border: none; }
-  .inner { padding: 8pt; text-align: center; }
-  .meta { margin-top: 6pt; text-align: left; }
-  .name { font-size: 12pt; font-weight: 700; line-height: 1.2; }
-  .item { font-size: 11pt; font-weight: 650; margin-top: 3pt; line-height: 1.2; }
-  .code { font-size: 9pt; margin-top: 3pt; opacity: 0.92; }
-  img { display: block; margin: 0 auto; background: #fff; padding: 4pt; }
+  .inner { padding: 14pt 16pt 16pt; text-align: center; }
+  .meta { margin-top: 10pt; padding: 0 8pt; text-align: left; }
+  .name { font-size: 12pt; font-weight: 700; line-height: 1.3; padding: 0 4pt 0 8pt; }
+  .item { font-size: 11pt; font-weight: 650; margin-top: 5pt; line-height: 1.3; padding: 0 4pt 0 8pt; }
+  .code { font-size: 9pt; margin-top: 5pt; opacity: 0.92; padding: 0 4pt 0 8pt; }
+  img { display: block; margin: 0 auto; background: #fff; padding: 5pt; border-radius: 4pt; }
 </style>
 </head>
 <body>
 <div class="cover">
-  <h1>Uttoron Sharodotsav QR cards${laneFilter ? ` — ${laneFilter} only` : ""}</h1>
+  <h1>Uttoron Sharodotsav QR cards — food only</h1>
   <p>Source: ${escapeHtml(source)}</p>
-  <p>${cards.length} single-item cards from ${new Set(cards.map((card) => card.code)).size} orders${laneFilter ? ` (${laneFilter} only, no ${laneFilter === "food" ? "entry" : "food"})` : ""}. Grouped A to Z. Each box is one ticket with its own QR (order code).</p>
-  <p>Print on letter paper. Cut on the box borders for handout.</p>
+  <p>${cards.length} food cards from ${new Set(cards.map((card) => card.code)).size} orders. No entry. No kids pizza.</p>
+  <p>Colors: fish = orange, non-veg = red, Sunday veg = forest green, Saturday veg = lime green.</p>
+  <p>Print on letter paper. Cut in the white gaps between boxes.</p>
 </div>
 ${sections}
 </body>
@@ -240,7 +276,9 @@ console.log(JSON.stringify({
   source,
   outPath,
   laneFilter: laneFilter || "all",
+  skipped,
   orders: new Set(cards.map((card) => card.code)).size,
   cards: cards.length,
+  kinds: kindCounts,
   letters: [...groups.keys()],
 }, null, 2));
