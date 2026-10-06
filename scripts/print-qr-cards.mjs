@@ -202,7 +202,7 @@ for (const card of cards) {
   card.qr = await QRCode.toDataURL(card.code, {
     errorCorrectionLevel: "M",
     margin: 1,
-    width: 220,
+    width: 160,
     color: { dark: "#111111", light: "#ffffff" },
   });
 }
@@ -216,12 +216,15 @@ for (const card of cards) {
 const kindCounts = {};
 for (const card of cards) kindCounts[card.kind] = (kindCounts[card.kind] || 0) + 1;
 
+const COLS = 5;
+const QR_PX = 68;
+
 const sections = [...groups.entries()].map(([letter, list]) => {
   const cells = list.map((card) => {
     const itemLabel = card.parts > 1 ? `${card.itemName} (${card.unit} of ${card.parts})` : card.itemName;
     return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};">
       <div class="inner">
-        <img src="${card.qr}" width="110" height="110" alt="QR ${escapeHtml(card.code)}">
+        <img src="${card.qr}" width="${QR_PX}" height="${QR_PX}" alt="QR ${escapeHtml(card.code)}">
         <div class="meta">
           <div class="name">${escapeHtml(card.name)}</div>
           <div class="item">${escapeHtml(itemLabel)}</div>
@@ -231,12 +234,12 @@ const sections = [...groups.entries()].map(([letter, list]) => {
     </td>`;
   });
   const rowsHtml = [];
-  for (let index = 0; index < cells.length; index += 3) {
-    const slice = cells.slice(index, index + 3);
-    while (slice.length < 3) slice.push('<td class="empty"></td>');
+  for (let index = 0; index < cells.length; index += COLS) {
+    const slice = cells.slice(index, index + COLS);
+    while (slice.length < COLS) slice.push('<td class="empty"></td>');
     rowsHtml.push(`<tr>${slice.join("")}</tr>`);
   }
-  return `<h1 class="letter">Letter ${escapeHtml(letter)} · ${list.length} tickets</h1>
+  return `<h2 class="letter">Letter ${escapeHtml(letter)} · ${list.length}</h2>
 <table class="grid" width="100%">${rowsHtml.join("")}</table>`;
 }).join("\n");
 
@@ -246,27 +249,26 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
 <title>Uttoron QR cards — food</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-  @page { size: letter; margin: 0.5in; }
+  @page { size: letter; margin: 0.3in; }
   body { font-family: Calibri, Arial, sans-serif; color: #111; }
-  h1.letter { page-break-before: always; font-size: 22pt; margin: 8pt 0 12pt; }
-  h1.letter:first-of-type { page-break-before: auto; }
-  .cover { margin-bottom: 18pt; }
-  .grid { border-collapse: separate; border-spacing: 16pt 18pt; width: 100%; }
-  .card { width: 33%; vertical-align: top; border: 1.5pt solid #111; border-radius: 10pt; padding: 0; }
-  .empty { width: 33%; border: none; }
-  .inner { padding: 14pt 16pt 16pt; text-align: center; }
-  .meta { margin-top: 10pt; padding: 0 8pt; text-align: left; }
-  .name { font-size: 12pt; font-weight: 700; line-height: 1.3; padding: 0 4pt 0 8pt; }
-  .item { font-size: 11pt; font-weight: 650; margin-top: 5pt; line-height: 1.3; padding: 0 4pt 0 8pt; }
-  .code { font-size: 9pt; margin-top: 5pt; opacity: 0.92; padding: 0 4pt 0 8pt; }
-  img { display: block; margin: 0 auto; background: #fff; padding: 5pt; border-radius: 4pt; }
+  h2.letter { page-break-before: auto; font-size: 11pt; margin: 8pt 0 4pt; border-bottom: 1pt solid #333; padding-bottom: 2pt; }
+  .cover { margin-bottom: 8pt; }
+  .grid { border-collapse: separate; border-spacing: 6pt 7pt; width: 100%; table-layout: fixed; }
+  .card { width: 20%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 0; }
+  .empty { width: 20%; border: none; }
+  .inner { padding: 5pt 6pt 6pt; text-align: center; }
+  .meta { margin-top: 3pt; padding: 0 2pt; text-align: left; }
+  .name { font-size: 8pt; font-weight: 700; line-height: 1.12; padding: 0 2pt 0 3pt; }
+  .item { font-size: 7pt; font-weight: 650; margin-top: 1pt; line-height: 1.12; padding: 0 2pt 0 3pt; }
+  .code { font-size: 6.5pt; margin-top: 1pt; opacity: 0.92; padding: 0 2pt 0 3pt; }
+  img { display: block; margin: 0 auto; background: #fff; padding: 2pt; }
 </style>
 </head>
 <body>
 <div class="cover">
   <h1>Uttoron Sharodotsav QR cards — food only</h1>
   <p>Source: ${escapeHtml(source)}</p>
-  <p>${cards.length} food cards from ${new Set(cards.map((card) => card.code)).size} orders. No entry. No kids pizza.</p>
+  <p>${cards.length} food cards from ${new Set(cards.map((card) => card.code)).size} orders. No entry. No kids pizza. Layout: ${COLS} per row.</p>
   <p>Colors: fish = orange, non-veg = red, Sunday veg = forest green, Saturday veg = lime green.</p>
   <p>Print on letter paper. Cut in the white gaps between boxes.</p>
 </div>
