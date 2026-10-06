@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker Backup</title>
-  <link rel="stylesheet" href="../styles.css?v=48">
+  <link rel="stylesheet" href="../styles.css?v=49">
 </head>
 <body>
 <div class="app-shell">
@@ -183,6 +183,11 @@
       <h2>Sheet</h2>
       <button type="button" class="print-sheet btn-teal">Print sheet</button>
       <p class="note sheet-day-note"></p>
+      <div class="sheet-toolbar">
+        <label>Search sheet
+          <input class="sheet-search" autocomplete="off" placeholder="Name, email, code, status">
+        </label>
+      </div>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
@@ -336,6 +341,11 @@
       <h2>Sheet</h2>
       <button type="button" class="print-sheet btn-teal">Print sheet</button>
       <p class="note sheet-day-note"></p>
+      <div class="sheet-toolbar">
+        <label>Search sheet
+          <input class="sheet-search" autocomplete="off" placeholder="Name, email, code, status">
+        </label>
+      </div>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
       <p class="note sheet-wait">The live Google Sheet is in the Ticket Tracker folder. It updates only from this app. The link appears after the next save.</p>
@@ -372,10 +382,10 @@
   <script src="../vendor/qrcode-generator.js"></script>
   <script src="../vendor/xlsx.mini.min.js"></script>
   <script src="../sheet.js?v=1"></script>
-  <script src="../catalog.js?v=4"></script>
+  <script src="../catalog.js?v=5"></script>
   <script src="../ledger.js?v=30"></script>
   <script src="../record.js?v=9"></script>
   <script src="../vendor/html5-qrcode.min.js"></script>
-  <script src="../app.js?v=58"></script>
+  <script src="../app.js?v=59"></script>
 </body>
 </html>

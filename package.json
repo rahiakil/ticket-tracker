@@ -10,7 +10,9 @@
     "test": "node --test",
     "hash-password": "node scripts/hash-password.mjs",
     "init-demo": "node scripts/init-demo.mjs",
-    "upsert-user": "node scripts/upsert-user.mjs"
+    "upsert-user": "node scripts/upsert-user.mjs",
+    "build-catalog": "node scripts/build-catalog.mjs",
+    "print-qr-cards": "node scripts/print-qr-cards.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

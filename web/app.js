@@ -1497,10 +1497,64 @@ async function shareTicket() {
 }
 
 let sheetPublishTried = false;
+let sheetQuery = "";
+let sheetSortCol = 2;
+let sheetSortDir = 1;
+let sheetToolbarBound = false;
+
+function sheetPickupRatio(person) {
+  if (!person) return { total: 0, taken: 0, ratio: 0 };
+  const items = orderView(person).items;
+  const taken = items.filter((item) => item.taken).length;
+  return { total: items.length, taken, ratio: items.length ? taken / items.length : 0 };
+}
+
+function bindSheetToolbar() {
+  if (sheetToolbarBound) return;
+  sheetToolbarBound = true;
+  document.querySelectorAll(".sheet-search").forEach((input) => {
+    input.addEventListener("input", () => {
+      sheetQuery = input.value;
+      document.querySelectorAll(".sheet-search").forEach((other) => {
+        if (other !== input) other.value = sheetQuery;
+      });
+      renderLiveSheet();
+    });
+  });
+}
 
 function renderLiveSheet() {
+  bindSheetToolbar();
   const rows = statusGrid();
   const url = currentBook.sheetUrl || "";
+  const header = rows[0] || [];
+  const nameIndex = header.indexOf("Name");
+  const codeIndex = header.indexOf("Code");
+  const salesBreak = rows.findIndex((row, index) => index > 0 && row[0] === "On site sales");
+  const mainRows = salesBreak > 0 ? rows.slice(1, salesBreak) : rows.slice(1).filter((row) => row[0] !== "On site sales");
+  const saleRows = salesBreak > 0 ? rows.slice(salesBreak + 1) : [];
+  const tokens = normalized(sheetQuery).split(" ").filter(Boolean);
+  function matches(row) {
+    if (!tokens.length) return true;
+    const hay = normalized(row.join(" "));
+    return tokens.every((token) => hay.includes(token));
+  }
+  function sortRows(list) {
+    const col = Math.max(0, Math.min(sheetSortCol, Math.max(0, header.length - 1)));
+    return list.slice().sort((left, right) => {
+      const a = String(left[col] ?? "");
+      const b = String(right[col] ?? "");
+      const asNum = Number(a);
+      const bsNum = Number(b);
+      const cmp = Number.isFinite(asNum) && Number.isFinite(bsNum) && a !== "" && b !== ""
+        ? asNum - bsNum
+        : a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+      return cmp * sheetSortDir;
+    });
+  }
+  const shownMain = sortRows(mainRows.filter(matches));
+  const shownSales = sortRows(saleRows.filter(matches));
+
   document.querySelectorAll(".sheet-panel").forEach((panel) => {
     const link = panel.querySelector(".google-sheet-link");
     const wait = panel.querySelector(".sheet-wait");
@@ -1524,72 +1578,85 @@ function renderLiveSheet() {
     table.replaceChildren();
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
-    const nameIndex = (rows[0] || []).indexOf("Name");
-    const codeIndex = (rows[0] || []).indexOf("Code");
-    (rows[0] || []).forEach((label) => {
+    header.forEach((label, index) => {
       const cell = document.createElement("th");
-      cell.textContent = label;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sheet-sort";
+      button.textContent = sheetSortCol === index
+        ? `${label} ${sheetSortDir > 0 ? "▲" : "▼"}`
+        : label;
+      button.addEventListener("click", () => {
+        if (sheetSortCol === index) sheetSortDir *= -1;
+        else {
+          sheetSortCol = index;
+          sheetSortDir = 1;
+        }
+        renderLiveSheet();
+      });
+      cell.append(button);
       headRow.append(cell);
     });
     head.append(headRow);
     const body = document.createElement("tbody");
-    rows.slice(1).forEach((row) => {
-      if (row[0] === "On site sales") {
+    function appendDataRows(list) {
+      list.forEach((row) => {
         const line = document.createElement("tr");
-        const cell = document.createElement("td");
-        cell.colSpan = (rows[0] || []).length || 1;
-        cell.textContent = "On site sales";
-        cell.className = "sheet-break";
-        line.append(cell);
-        body.append(line);
-        return;
-      }
-      const line = document.createElement("tr");
-      const person = codeIndex >= 0 ? catalogPerson(row[codeIndex]) : null;
-      const pickup = person ? todayPickup(person) : { total: 0, taken: 0, ratio: 0 };
-      const lockedText = codeIndex >= 0 ? lockLabel(row[codeIndex]) : "";
-      if (lockedText) {
-        line.className = "sheet-locked";
-        line.title = lockedText;
-      } else if (pickup.ratio > 0) {
-        line.className = "sheet-picked";
-        line.style.setProperty("--pick", `${Math.round(pickup.ratio * 100)}%`);
-        line.title = pickup.ratio === 1
-          ? `Picked up today (${eventDayLabel()})`
-          : `${pickup.taken} of ${pickup.total} ${eventDayLabel()} tickets picked up`;
-      }
-      row.forEach((value, index) => {
-        const cell = document.createElement("td");
-        if (index === nameIndex) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "text-button sheet-name";
-          button.textContent = value;
-          button.addEventListener("click", () => {
-            const match = catalogPerson(row[codeIndex]);
-            if (match) paintOpen(match, { allActivity: true });
-          });
-          cell.append(button);
-          if (pickup.total) {
-            const mark = document.createElement("span");
-            mark.className = "today-mark";
-            mark.textContent = pickup.ratio === 1 ? "Picked up today" : `${Math.round(pickup.ratio * 100)}% today`;
-            cell.append(mark);
-          }
-        } else {
-          cell.textContent = value;
+        const person = codeIndex >= 0 ? catalogPerson(row[codeIndex]) : null;
+        const pickup = sheetPickupRatio(person);
+        const lockedText = codeIndex >= 0 ? lockLabel(row[codeIndex]) : "";
+        if (lockedText) {
+          line.className = "sheet-locked";
+          line.title = lockedText;
+        } else if (pickup.ratio > 0) {
+          line.className = pickup.ratio < 1 ? "sheet-picked sheet-partial" : "sheet-picked";
+          line.style.setProperty("--pick", `${Math.round(pickup.ratio * 100)}%`);
+          line.title = pickup.ratio === 1
+            ? "All tickets picked up"
+            : `${pickup.taken} of ${pickup.total} tickets picked up`;
         }
-        line.append(cell);
+        row.forEach((value, index) => {
+          const cell = document.createElement("td");
+          if (index === nameIndex) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "text-button sheet-name";
+            button.textContent = value;
+            button.addEventListener("click", () => {
+              const match = catalogPerson(row[codeIndex]);
+              if (match) paintOpen(match, { allActivity: true });
+            });
+            cell.append(button);
+            if (pickup.total) {
+              const mark = document.createElement("span");
+              mark.className = "today-mark";
+              mark.textContent = pickup.ratio === 1 ? "Complete" : `${Math.round(pickup.ratio * 100)}% picked`;
+              cell.append(mark);
+            }
+          } else {
+            cell.textContent = value;
+          }
+          line.append(cell);
+        });
+        body.append(line);
       });
+    }
+    appendDataRows(shownMain);
+    if (shownSales.length) {
+      const line = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = header.length || 1;
+      cell.textContent = "On site sales";
+      cell.className = "sheet-break";
+      line.append(cell);
       body.append(line);
-    });
+      appendDataRows(shownSales);
+    }
     table.append(head, body);
   });
-  const day = eventDayLabel();
-  const dayText = day === "Friday" || day === "Saturday" || day === "Sunday"
-    ? `Yellow means locked now. Green is ${day} only. A full green row means every ${day} ticket is picked up. A shorter green bar is the share picked up today.`
-    : "Yellow means locked now. Green follows that day’s tickets. Friday, Saturday, and Sunday are counted apart.";
-  document.querySelectorAll(".sheet-day-note").forEach((node) => { node.textContent = dayText; });
+  document.querySelectorAll(".sheet-day-note").forEach((node) => {
+    node.textContent = "Yellow means locked now. Green fills by pickup progress, so partial rows stay partly green. Click a column title to sort.";
+  });
   if (!url && !sheetPublishTried && readSession()) {
     sheetPublishTried = true;
     queueWrite((book) => {
