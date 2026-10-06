@@ -8,10 +8,13 @@ const laneFilter = flags.has("--food-only") ? "food"
   : null;
 const source = args[0] || "E:\\Downloads\\order_list_10_06_2026_.csv";
 const outPath = args[1] || (laneFilter === "food"
-  ? "E:\\Downloads\\uttaron-qr-cards-food-10-06-2026.doc"
+  ? "E:\\Downloads\\uttaron-qr-cards-food-10-06-2026.docx"
   : laneFilter === "entry"
-    ? "E:\\Downloads\\uttaron-qr-cards-entry-10-06-2026.doc"
-    : "E:\\Downloads\\uttaron-qr-cards-10-06-2026.doc");
+    ? "E:\\Downloads\\uttaron-qr-cards-entry-10-06-2026.docx"
+    : "E:\\Downloads\\uttaron-qr-cards-10-06-2026.docx");
+const htmlPath = /\.html?$/i.test(outPath)
+  ? outPath
+  : outPath.replace(/\.(docx|doc)$/i, ".htm");
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -271,10 +274,43 @@ ${sections}
 </body>
 </html>`;
 
-writeFileSync(outPath, html, "utf8");
+writeFileSync(htmlPath, html, "utf8");
+
+const docxPath = /\.docx$/i.test(outPath) ? outPath : outPath.replace(/\.(htm|html|doc)$/i, ".docx");
+if (docxPath.toLowerCase() !== htmlPath.toLowerCase()) {
+  const ps = `
+$ErrorActionPreference = 'Stop'
+$htmlPath = '${htmlPath.replace(/'/g, "''")}'
+$docxPath = '${docxPath.replace(/'/g, "''")}'
+$word = $null; $doc = $null
+try {
+  $word = New-Object -ComObject Word.Application
+  $word.Visible = $false
+  $word.DisplayAlerts = 0
+  $doc = $word.Documents.Open($htmlPath, $false, $true)
+  # 16 = wdFormatXMLDocument (.docx)
+  $doc.SaveAs([ref]$docxPath, [ref]16)
+} finally {
+  if ($doc) { $doc.Close($false) | Out-Null }
+  if ($word) { $word.Quit() | Out-Null }
+  if ($doc) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null }
+  if ($word) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null }
+  [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+}
+`;
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync("powershell", ["-NoProfile", "-Command", ps], { encoding: "utf8" });
+  if (result.status !== 0) {
+    console.error(result.stdout || "");
+    console.error(result.stderr || "");
+    throw new Error(`Word failed to save DOCX (exit ${result.status})`);
+  }
+}
+
 console.log(JSON.stringify({
   source,
-  outPath,
+  htmlPath,
+  outPath: docxPath,
   laneFilter: laneFilter || "all",
   skipped,
   orders: new Set(cards.map((card) => card.code)).size,
