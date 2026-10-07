@@ -219,8 +219,8 @@ for (const card of cards) {
 const kindCounts = {};
 for (const card of cards) kindCounts[card.kind] = (kindCounts[card.kind] || 0) + 1;
 
-const COLS = 5;
-const QR_PX = 68;
+const COLS = 4;
+const QR_PX = 84;
 
 const sections = [...groups.entries()].map(([letter, list]) => {
   const cells = list.map((card) => {
@@ -257,8 +257,8 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
   h2.letter { page-break-before: auto; font-size: 11pt; margin: 8pt 0 4pt; border-bottom: 1pt solid #333; padding-bottom: 2pt; }
   .cover { margin-bottom: 8pt; }
   .grid { border-collapse: separate; border-spacing: 18pt 21pt; width: 100%; table-layout: fixed; }
-  .card { width: 20%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
-  .empty { width: 20%; border: none; }
+  .card { width: 25%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
+  .empty { width: 25%; border: none; }
   .inner { padding: 0; text-align: center; }
   .meta { margin-top: 4pt; padding: 0 4pt 0 6pt; text-align: left; mso-padding-alt: 0 4pt 0 6pt; }
   .name { font-size: 8pt; font-weight: 700; line-height: 1.15; margin: 0 2pt; word-wrap: break-word; }
