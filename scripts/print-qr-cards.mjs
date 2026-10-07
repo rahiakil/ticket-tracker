@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import QRCode from "qrcode";
-import { refundQty } from "./refunds.mjs";
+import { allowedQty } from "./refunds.mjs";
 
 const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")));
@@ -164,7 +164,7 @@ for (const row of body) {
     if (!match) break;
     const itemName = match[1].trim();
     const ordered = Math.max(1, Number(match[2]) || 1);
-    const qty = Math.max(0, ordered - refundQty(code, itemName));
+    const qty = allowedQty(code, itemName, ordered);
     rest = rest.slice(match[0].length).trim();
     if (qty < 1) continue;
     const lane = laneOf(itemName);
@@ -222,7 +222,7 @@ for (const card of cards) kindCounts[card.kind] = (kindCounts[card.kind] || 0) +
 const COLS = 4;
 const QR_PX = 84;
 
-const sections = [...groups.entries()].map(([letter, list]) => {
+const sections = [...groups.entries()].map(([letter, list], sectionIndex) => {
   const cells = list.map((card) => {
     const itemLabel = card.parts > 1 ? `${card.itemName} (${card.unit} of ${card.parts})` : card.itemName;
     return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};padding:6pt 8pt 7pt 8pt;">
@@ -242,8 +242,8 @@ const sections = [...groups.entries()].map(([letter, list]) => {
     while (slice.length < COLS) slice.push('<td class="empty"></td>');
     rowsHtml.push(`<tr>${slice.join("")}</tr>`);
   }
-  return `<h2 class="letter">Letter ${escapeHtml(letter)} · ${list.length}</h2>
-<table class="grid" width="100%">${rowsHtml.join("")}</table>`;
+  const breakHtml = sectionIndex === 0 ? "" : `<br clear="all" style="page-break-before:always">`;
+  return `${breakHtml}<div class="letter-page"><table class="grid" width="100%">${rowsHtml.join("")}</table></div>`;
 }).join("\n");
 
 const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
@@ -253,9 +253,9 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
   @page { size: letter; margin: 0.3in; }
-  body { font-family: Calibri, Arial, sans-serif; color: #111; }
-  h2.letter { page-break-before: auto; font-size: 11pt; margin: 8pt 0 4pt; border-bottom: 1pt solid #333; padding-bottom: 2pt; }
-  .cover { margin-bottom: 8pt; }
+  body { font-family: Calibri, Arial, sans-serif; color: #111; margin: 0; }
+  .letter-page { page-break-before: always; }
+  .letter-page:first-of-type { page-break-before: auto; }
   .grid { border-collapse: separate; border-spacing: 18pt 21pt; width: 100%; table-layout: fixed; }
   .card { width: 25%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
   .empty { width: 25%; border: none; }
@@ -268,13 +268,6 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
 </style>
 </head>
 <body>
-<div class="cover">
-  <h1>Uttoron Sharodotsav QR cards — food only</h1>
-  <p>Source: ${escapeHtml(source)}</p>
-  <p>${cards.length} food cards from ${new Set(cards.map((card) => card.code)).size} orders. No entry. No kids pizza. Layout: ${COLS} per row.</p>
-  <p>Colors: fish = orange, non-veg = red, Sunday veg = forest green, Saturday veg = lime green.</p>
-  <p>Print on letter paper. Cut in the white gaps between boxes.</p>
-</div>
 ${sections}
 </body>
 </html>`;

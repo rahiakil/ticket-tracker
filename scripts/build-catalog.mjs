@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { applyOrderRefunds } from "./refunds.mjs";
+import { applyOrderRefunds, REFUNDS } from "./refunds.mjs";
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -93,7 +93,7 @@ for (const row of body) {
 
 const refunds = applyOrderRefunds(orders);
 
-const out = `window.TicketCatalog = ${JSON.stringify({ orders }, null, 2)};
+const out = `window.TicketCatalog = ${JSON.stringify({ orders, refunds: REFUNDS.map(({ code, item, keep, note }) => ({ code, item, keep, note })) }, null, 2)};
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();
   const orderCode = text.match(/order-(\\d+)/i);

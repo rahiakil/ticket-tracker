@@ -370,16 +370,36 @@ async function flushWrites() {
   if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
 }
 
+function refundedOrders(orders) {
+  const rules = (window.TicketCatalog && window.TicketCatalog.refunds) || [];
+  if (!rules.length || !orders) return orders || {};
+  const next = {};
+  for (const [code, order] of Object.entries(orders)) {
+    if (!order || !Array.isArray(order.items)) {
+      next[code] = order;
+      continue;
+    }
+    const items = [];
+    for (const item of order.items) {
+      const caps = rules.filter((rule) => rule.code === code && rule.item === item.name).map((rule) => rule.keep);
+      const qty = caps.length ? Math.max(0, Math.min(Number(item.qty) || 0, ...caps)) : item.qty;
+      if (qty > 0) items.push({ ...item, qty });
+    }
+    next[code] = { ...order, items };
+  }
+  return next;
+}
+
 function catalogSource() {
   const fromBook = currentBook.sheet && currentBook.sheet.orders;
-  if (fromBook && Object.keys(fromBook).length) return fromBook;
+  if (fromBook && Object.keys(fromBook).length) return refundedOrders(fromBook);
   try {
     const saved = JSON.parse(localStorage.getItem(storeKey("sheet")) || "null");
-    if (saved && saved.orders && Object.keys(saved.orders).length) return saved.orders;
+    if (saved && saved.orders && Object.keys(saved.orders).length) return refundedOrders(saved.orders);
   } catch {
     /* use the built-in sheet */
   }
-  return (window.TicketCatalog && window.TicketCatalog.orders) || {};
+  return refundedOrders((window.TicketCatalog && window.TicketCatalog.orders) || {});
 }
 
 function activeOrders() {
