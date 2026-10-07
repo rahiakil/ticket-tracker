@@ -803,20 +803,7 @@ window.TicketCatalog = {
       "event": "Sharodotsav 2026",
       "date": "September 17th, 2026",
       "amount": "$120",
-      "items": [
-        {
-          "name": "Friday Adult Non-Member Entry",
-          "qty": 2,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Friday Kids Non-Member Entry",
-          "qty": 2,
-          "lane": "entry",
-          "tone": "entry"
-        }
-      ]
+      "items": []
     },
     "11808": {
       "code": "11808",
@@ -921,12 +908,6 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
-        },
-        {
-          "name": "Saturday Lunch Vegetarian",
-          "qty": 3,
-          "lane": "food",
-          "tone": "sat-veg"
         },
         {
           "name": "Saturday Pizza for Kids",
@@ -4165,7 +4146,7 @@ window.TicketCatalog = {
         },
         {
           "name": "Sunday Machher Kalia",
-          "qty": 13,
+          "qty": 2,
           "lane": "food",
           "tone": "sun-nonveg"
         }
@@ -5618,28 +5599,10 @@ window.TicketCatalog = {
           "tone": "entry"
         },
         {
-          "name": "Saturday Lunch Vegetarian",
-          "qty": 2,
-          "lane": "food",
-          "tone": "sat-veg"
-        },
-        {
           "name": "Saturday Pizza for Kids",
           "qty": 1,
           "lane": "food",
           "tone": "sat-nonveg"
-        },
-        {
-          "name": "Sunday Lunch Non-Vegetarian",
-          "qty": 2,
-          "lane": "food",
-          "tone": "sun-nonveg"
-        },
-        {
-          "name": "Sunday Machher Kalia",
-          "qty": 2,
-          "lane": "food",
-          "tone": "sun-nonveg"
         },
         {
           "name": "Sunday Pizza for Kids",
@@ -6249,28 +6212,10 @@ window.TicketCatalog = {
           "tone": "entry"
         },
         {
-          "name": "Friday Kids Non-Member Entry",
-          "qty": 1,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
           "name": "Saturday Adult Non-Member Entry",
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
-        },
-        {
-          "name": "Saturday Kids Non-Member Entry",
-          "qty": 1,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Saturday Lunch Vegetarian",
-          "qty": 2,
-          "lane": "food",
-          "tone": "sat-veg"
         },
         {
           "name": "Saturday Pizza for Kids",
@@ -13833,20 +13778,7 @@ window.TicketCatalog = {
       "event": "Sharodotsav 2026",
       "date": "October 1st, 2026",
       "amount": "$174",
-      "items": [
-        {
-          "name": "Saturday Adult Non-Member Entry",
-          "qty": 3,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Saturday Lunch Vegetarian",
-          "qty": 3,
-          "lane": "food",
-          "tone": "sat-veg"
-        }
-      ]
+      "items": []
     },
     "12266": {
       "code": "12266",
@@ -16970,20 +16902,7 @@ window.TicketCatalog = {
       "event": "Sharodotsav 2026",
       "date": "October 4th, 2026",
       "amount": "$100",
-      "items": [
-        {
-          "name": "Sunday Adult Non-Member Entry",
-          "qty": 2,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Sunday Kids Non-Member Entry",
-          "qty": 1,
-          "lane": "entry",
-          "tone": "entry"
-        }
-      ]
+      "items": []
     },
     "12369": {
       "code": "12369",
@@ -17419,14 +17338,7 @@ window.TicketCatalog = {
       "event": "Sharodotsav 2026",
       "date": "October 4th, 2026",
       "amount": "$48",
-      "items": [
-        {
-          "name": "Saturday Lunch Vegetarian",
-          "qty": 3,
-          "lane": "food",
-          "tone": "sat-veg"
-        }
-      ]
+      "items": []
     },
     "12383": {
       "code": "12383",

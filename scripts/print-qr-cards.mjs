@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import QRCode from "qrcode";
+import { refundQty } from "./refunds.mjs";
 
 const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")));
@@ -162,8 +163,10 @@ for (const row of body) {
     const match = rest.match(/^(.+?)\sx\s(\d+)\s*(?:,\s*|$)/i);
     if (!match) break;
     const itemName = match[1].trim();
-    const qty = Math.max(1, Number(match[2]) || 1);
+    const ordered = Math.max(1, Number(match[2]) || 1);
+    const qty = Math.max(0, ordered - refundQty(code, itemName));
     rest = rest.slice(match[0].length).trim();
+    if (qty < 1) continue;
     const lane = laneOf(itemName);
     if (laneFilter && lane !== laneFilter) continue;
     if (shouldSkipItem(itemName, lane)) {
@@ -253,7 +256,7 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
   body { font-family: Calibri, Arial, sans-serif; color: #111; }
   h2.letter { page-break-before: auto; font-size: 11pt; margin: 8pt 0 4pt; border-bottom: 1pt solid #333; padding-bottom: 2pt; }
   .cover { margin-bottom: 8pt; }
-  .grid { border-collapse: separate; border-spacing: 6pt 7pt; width: 100%; table-layout: fixed; }
+  .grid { border-collapse: separate; border-spacing: 18pt 21pt; width: 100%; table-layout: fixed; }
   .card { width: 20%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
   .empty { width: 20%; border: none; }
   .inner { padding: 0; text-align: center; }

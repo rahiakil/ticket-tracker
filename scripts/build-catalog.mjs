@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { applyOrderRefunds } from "./refunds.mjs";
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -90,6 +91,8 @@ for (const row of body) {
   };
 }
 
+const refunds = applyOrderRefunds(orders);
+
 const out = `window.TicketCatalog = ${JSON.stringify({ orders }, null, 2)};
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();
@@ -107,6 +110,7 @@ writeFileSync(new URL("../web/catalog.js", import.meta.url), out);
 console.log(JSON.stringify({
   source,
   orders: Object.keys(orders).length,
+  refunds,
   items: [...itemNames.entries()].sort((left, right) => right[1] - left[1]),
 }, null, 2));
 void pathToFileURL;
