@@ -116,6 +116,10 @@ function ensureSalesBook_() {
   return ss;
 }
 
+function keepEventDays_(current, incoming) {
+  if (incoming && incoming.eventDays && incoming.eventDays.friday) current.eventDays = incoming.eventDays;
+}
+
 function keepSheet_(current, incoming) {
   if (incoming && incoming.sheet && incoming.sheet.orders) current.sheet = incoming.sheet;
 }
@@ -159,6 +163,7 @@ function mergeBook_(current, incoming) {
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
+    keepEventDays_(current, incoming);
     return current;
   }
   if (incoming && incoming.releaseAllLocks && incoming.actor === "siteadmin") {
@@ -169,6 +174,7 @@ function mergeBook_(current, incoming) {
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
+    keepEventDays_(current, incoming);
     return current;
   }
   if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
@@ -188,6 +194,7 @@ function mergeBook_(current, incoming) {
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
+    keepEventDays_(current, incoming);
     return current;
   }
   var orders = current.orders || {};
@@ -250,6 +257,7 @@ function mergeBook_(current, incoming) {
   current.counts = countBook_(current);
   keepSheet_(current, incoming);
   keepAccounts_(current, incoming);
+  keepEventDays_(current, incoming);
   return current;
 }
 

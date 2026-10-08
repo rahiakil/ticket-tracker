@@ -680,12 +680,20 @@ const DEFAULT_EVENT_DAYS = { friday: "2026-10-09", saturday: "2026-10-10", sunda
 function eventDates(book) {
   const saved = book && book.eventDays;
   const pick = (day) => (/^\d{4}-\d{2}-\d{2}$/.test(saved && saved[day] || "") ? saved[day] : DEFAULT_EVENT_DAYS[day]);
-  return { friday: pick("friday"), saturday: pick("saturday"), sunday: pick("sunday") };
+  const openRaw = saved && saved.open;
+  const open = (day) => (openRaw && typeof openRaw[day] === "boolean" ? openRaw[day] : true);
+  return {
+    friday: pick("friday"),
+    saturday: pick("saturday"),
+    sunday: pick("sunday"),
+    open: { friday: open("friday"), saturday: open("saturday"), sunday: open("sunday") },
+  };
 }
 
 function paintDemo() {
   const dates = eventDates(currentBook);
-  const summary = `Reality: Friday ${dates.friday}, Saturday ${dates.saturday}, Sunday ${dates.sunday}.`;
+  const openNames = ["friday", "saturday", "sunday"].filter((day) => dates.open[day]);
+  const summary = `Open: ${openNames.length ? openNames.join(", ") : "none"}. Friday ${dates.friday}, Saturday ${dates.saturday}, Sunday ${dates.sunday}.`;
   for (const button of document.querySelectorAll(".demo-toggle")) {
     button.textContent = demoMode ? "Demo on" : "Demo off";
     button.className = demoMode ? "demo-toggle btn-teal" : "demo-toggle btn-orange";
@@ -764,7 +772,9 @@ function ticketPill(person, item, index, lane, locked, now) {
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now, eventDates(currentBook));
-  const future = !demoMode && Boolean(TicketLedger.itemDay(item.id)) && ahead > 0;
+  const day = TicketLedger.itemDay(item.id);
+  const closed = !demoMode && Boolean(day) && !TicketLedger.dayIsOpen(day, eventDates(currentBook));
+  const future = !demoMode && Boolean(day) && (ahead > 0 || closed);
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
   button.className = `item-pill coupon-${kind} ${state}`;
   if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
@@ -1191,8 +1201,9 @@ function paintEventDays() {
   const dates = eventDates(currentBook);
   for (const day of ["friday", "saturday", "sunday"]) {
     const input = document.querySelector(`#day-${day}`);
-    if (!input || document.activeElement === input) continue;
-    input.value = dates[day];
+    if (input && document.activeElement !== input) input.value = dates[day];
+    const open = document.querySelector(`#open-${day}`);
+    if (open && document.activeElement !== open) open.checked = dates.open[day];
   }
 }
 
@@ -1465,15 +1476,26 @@ function renderDisputes() {
 
 let cart = [];
 
+function hiddenSaleItem(name) {
+  const text = String(name || "").toLowerCase().replace(/\s+/g, " ");
+  if (text.includes("chinese") && /non-?veg/.test(text)) return true;
+  if (text.includes("chicken roll") || text.includes("mutton roll") || text.includes("paneer roll")) return true;
+  return false;
+}
+
 function menuItems() {
   const names = new Map();
   Object.values(catalogSource()).forEach((person) => {
     (person.items || []).forEach((item) => {
-      if (item.lane !== "food") return;
-      if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: "food", tone: item.tone || "food" });
+      if (item.lane !== "food" && item.lane !== "entry") return;
+      if (hiddenSaleItem(item.name)) return;
+      if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: item.lane, tone: item.tone || item.lane });
     });
   });
-  return [...names.values()].sort((left, right) => left.name.localeCompare(right.name));
+  return [...names.values()].sort((left, right) => {
+    if (left.lane !== right.lane) return left.lane === "entry" ? -1 : 1;
+    return left.name.localeCompare(right.name);
+  });
 }
 
 function addSaleItem(item) {
@@ -1504,7 +1526,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Tap a food item to add it. The QR is for that food only.";
+  hint.textContent = "Tap an entry or food item to add it. The QR covers every item on this sale.";
   const grid = document.createElement("div");
   grid.className = "sale-tiles";
   for (const item of items) {
@@ -1531,7 +1553,13 @@ function openSale() {
   if (!can("sell")) return;
   cart = [];
   document.querySelector("#sale-name").value = "";
-  document.querySelector("#sale-email").value = "";
+  const email = document.querySelector("#sale-email");
+  const noEmail = document.querySelector("#sale-no-email");
+  if (email) {
+    email.value = "";
+    email.disabled = false;
+  }
+  if (noEmail) noEmail.checked = false;
   document.querySelector("#sale-note").textContent = "";
   paintSaleTiles();
   paintCart();
@@ -1593,11 +1621,11 @@ function nextWalkCode() {
 function submitSale() {
   if (!can("sell")) return;
   const name = document.querySelector("#sale-name").value.trim();
-  const email = document.querySelector("#sale-email").value.trim();
+  const noEmail = document.querySelector("#sale-no-email");
+  const email = noEmail && noEmail.checked ? "" : document.querySelector("#sale-email").value.trim();
   const note = document.querySelector("#sale-note");
-  cart = cart.filter((item) => item.lane === "food");
   if (!name || !cart.length) {
-    note.textContent = "Add a name and at least one food item.";
+    note.textContent = "Add a name and at least one ticket.";
     return;
   }
   const code = nextWalkCode();
@@ -1609,7 +1637,7 @@ function submitSale() {
     event: "On site",
     date: new Date().toLocaleDateString(),
     amount: "",
-    items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: "food", tone: "food" })),
+    items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: item.lane === "entry" ? "entry" : "food", tone: item.tone || item.lane })),
   };
   const at = new Date().toISOString();
   queueWrite((book) => {
@@ -2658,15 +2686,26 @@ document.querySelector("#save-event-days").addEventListener("click", () => {
   const friday = document.querySelector("#day-friday").value;
   const saturday = document.querySelector("#day-saturday").value;
   const sunday = document.querySelector("#day-sunday").value;
+  const open = {
+    friday: document.querySelector("#open-friday").checked,
+    saturday: document.querySelector("#open-saturday").checked,
+    sunday: document.querySelector("#open-sunday").checked,
+  };
   const noteBox = document.querySelector("#admin-note");
   if (![friday, saturday, sunday].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) {
     noteBox.hidden = false;
     noteBox.textContent = "Choose a date for Friday, Saturday, and Sunday.";
     return;
   }
+  if (!open.friday && !open.saturday && !open.sunday) {
+    noteBox.hidden = false;
+    noteBox.textContent = "Turn on at least one day.";
+    return;
+  }
   const applied = queueWrite((book) => {
-    book.eventDays = { friday, saturday, sunday };
-    return { write: true, book, message: `Reality dates saved. Friday ${friday}, Saturday ${saturday}, Sunday ${sunday}.` };
+    book.eventDays = { friday, saturday, sunday, open };
+    const names = ["friday", "saturday", "sunday"].filter((day) => open[day]);
+    return { write: true, book, message: `Open days saved: ${names.join(", ")}.` };
   });
   noteBox.hidden = false;
   noteBox.textContent = applied.message;
@@ -2815,6 +2854,10 @@ document.querySelector("#factory-reset").addEventListener("click", () => {
   if (friday) friday.value = DEFAULT_EVENT_DAYS.friday;
   if (saturday) saturday.value = DEFAULT_EVENT_DAYS.saturday;
   if (sunday) sunday.value = DEFAULT_EVENT_DAYS.sunday;
+  for (const day of ["friday", "saturday", "sunday"]) {
+    const open = document.querySelector(`#open-${day}`);
+    if (open) open.checked = true;
+  }
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   queueWrite((book) => TicketLedger.factoryReset(book, at, actor));
@@ -2883,6 +2926,15 @@ document.querySelector("#new-sale").addEventListener("click", openSale);
 document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
 document.querySelector("#sale-name").addEventListener("input", paintCart);
 document.querySelector("#sale-submit").addEventListener("click", submitSale);
+const saleNoEmail = document.querySelector("#sale-no-email");
+if (saleNoEmail) {
+  saleNoEmail.addEventListener("change", () => {
+    const email = document.querySelector("#sale-email");
+    if (!email) return;
+    email.disabled = saleNoEmail.checked;
+    if (saleNoEmail.checked) email.value = "";
+  });
+}
 document.querySelector("#print-ticket").addEventListener("click", printTicket);
 document.querySelector("#bluetooth-print").addEventListener("click", () => { bluetoothPrint(); });
 document.querySelector("#share-ticket").addEventListener("click", () => { shareTicket(); });

@@ -312,6 +312,13 @@ function statusDetail(order) {
     return "";
   }
 
+  function dayIsOpen(dayName, dates) {
+    if (!dayName) return true;
+    const open = dates && dates.open;
+    if (!open || typeof open[dayName] !== "boolean") return true;
+    return open[dayName];
+  }
+
   function daysAhead(dayName, now, dates) {
     const clock = now instanceof Date ? now : new Date(now || Date.now());
     const mapped = dates && dates[dayName];
@@ -556,7 +563,8 @@ function statusDetail(order) {
     const when = new Date(at);
     const demo = Boolean(options && options.demo);
     const dates = options && options.eventDays;
-    if (!demo && named && itemDay(named.name) && daysAhead(itemDay(named.name), when, dates) > 0) {
+    const day = named && itemDay(named.name);
+    if (!demo && day && (!dayIsOpen(day, dates) || daysAhead(day, when, dates) > 0)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
       return { book: pruneBook(current), changed: false, blocked: true, already: false, phrase: "" };
     }
@@ -839,6 +847,7 @@ function statusDetail(order) {
     saveAccounts,
     LOCK_MS,
     itemDay,
+    dayIsOpen,
     daysAhead,
     couponKind,
     entryHue,

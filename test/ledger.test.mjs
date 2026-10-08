@@ -188,6 +188,17 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(ledger.daysAhead("friday", new Date(2026, 9, 9, 12), eventDays), 0);
   assert.equal(ledger.daysAhead("saturday", new Date(2026, 9, 9, 12), eventDays), 1);
   assert.equal(ledger.daysAhead("sunday", new Date(2026, 9, 11, 12), eventDays), 0);
+  const closedSaturday = { ...eventDays, open: { friday: false, saturday: true, sunday: false } };
+  assert.equal(ledger.dayIsOpen("saturday", closedSaturday), true);
+  assert.equal(ledger.dayIsOpen("sunday", closedSaturday), false);
+  const sundayBuyer = {
+    code: "12166",
+    full: "UTT20260900012166",
+    name: "barna NA",
+    items: [{ name: "Sunday Adult Member Entry", qty: 1, lane: "entry", tone: "entry" }],
+  };
+  const blockedDay = ledger.markItem(ledger.emptyBook(), sundayBuyer, 0, "2026-10-11T18:00:00.000Z", "admin", "phone-a", { eventDays: closedSaturday });
+  assert.equal(blockedDay.blocked, true);
 });
 
 test("a line stays locked so a second phone cannot mark it twice", () => {

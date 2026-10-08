@@ -244,9 +244,10 @@
       <label>Name
         <input id="sale-name" autocomplete="name">
       </label>
-      <label>Email
+      <label>Email, optional
         <input id="sale-email" autocomplete="email">
       </label>
+      <label class="check-line"><input id="sale-no-email" type="checkbox"> No email</label>
       <div id="sale-tiles"></div>
       <article id="sale-checkout" class="checkout-card"></article>
       <button id="sale-submit" class="btn-orange" type="button">Create QR</button>
@@ -291,16 +292,19 @@
     </div>
     <section class="panel" data-site-panel="orders">
       <h2>Event days</h2>
-      <p class="note">Reality uses these dates. Demo ignores them and lets every ticket be marked.</p>
+      <p class="note">Turn a day on when that day's tickets should be accepted. Leave the others off.</p>
       <label>Friday
         <input id="day-friday" type="date" value="2026-10-09">
       </label>
+      <label class="check-line"><input id="open-friday" type="checkbox" checked> Friday open</label>
       <label>Saturday
         <input id="day-saturday" type="date" value="2026-10-10">
       </label>
+      <label class="check-line"><input id="open-saturday" type="checkbox" checked> Saturday open</label>
       <label>Sunday
         <input id="day-sunday" type="date" value="2026-10-11">
       </label>
+      <label class="check-line"><input id="open-sunday" type="checkbox" checked> Sunday open</label>
       <button id="save-event-days" class="btn-teal" type="button">Save event days</button>
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
@@ -435,9 +439,9 @@
   <script src="../vendor/xlsx.mini.min.js"></script>
   <script src="../sheet.js?v=1"></script>
   <script src="../catalog.js?v=8"></script>
-  <script src="../ledger.js?v=35"></script>
+  <script src="../ledger.js?v=36"></script>
   <script src="../record.js?v=9"></script>
   <script src="../vendor/html5-qrcode.min.js"></script>
-  <script src="../app.js?v=67"></script>
+  <script src="../app.js?v=68"></script>
 </body>
 </html>
