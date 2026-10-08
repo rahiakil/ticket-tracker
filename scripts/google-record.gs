@@ -124,6 +124,23 @@ function keepSheet_(current, incoming) {
   if (incoming && incoming.sheet && incoming.sheet.orders) current.sheet = incoming.sheet;
 }
 
+function keepLogEpoch_(current, incoming) {
+  if (!incoming || !incoming.logEpoch) return;
+  if (!current.logEpoch || String(incoming.logEpoch) >= String(current.logEpoch)) current.logEpoch = incoming.logEpoch;
+}
+
+function applyLogEpoch_(current) {
+  var epoch = Date.parse(current.logEpoch || "");
+  if (!epoch) return;
+  current.log = (current.log || []).filter(function (item) {
+    return item && Date.parse(item.at) > epoch;
+  });
+  current.lines = (current.lines || []).filter(function (line) {
+    var at = Date.parse(String(line).slice(0, 24));
+    return !at || at > epoch;
+  });
+}
+
 function lockFresh_(lock) {
   if (!lock || !lock.holder || !lock.at) return false;
   var age = Date.now() - Date.parse(lock.at);
@@ -134,8 +151,9 @@ function mergeBook_(current, incoming) {
   if (!current.locks) current.locks = {};
   if (incoming && incoming.factoryReset && incoming.allowCleanup) {
     current.orders = {};
-    current.lines = incoming.lines || [];
-    current.log = incoming.log || [];
+    current.lines = [];
+    current.log = [];
+    current.logEpoch = incoming.logEpoch || "";
     current.locks = {};
     current.walkups = {};
     current.disputes = [];
@@ -149,6 +167,19 @@ function mergeBook_(current, incoming) {
     current.lastWriteId = incoming.lastWriteId || "";
     current.counts = countBook_(current);
     keepAccounts_(current, incoming);
+    return current;
+  }
+  if (incoming && incoming.resetLog && incoming.allowCleanup) {
+    current.lines = [];
+    current.log = [];
+    current.logEpoch = incoming.logEpoch || "";
+    current.resetLog = false;
+    current.allowCleanup = false;
+    current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
+    current.counts = countBook_(current);
+    keepSheet_(current, incoming);
+    keepAccounts_(current, incoming);
+    keepEventDays_(current, incoming);
     return current;
   }
   if (incoming && incoming.cleanupAll && incoming.allowCleanup) {
@@ -175,6 +206,8 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepLogEpoch_(current, incoming);
+    applyLogEpoch_(current);
     return current;
   }
   if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
@@ -195,6 +228,8 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepLogEpoch_(current, incoming);
+    applyLogEpoch_(current);
     return current;
   }
   var orders = current.orders || {};
@@ -258,6 +293,8 @@ function mergeBook_(current, incoming) {
   keepSheet_(current, incoming);
   keepAccounts_(current, incoming);
   keepEventDays_(current, incoming);
+  keepLogEpoch_(current, incoming);
+  applyLogEpoch_(current);
   return current;
 }
 

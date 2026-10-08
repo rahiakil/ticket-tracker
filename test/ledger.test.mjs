@@ -251,6 +251,31 @@ test("factory reset clears scans and the uploaded sheet", () => {
   assert.equal(Object.keys(reset.book.walkups).length, 0);
   assert.equal(reset.book.disputes.length, 0);
   assert.equal(reset.book.accounts[0].username, "siteadmin");
+  assert.equal(reset.book.log.length, 0);
+  assert.equal(reset.book.lines.length, 0);
+  assert.equal(reset.book.logEpoch, "2026-10-03T18:03:00.000Z");
+});
+
+test("log reset clears past actions and leaves scans", () => {
+  const book = {
+    schemaVersion: 1,
+    lines: ["2026-10-03T18:00:00.000Z 12166 scanned"],
+    log: [{ at: "2026-10-03T18:00:00.000Z", text: "12166 scanned" }],
+    orders: { 12166: { orderId: "12166", variants: { a: { taken: true } } } },
+    locks: {},
+    sheet: { orders: { 12166: { code: "12166", name: "barna NA" } } },
+    accounts: [{ username: "siteadmin", hash: "a".repeat(64), role: "records" }],
+    eventDays: { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" },
+  };
+  const cleared = ledger.resetLog(book, "2026-10-03T18:04:00.000Z");
+  assert.equal(cleared.book.resetLog, true);
+  assert.equal(cleared.book.allowCleanup, true);
+  assert.equal(cleared.book.log.length, 0);
+  assert.equal(cleared.book.lines.length, 0);
+  assert.equal(cleared.book.orders["12166"].variants.a.taken, true);
+  assert.equal(cleared.book.sheet.orders["12166"].name, "barna NA");
+  assert.equal(cleared.book.eventDays.saturday, "2026-10-10");
+  assert.equal(ledger.activityFor(cleared.book, "12166").length, 0);
 });
 
 test("source sheet edits remove an order or one item", () => {

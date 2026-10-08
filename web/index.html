@@ -226,6 +226,9 @@
 
     <section class="panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <h2>Log</h2>
+      <button type="button" class="reset-log secondary">Reset log</button>
+      <button type="button" class="factory-reset secondary">Factory reset</button>
+      <p class="note">Reset log clears past actions on every phone. Factory reset also clears scans, walk-up sales, and the uploaded sheet. Logins stay.</p>
       <label>Search log
         <input id="log-search" autocomplete="off" placeholder="Name, email, or order number">
       </label>
@@ -331,7 +334,8 @@
       <button id="admin-refresh" class="secondary" type="button">Refresh</button>
       <button id="release-locks" class="secondary" type="button">Release all locks</button>
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
-      <button id="factory-reset" class="secondary" type="button">Factory reset</button>
+      <button type="button" class="reset-log secondary">Reset log</button>
+      <button id="factory-reset" class="factory-reset secondary" type="button">Factory reset</button>
       <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
       <input id="sheet-upload" class="visually-hidden" type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values">
       <p id="sheet-note" class="note"></p>
@@ -411,6 +415,8 @@
     </section>
     <section class="panel" data-site-panel="orders">
       <h2>Log</h2>
+      <button type="button" class="reset-log secondary">Reset log</button>
+      <p class="note">Reset log removes past actions from this phone and the shared record. Scans stay.</p>
       <label>Search log
         <input id="site-log-search" autocomplete="off" placeholder="Name, email, or order number">
       </label>
@@ -436,9 +442,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=8"></script>
-  <script src="ledger.js?v=36"></script>
+  <script src="ledger.js?v=37"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=70"></script>
+  <script src="app.js?v=71"></script>
 </body>
 </html>

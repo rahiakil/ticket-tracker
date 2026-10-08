@@ -544,8 +544,9 @@ function statusDetail(order) {
     const next = emptyBook();
     if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
     const who = actor || "siteadmin";
-    next.lines = [`${at} ${who} factory reset`];
-    next.log = [{ at, text: `${who} factory reset` }];
+    next.lines = [];
+    next.log = [];
+    next.logEpoch = at;
     next.sheet = { orders: {} };
     next.factoryReset = true;
     next.cleanupAll = true;
@@ -623,9 +624,21 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(order)) };
   }
 
+  function resetLog(book, at) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    next.lines = [];
+    next.log = [];
+    next.logEpoch = at;
+    next.resetLog = true;
+    next.allowCleanup = true;
+    next.actor = "siteadmin";
+    return { book: next, changed: true };
+  }
+
   function activityFor(book, code) {
     const needle = new RegExp(`\\b${String(code).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-    return (book.log || []).filter((item) => item && needle.test(String(item.text)));
+    const epoch = Date.parse(book && book.logEpoch || "") || 0;
+    return (book.log || []).filter((item) => item && (!epoch || Date.parse(item.at) > epoch) && needle.test(String(item.text)));
   }
 
   function isSheetOrder(order) {
@@ -842,6 +855,7 @@ function statusDetail(order) {
     releaseAllLocks,
     cleanupAll,
     factoryReset,
+    resetLog,
     prepareSourceSheet,
     editSourceSheet,
     saveAccounts,

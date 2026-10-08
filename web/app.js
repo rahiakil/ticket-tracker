@@ -1113,7 +1113,12 @@ function note(text) {
 function readNotes() {
   try {
     const items = JSON.parse(localStorage.getItem(storeKey("local-log")) || "[]");
-    return Array.isArray(items) ? items : [];
+    const epoch = Date.parse(currentBook && currentBook.logEpoch || "") || 0;
+    const kept = (Array.isArray(items) ? items : []).filter((item) => item && (!epoch || Date.parse(item.at) > epoch));
+    if (epoch && kept.length !== (Array.isArray(items) ? items.length : 0)) {
+      localStorage.setItem(storeKey("local-log"), JSON.stringify(kept));
+    }
+    return kept;
   } catch {
     return [];
   }
@@ -2850,7 +2855,26 @@ if (createLoginForm) {
     });
   }
 }
-document.querySelector("#factory-reset").addEventListener("click", () => {
+function resetActivityLog() {
+  if (!canResetScans()) return;
+  if (!window.confirm("Reset the log? Past actions are removed from this phone and the shared record. Scans and the order sheet stay.")) return;
+  localStorage.removeItem(storeKey("local-log"));
+  const at = new Date().toISOString();
+  queueWrite((book) => TicketLedger.resetLog(book, at));
+  for (const id of ["#admin-note", "#admin-message"]) {
+    const noteBox = document.querySelector(id);
+    if (!noteBox) continue;
+    noteBox.hidden = false;
+    noteBox.textContent = "Log reset sent. Past actions are cleared after the save.";
+  }
+  renderOrders();
+}
+
+document.querySelectorAll(".reset-log").forEach((button) => {
+  button.addEventListener("click", resetActivityLog);
+});
+document.querySelectorAll(".factory-reset").forEach((button) => {
+  button.addEventListener("click", () => {
   const sure = window.confirm("Factory reset clears every scan, lock, log, walk-up sale, dispute, uploaded order sheet, and saved event days. Logins stay. The built-in order list comes back. This cannot be undone.");
   if (!sure) return;
   if (!window.confirm("Reset the tracker now?")) return;
@@ -2878,6 +2902,7 @@ document.querySelector("#factory-reset").addEventListener("click", () => {
     noteBox.textContent = "Factory reset sent. Scans and the uploaded sheet are cleared. The built-in order list is back.";
   }
   renderOrders();
+  });
 });
 
 setInterval(() => {
