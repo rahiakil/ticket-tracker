@@ -34,6 +34,8 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Search orders/);
   assert.match(html, /Main page/);
   assert.match(html, /Clean up everything/);
+  assert.match(html, /Factory reset/);
+  assert.match(app, /factoryReset/);
   assert.match(html, /Upload order sheet/);
   assert.match(html, /Search log/);
   assert.match(html, />Demo on</);

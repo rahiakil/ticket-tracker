@@ -2802,6 +2802,32 @@ if (createLoginForm) {
     });
   }
 }
+document.querySelector("#factory-reset").addEventListener("click", () => {
+  const sure = window.confirm("Factory reset clears every scan, lock, log, walk-up sale, dispute, uploaded order sheet, and saved event days. Logins stay. The built-in order list comes back. This cannot be undone.");
+  if (!sure) return;
+  if (!window.confirm("Reset the tracker now?")) return;
+  localStorage.removeItem(storeKey("sheet"));
+  localStorage.removeItem(storeKey("local-log"));
+  demoMode = true;
+  const friday = document.querySelector("#day-friday");
+  const saturday = document.querySelector("#day-saturday");
+  const sunday = document.querySelector("#day-sunday");
+  if (friday) friday.value = DEFAULT_EVENT_DAYS.friday;
+  if (saturday) saturday.value = DEFAULT_EVENT_DAYS.saturday;
+  if (sunday) sunday.value = DEFAULT_EVENT_DAYS.sunday;
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  queueWrite((book) => TicketLedger.factoryReset(book, at, actor));
+  openedCode = "";
+  paintDemo();
+  for (const id of ["#admin-note", "#admin-message"]) {
+    const noteBox = document.querySelector(id);
+    if (!noteBox) continue;
+    noteBox.hidden = false;
+    noteBox.textContent = "Factory reset sent. Scans and the uploaded sheet are cleared. The built-in order list is back.";
+  }
+  renderOrders();
+});
 
 setInterval(() => {
   if (document.hidden || !readSession() || flushing || pendingWrites.length) return;

@@ -219,6 +219,29 @@ test("a line stays locked so a second phone cannot mark it twice", () => {
   assert.match(cleared.book.log[0].text, /admin cleaned up everything/);
 });
 
+test("factory reset clears scans and the uploaded sheet", () => {
+  const reset = ledger.factoryReset({
+    schemaVersion: 1,
+    lines: [],
+    log: [],
+    orders: { 12166: { orderId: "12166", variants: {} } },
+    locks: { 12166: { holder: "phone-a" } },
+    walkups: { walk1: { code: "walk1" } },
+    disputes: [{ key: "12166|entry", open: true }],
+    sheet: { orders: { 12166: { code: "12166" } } },
+    eventDays: { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" },
+    accounts: [{ username: "siteadmin", hash: "a".repeat(64), role: "records" }],
+  }, "2026-10-03T18:03:00.000Z", "admin");
+  assert.equal(reset.book.factoryReset, true);
+  assert.equal(reset.book.allowCleanup, true);
+  assert.equal(Object.keys(reset.book.orders).length, 0);
+  assert.equal(Object.keys(reset.book.sheet.orders).length, 0);
+  assert.equal(reset.book.eventDays, undefined);
+  assert.equal(Object.keys(reset.book.walkups).length, 0);
+  assert.equal(reset.book.disputes.length, 0);
+  assert.equal(reset.book.accounts[0].username, "siteadmin");
+});
+
 test("source sheet edits remove an order or one item", () => {
   const book = ledger.prepareSourceSheet(ledger.emptyBook(), {
     "12166": {

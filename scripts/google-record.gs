@@ -128,6 +128,25 @@ function lockFresh_(lock) {
 
 function mergeBook_(current, incoming) {
   if (!current.locks) current.locks = {};
+  if (incoming && incoming.factoryReset && incoming.allowCleanup) {
+    current.orders = {};
+    current.lines = incoming.lines || [];
+    current.log = incoming.log || [];
+    current.locks = {};
+    current.walkups = {};
+    current.disputes = [];
+    current.sheet = { orders: {} };
+    current.eventDays = null;
+    current.factoryReset = false;
+    current.cleanupAll = false;
+    current.allowCleanup = false;
+    current.releaseAllLocks = false;
+    current.baseWriteId = "";
+    current.lastWriteId = incoming.lastWriteId || "";
+    current.counts = countBook_(current);
+    keepAccounts_(current, incoming);
+    return current;
+  }
   if (incoming && incoming.cleanupAll && incoming.allowCleanup) {
     current.orders = {};
     current.lines = incoming.lines || [];

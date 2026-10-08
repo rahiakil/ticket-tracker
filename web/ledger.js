@@ -533,6 +533,20 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true };
   }
 
+  function factoryReset(book, at, actor) {
+    const next = emptyBook();
+    if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
+    const who = actor || "siteadmin";
+    next.lines = [`${at} ${who} factory reset`];
+    next.log = [{ at, text: `${who} factory reset` }];
+    next.sheet = { orders: {} };
+    next.factoryReset = true;
+    next.cleanupAll = true;
+    next.allowCleanup = true;
+    next.actor = "siteadmin";
+    return { book: next, changed: true };
+  }
+
   function markItem(book, person, itemIndex, at, actor, holder, options) {
     if (foreignLock(book, person.code, holder, at)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
@@ -819,6 +833,7 @@ function statusDetail(order) {
     releaseLock,
     releaseAllLocks,
     cleanupAll,
+    factoryReset,
     prepareSourceSheet,
     editSourceSheet,
     saveAccounts,
