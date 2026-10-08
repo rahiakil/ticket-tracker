@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=51">
+  <link rel="stylesheet" href="styles.css?v=52">
 </head>
 <body>
 <div class="app-shell">
@@ -128,7 +128,7 @@
       </details>
     </section>
 
-    <section class="panel" data-page-panel="desk">
+    <section class="panel order-side" data-page-panel="desk">
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -349,7 +349,7 @@
     </section>
     <section class="panel" data-site-panel="logins" hidden>
       <h2>Logins</h2>
-      <p class="note">Change the username, password, and abilities for each login. Desk starts with new sales and QR only. Scanning, adding, editing, searching, and admin functions stay off until you turn them on.</p>
+      <p class="note">Volunteer can scan. Desk can look people up and add a new QR, and cannot edit the sheet. Admin can edit the sheet.</p>
       <div id="login-list"></div>
       <h2>Create login</h2>
       <form id="create-login">
@@ -372,7 +372,7 @@
           <label><input type="checkbox" data-ability="scan"> Scanning</label>
           <label><input type="checkbox" data-ability="add"> Adding</label>
           <label><input type="checkbox" data-ability="edit"> Editing</label>
-          <label><input type="checkbox" data-ability="search"> Searching</label>
+          <label><input type="checkbox" data-ability="search" checked> Searching</label>
           <label><input type="checkbox" data-ability="sell" checked> New sales</label>
           <label><input type="checkbox" data-ability="admin"> Admin functions</label>
         </fieldset>
@@ -434,9 +434,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=8"></script>
-  <script src="ledger.js?v=32"></script>
+  <script src="ledger.js?v=33"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=62"></script>
+  <script src="app.js?v=63"></script>
 </body>
 </html>

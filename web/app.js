@@ -201,9 +201,9 @@ function defaultAbilities(role) {
     return { scan: true, add: true, edit: true, search: true, sell: true, admin: true };
   }
   if (role === "desk") {
-    return { scan: false, add: false, edit: false, search: false, sell: true, admin: false };
+    return { scan: false, add: false, edit: false, search: true, sell: true, admin: false };
   }
-  return { scan: true, add: true, edit: false, search: true, sell: false, admin: false };
+  return { scan: true, add: true, edit: false, search: false, sell: false, admin: false };
 }
 
 function abilitiesFor(account) {
@@ -948,7 +948,33 @@ function paintOpen(person, options) {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
   card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
-  host.append(card);
+  host.append(card, printSlips(person));
+  if (options && options.printCopies) window.setTimeout(printTicket, 300);
+}
+
+function printSlips(person) {
+  const stack = document.createElement("div");
+  stack.className = "print-slips";
+  const copies = orderView(person).items;
+  const slips = copies.length ? copies : [{ id: "Ticket", unit: 0, parts: 1 }];
+  slips.forEach((item) => {
+    const slip = document.createElement("article");
+    slip.className = "print-slip";
+    const name = document.createElement("p");
+    name.className = "print-slip-name";
+    name.textContent = person.name;
+    const ticketId = document.createElement("p");
+    ticketId.className = "print-slip-id";
+    ticketId.textContent = person.full || person.code;
+    const label = document.createElement("p");
+    label.className = "print-slip-item";
+    label.textContent = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
+    const qr = document.createElement("div");
+    paintQr(person.code, qr);
+    slip.append(name, ticketId, label, qr);
+    stack.append(slip);
+  });
+  return stack;
 }
 
 function runLane(person, lane) {
@@ -1553,8 +1579,9 @@ function submitSale() {
     return { write: next.changed, book: next.book, message: `Order ${code} created.` };
   });
   cart = [];
-  note.textContent = `Order ${code} is ready to share.`;
-  paintOpen(person, { allTickets: true });
+  const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
+  note.textContent = `Order ${code} is ready. ${copies} ticket${copies === 1 ? "" : "s"} use the same QR.`;
+  paintOpen(person, { allTickets: true, printCopies: true });
 }
 
 function receiptText(person) {

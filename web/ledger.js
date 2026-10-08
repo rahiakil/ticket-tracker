@@ -489,24 +489,11 @@ function statusDetail(order) {
   }
 
   function accountAbilities(raw, role) {
-    const all = role === "records" || role === "scanner";
-    const desk = role === "desk";
-    const base = {
-      scan: all || !desk,
-      add: all || !desk,
-      edit: all,
-      search: all || !desk,
-      sell: all || desk,
-      admin: all,
-    };
-    if (role === "food") {
-      base.scan = true;
-      base.add = true;
-      base.edit = false;
-      base.search = true;
-      base.sell = false;
-      base.admin = false;
-    }
+    const base = role === "records" || role === "scanner"
+      ? { scan: true, add: true, edit: true, search: true, sell: true, admin: true }
+      : role === "desk"
+        ? { scan: false, add: false, edit: false, search: true, sell: true, admin: false }
+        : { scan: true, add: true, edit: false, search: false, sell: false, admin: false };
     const next = { ...base };
     if (raw && typeof raw === "object") {
       for (const key of Object.keys(base)) {
