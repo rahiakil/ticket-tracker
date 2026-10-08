@@ -439,15 +439,110 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true };
   }
 
-  function cleanupAll(book, at) {
+  function cleanupAll(book, at, actor) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
     if (book && book.eventDays) next.eventDays = book.eventDays;
-    next.lines = [`${at} siteadmin cleaned up everything`];
-    next.log = [{ at, text: "siteadmin cleaned up everything" }];
+    if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
+    const who = actor || "siteadmin";
+    next.lines = [`${at} ${who} cleaned up everything`];
+    next.log = [{ at, text: `${who} cleaned up everything` }];
     next.cleanupAll = true;
+    next.allowCleanup = true;
     next.actor = "siteadmin";
     return { book: next, changed: true };
+  }
+
+  function prepareSourceSheet(book, orders) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!next.sheet || !next.sheet.orders || !Object.keys(next.sheet.orders).length) {
+      next.sheet = {
+        orders: structuredClone(orders && typeof orders === "object" ? orders : {}),
+        fileName: "source",
+        uploadedAt: "",
+      };
+    }
+    return next;
+  }
+
+  function editSourceSheet(book, action, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const orders = next.sheet && next.sheet.orders;
+    const code = String(action && action.code || "");
+    const person = orders && orders[code];
+    if (!person) return { book: pruneBook(next), changed: false };
+    if (action.type === "delete-order") {
+      delete orders[code];
+    } else if (action.type === "delete-item") {
+      const name = String(action.name || "");
+      const index = Array.isArray(person.items) ? person.items.findIndex((item) => item && item.name === name) : -1;
+      if (index < 0) return { book: pruneBook(next), changed: false };
+      person.items.splice(index, 1);
+    } else {
+      return { book: pruneBook(next), changed: false };
+    }
+    next.sheet.uploadedAt = at;
+    if (!Array.isArray(next.log)) next.log = [];
+    const detail = action.type === "delete-order" ? "order removed" : `item removed: ${action.name}`;
+    next.log.push({ at, text: `${code} source sheet ${detail} by ${actor || "admin"}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function accountAbilities(raw, role) {
+    const all = role === "records" || role === "scanner";
+    const desk = role === "desk";
+    const base = {
+      scan: all || !desk,
+      add: all || !desk,
+      edit: all,
+      search: all || !desk,
+      sell: all || desk,
+      admin: all,
+    };
+    if (role === "food") {
+      base.scan = true;
+      base.add = true;
+      base.edit = false;
+      base.search = true;
+      base.sell = false;
+      base.admin = false;
+    }
+    const next = { ...base };
+    if (raw && typeof raw === "object") {
+      for (const key of Object.keys(base)) {
+        if (typeof raw[key] === "boolean") next[key] = raw[key];
+      }
+    }
+    if (role === "records") {
+      for (const key of Object.keys(next)) next[key] = true;
+    }
+    return next;
+  }
+
+  function saveAccounts(book, accounts, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const clean = [];
+    const seen = new Set();
+    for (const account of accounts || []) {
+      const username = String(account && account.username || "").trim().toLowerCase();
+      const hash = String(account && account.hash || "");
+      const role = String(account && account.role || "");
+      if (!/^[a-z0-9][a-z0-9-]{1,31}$/.test(username)) continue;
+      if (!/^[a-f0-9]{64}$/.test(hash)) continue;
+      if (!["records", "scanner", "desk", "food"].includes(role)) continue;
+      if (seen.has(username)) continue;
+      seen.add(username);
+      clean.push({ username, hash, role, abilities: accountAbilities(account.abilities, role) });
+    }
+    if (!clean.length || !clean.some((account) => account.role === "records")) {
+      return { book: pruneBook(next), changed: false };
+    }
+    next.accounts = clean;
+    next.accountsWrite = true;
+    if (next.sheet && next.sheet.orders && Object.keys(next.sheet.orders).length) next.sheet.logins = clean;
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${actor || "siteadmin"} updated logins` });
+    return { book: pruneBook(next), changed: true };
   }
 
   function markItem(book, person, itemIndex, at, actor, holder, options) {
@@ -736,6 +831,9 @@ function statusDetail(order) {
     releaseLock,
     releaseAllLocks,
     cleanupAll,
+    prepareSourceSheet,
+    editSourceSheet,
+    saveAccounts,
     LOCK_MS,
     itemDay,
     daysAhead,

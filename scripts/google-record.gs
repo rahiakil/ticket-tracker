@@ -128,7 +128,7 @@ function lockFresh_(lock) {
 
 function mergeBook_(current, incoming) {
   if (!current.locks) current.locks = {};
-  if (incoming && incoming.cleanupAll && incoming.actor === "siteadmin") {
+  if (incoming && incoming.cleanupAll && incoming.allowCleanup) {
     current.orders = {};
     current.lines = incoming.lines || [];
     current.log = incoming.log || [];
@@ -139,6 +139,7 @@ function mergeBook_(current, incoming) {
     current.lastWriteId = incoming.lastWriteId || "";
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
+    keepAccounts_(current, incoming);
     return current;
   }
   if (incoming && incoming.releaseAllLocks && incoming.actor === "siteadmin") {
@@ -148,6 +149,7 @@ function mergeBook_(current, incoming) {
     current.lastWriteId = incoming.lastWriteId || current.lastWriteId || "";
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
+    keepAccounts_(current, incoming);
     return current;
   }
   if (String(incoming.baseWriteId || "") === String(current.lastWriteId || "")) {
@@ -166,6 +168,7 @@ function mergeBook_(current, incoming) {
     pruneOld_(current);
     current.counts = countBook_(current);
     keepSheet_(current, incoming);
+    keepAccounts_(current, incoming);
     return current;
   }
   var orders = current.orders || {};
@@ -227,7 +230,34 @@ function mergeBook_(current, incoming) {
   pruneOld_(current);
   current.counts = countBook_(current);
   keepSheet_(current, incoming);
+  keepAccounts_(current, incoming);
   return current;
+}
+
+function keepAccounts_(current, incoming) {
+  if (incoming && incoming.accountsWrite && Array.isArray(incoming.accounts)) {
+    current.accounts = incoming.accounts.filter(function (account) {
+      return account && /^[a-z0-9][a-z0-9-]{1,31}$/.test(String(account.username || ""))
+        && /^[a-f0-9]{64}$/.test(String(account.hash || ""))
+        && ["records", "scanner", "desk", "food"].indexOf(String(account.role || "")) >= 0;
+    }).map(function (account) {
+      var role = String(account.role);
+      var abilities = {};
+      ["scan", "add", "edit", "search", "sell", "admin"].forEach(function (key) {
+        abilities[key] = Boolean(account.abilities && account.abilities[key]);
+      });
+      if (role === "records") {
+        ["scan", "add", "edit", "search", "sell", "admin"].forEach(function (key) { abilities[key] = true; });
+      }
+      return {
+        username: String(account.username).trim().toLowerCase(),
+        hash: String(account.hash),
+        role: role,
+        abilities: abilities,
+      };
+    });
+  }
+  current.accountsWrite = false;
 }
 
 function mergeLog_(currentLog, incomingLog) {

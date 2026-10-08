@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=49">
+  <link rel="stylesheet" href="styles.css?v=51">
 </head>
 <body>
 <div class="app-shell">
@@ -47,7 +47,8 @@
   <main id="gate" class="gate">
     <div>
       <p class="gate-message">For you, without login, we will not allow you.</p>
-      <button id="show-login" class="text-button" type="button">Log in</button>
+      <button id="show-desk" class="text-button" type="button">Desk</button>
+      <button id="show-admin-login" class="text-button" type="button">Admin</button>
       <button id="show-volunteer" class="text-button" type="button">Volunteer</button>
       <button id="show-admin" class="text-button" type="button">Site admin</button>
       <a class="text-button" href="backup/">Backup page</a>
@@ -187,6 +188,14 @@
         <label>Search sheet
           <input class="sheet-search" autocomplete="off" placeholder="Name, email, code, status">
         </label>
+        <label>Show
+          <select class="sheet-filter">
+            <option value="all">Everything</option>
+            <option value="done">Done</option>
+            <option value="open">Still open</option>
+          </select>
+        </label>
+        <button type="button" class="cleanup-scans secondary">Clean up all scans</button>
       </div>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
@@ -276,6 +285,7 @@
     <div class="page-tabs admin-tabs">
       <button type="button" data-site-tab="orders" class="btn-teal">Orders</button>
       <button type="button" data-site-tab="sheet" class="btn-quiet">Sheet</button>
+      <button type="button" data-site-tab="logins" class="btn-quiet">Logins</button>
       <button type="button" data-site-tab="download" class="btn-quiet">Download</button>
       <button type="button" data-site-tab="export" class="btn-quiet">Export</button>
     </div>
@@ -337,6 +347,39 @@
       <button id="admin-email-csv" class="secondary" type="button">Email CSV</button>
       <p class="note">Email sends the status file. The live sheet stays in the Ticket Tracker folder.</p>
     </section>
+    <section class="panel" data-site-panel="logins" hidden>
+      <h2>Logins</h2>
+      <p class="note">Change the username, password, and abilities for each login. Desk starts with new sales and QR only. Scanning, adding, editing, searching, and admin functions stay off until you turn them on.</p>
+      <div id="login-list"></div>
+      <h2>Create login</h2>
+      <form id="create-login">
+        <label>Username
+          <input id="new-username" autocomplete="off" autocapitalize="none" required>
+        </label>
+        <label>Password
+          <input id="new-password" type="password" autocomplete="new-password" required>
+        </label>
+        <label>Role
+          <select id="new-role">
+            <option value="desk">Desk</option>
+            <option value="scanner">Admin</option>
+            <option value="food">Volunteer</option>
+            <option value="records">Site admin</option>
+          </select>
+        </label>
+        <fieldset class="ability-set">
+          <legend>Abilities</legend>
+          <label><input type="checkbox" data-ability="scan"> Scanning</label>
+          <label><input type="checkbox" data-ability="add"> Adding</label>
+          <label><input type="checkbox" data-ability="edit"> Editing</label>
+          <label><input type="checkbox" data-ability="search"> Searching</label>
+          <label><input type="checkbox" data-ability="sell" checked> New sales</label>
+          <label><input type="checkbox" data-ability="admin"> Admin functions</label>
+        </fieldset>
+        <button class="btn-orange" type="submit">Create login</button>
+      </form>
+      <p id="login-note" class="result" role="status" hidden></p>
+    </section>
     <section class="panel sheet-panel" data-site-panel="sheet" hidden>
       <h2>Sheet</h2>
       <button type="button" class="print-sheet btn-teal">Print sheet</button>
@@ -345,6 +388,14 @@
         <label>Search sheet
           <input class="sheet-search" autocomplete="off" placeholder="Name, email, code, status">
         </label>
+        <label>Show
+          <select class="sheet-filter">
+            <option value="all">Everything</option>
+            <option value="done">Done</option>
+            <option value="open">Still open</option>
+          </select>
+        </label>
+        <button type="button" class="cleanup-scans secondary">Clean up all scans</button>
       </div>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
@@ -383,9 +434,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=8"></script>
-  <script src="ledger.js?v=30"></script>
+  <script src="ledger.js?v=32"></script>
   <script src="record.js?v=9"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=60"></script>
+  <script src="app.js?v=62"></script>
 </body>
 </html>

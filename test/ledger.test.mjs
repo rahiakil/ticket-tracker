@@ -206,10 +206,57 @@ test("a line stays locked so a second phone cannot mark it twice", () => {
   const blocked = ledger.markItem(marked.book, person, 0, "2026-10-03T18:01:00.000Z", "admin", "phone-b");
   assert.equal(blocked.locked, true);
   assert.equal(blocked.changed, false);
-  const cleared = ledger.cleanupAll(marked.book, "2026-10-03T18:02:00.000Z");
+  marked.book.sheet = { orders: { "12166": person }, fileName: "source" };
+  marked.book.accounts = [{ username: "siteadmin", hash: "a".repeat(64), role: "records" }];
+  const cleared = ledger.cleanupAll(marked.book, "2026-10-03T18:02:00.000Z", "admin");
   assert.equal(cleared.book.cleanupAll, true);
+  assert.equal(cleared.book.allowCleanup, true);
+  assert.equal(cleared.book.actor, "siteadmin");
   assert.equal(Object.keys(cleared.book.orders).length, 0);
   assert.equal(Object.keys(cleared.book.locks).length, 0);
+  assert.equal(cleared.book.sheet.orders["12166"].name, "barna NA");
+  assert.equal(cleared.book.accounts[0].username, "siteadmin");
+  assert.match(cleared.book.log[0].text, /admin cleaned up everything/);
+});
+
+test("source sheet edits remove an order or one item", () => {
+  const book = ledger.prepareSourceSheet(ledger.emptyBook(), {
+    "12166": {
+      code: "12166",
+      name: "barna NA",
+      items: [
+        { name: "Regular Member Entry", qty: 1 },
+        { name: "Fish", qty: 2 },
+      ],
+    },
+  });
+  const item = ledger.editSourceSheet(book, { type: "delete-item", code: "12166", name: "Fish" }, "2026-10-07T00:00:00.000Z", "admin");
+  assert.equal(item.changed, true);
+  assert.deepEqual(item.book.sheet.orders["12166"].items.map((entry) => entry.name), ["Regular Member Entry"]);
+  const order = ledger.editSourceSheet(item.book, { type: "delete-order", code: "12166" }, "2026-10-07T00:01:00.000Z", "admin");
+  assert.equal(order.changed, true);
+  assert.equal(order.book.sheet.orders["12166"], undefined);
+});
+
+test("site admin can save logins when one site admin remains", () => {
+  const book = ledger.emptyBook();
+  book.sheet = { orders: { "12166": { code: "12166" } }, fileName: "source" };
+  const saved = ledger.saveAccounts(book, [
+    { username: "SiteAdmin", hash: "ab".repeat(32), role: "records" },
+    { username: "desk", hash: "cd".repeat(32), role: "desk" },
+  ], "2026-10-07T00:00:00.000Z", "siteadmin");
+  assert.equal(saved.changed, true);
+  assert.equal(saved.book.accountsWrite, true);
+  assert.equal(saved.book.accounts[0].username, "siteadmin");
+  assert.equal(saved.book.accounts[1].abilities.sell, true);
+  assert.equal(saved.book.accounts[1].abilities.edit, false);
+  assert.equal(saved.book.accounts[1].abilities.admin, false);
+  assert.equal(saved.book.sheet.logins[1].username, "desk");
+  assert.equal(saved.book.sheet.orders["12166"].code, "12166");
+  const blocked = ledger.saveAccounts(ledger.emptyBook(), [
+    { username: "desk", hash: "cd".repeat(32), role: "desk" },
+  ], "2026-10-07T00:00:00.000Z", "siteadmin");
+  assert.equal(blocked.changed, false);
 });
 
 test("orders stay until the file reaches 10000, then the oldest order is dropped", () => {

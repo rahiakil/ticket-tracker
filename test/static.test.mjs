@@ -65,4 +65,12 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /sheet-search/);
   assert.match(app, /sheetSortCol/);
   assert.match(app, /sheet-partial/);
+  assert.match(html, /id="show-desk"/);
+  assert.match(html, /id="show-admin-login"/);
+  assert.match(html, /id="create-login"/);
+  assert.match(html, /cleanup-scans/);
+  assert.match(html, /sheet-filter/);
+  assert.match(backupHtml, /id="show-desk"/);
+  assert.match(app, /username: "desk"/);
+  assert.match(app, /editSourceSheet/);
 });

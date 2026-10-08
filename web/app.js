@@ -17,13 +17,22 @@ function markMobile() {
 }
 markMobile();
 window.addEventListener("resize", markMobile);
-const ACCOUNTS = {
-  siteadmin: { hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "records" },
-  admin: { hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
-  volunteer: { hash: "dcbb0f3cafb30402d5ed4cb826e000bcae930c7ce60763e0458665150dffa879", role: "food" },
-};
+const BUILTIN_ACCOUNTS = [
+  { username: "siteadmin", hash: "4b4d84a924bee4381c8cba1badfe3aa96cd7746ec02e36f862fab18caf42dafc", role: "records" },
+  { username: "admin", hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", role: "scanner" },
+  { username: "desk", hash: "49be417ad74080a0031b636b44cfc26fdd0065492d6cd3b033960c4414955cf7", role: "desk" },
+  { username: "volunteer", hash: "dcbb0f3cafb30402d5ed4cb826e000bcae930c7ce60763e0458665150dffa879", role: "food" },
+];
+const ROLE_OPTIONS = [
+  ["records", "Site admin"],
+  ["scanner", "Admin"],
+  ["desk", "Desk"],
+  ["food", "Volunteer"],
+];
 const SESSION_KEY = storeKey("session");
 const ALIAS_KEY = storeKey("alias");
+const ACCOUNTS_KEY = storeKey("accounts");
+let loginLanding = "desk";
 const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 
 const gate = document.querySelector("#gate");
@@ -90,10 +99,49 @@ function sameText(left, right) {
   return difference === 0;
 }
 
+function storedAccounts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "null");
+    if (!Array.isArray(saved) || !saved.length) return null;
+    return saved.filter((account) => account && account.username && account.hash && account.role);
+  } catch {
+    return null;
+  }
+}
+
+function accountList() {
+  return storedAccounts() || BUILTIN_ACCOUNTS.map((account) => ({ ...account }));
+}
+
+function accountMap() {
+  const map = {};
+  accountList().forEach((account) => { map[account.username] = account; });
+  return map;
+}
+
+function cacheAccounts(book) {
+  const list = book && Array.isArray(book.accounts) && book.accounts.length
+    ? book.accounts
+    : book && book.sheet && book.sheet.logins;
+  if (!Array.isArray(list) || !list.length) return;
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
+}
+
+async function pullAccounts() {
+  const url = TicketRecord.recordUrl(recordOptions().recordUrl);
+  if (!url) return;
+  try {
+    cacheAccounts(await TicketRecord.loadWithScript(url));
+  } catch {
+    /* keep the last saved logins */
+  }
+}
+
 function readSession() {
   try {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (!saved || !ACCOUNTS[saved.username] || saved.role !== ACCOUNTS[saved.username].role || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
+    const account = saved && accountMap()[saved.username];
+    if (!account || saved.role !== account.role || typeof saved.exp !== "number" || saved.exp <= Date.now()) return null;
     return saved;
   } catch {
     return null;
@@ -120,14 +168,17 @@ function enterApp() {
     document.querySelector("#save-link").hidden = true;
   }
   if (session.role === "records") {
-    document.querySelector("#admin-who").textContent = `Signed in as ${readAlias()} (siteadmin)`;
+    document.querySelector("#admin-who").textContent = `Signed in as ${readAlias()} (${session.username})`;
     show(adminScreen);
+    showSitePage(siteTab);
+    renderLogins();
     refreshOrders();
     return;
   }
   document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
   applyRoleUi();
+  showWorkspacePage(can("admin") ? "admin" : "desk");
   paintCounter();
   refreshOrders();
 }
@@ -136,33 +187,130 @@ function isVolunteer() {
   return readSession()?.role === "food";
 }
 
-function applyRoleUi() {
-  const volunteer = isVolunteer();
-  const sale = document.querySelector("#new-sale");
-  const entryDesk = document.querySelector("#counter-entry");
-  if (sale) sale.hidden = volunteer;
-  if (entryDesk) entryDesk.hidden = volunteer;
-  document.querySelectorAll("[data-page='admin'], [data-page='stats']").forEach((button) => { button.hidden = volunteer; });
-  localStorage.setItem(storeKey("counter"), volunteer ? "food" : "entry");
+const ABILITY_FIELDS = [
+  ["scan", "Scanning"],
+  ["add", "Adding"],
+  ["edit", "Editing"],
+  ["search", "Searching"],
+  ["sell", "New sales"],
+  ["admin", "Admin functions"],
+];
+
+function defaultAbilities(role) {
+  if (role === "records" || role === "scanner") {
+    return { scan: true, add: true, edit: true, search: true, sell: true, admin: true };
+  }
+  if (role === "desk") {
+    return { scan: false, add: false, edit: false, search: false, sell: true, admin: false };
+  }
+  return { scan: true, add: true, edit: false, search: true, sell: false, admin: false };
 }
 
-document.querySelector("#show-login").addEventListener("click", () => {
-  document.querySelector("#username").value = "admin";
-  show(login);
-  document.querySelector("#password").focus();
-});
+function abilitiesFor(account) {
+  const next = defaultAbilities(account && account.role);
+  const saved = account && account.abilities;
+  if (saved && typeof saved === "object") {
+    for (const [key] of ABILITY_FIELDS) {
+      if (typeof saved[key] === "boolean") next[key] = saved[key];
+    }
+  }
+  if (account && account.role === "records") {
+    for (const [key] of ABILITY_FIELDS) next[key] = true;
+  }
+  return next;
+}
 
-document.querySelector("#show-volunteer").addEventListener("click", () => {
-  document.querySelector("#username").value = "volunteer";
-  show(login);
-  document.querySelector("#password").focus();
-});
+function can(name) {
+  const session = readSession();
+  if (!session) return false;
+  const account = accountMap()[session.username];
+  return Boolean(abilitiesFor(account)[name]);
+}
 
-document.querySelector("#show-admin").addEventListener("click", () => {
-  document.querySelector("#username").value = "siteadmin";
+function canEditSource() {
+  return can("edit");
+}
+
+function canResetScans() {
+  return can("admin");
+}
+
+function abilityBox(abilities) {
+  const box = document.createElement("fieldset");
+  box.className = "ability-set";
+  const legend = document.createElement("legend");
+  legend.textContent = "Abilities";
+  box.append(legend);
+  ABILITY_FIELDS.forEach(([key, label]) => {
+    const wrap = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.ability = key;
+    input.checked = Boolean(abilities[key]);
+    wrap.append(input, document.createTextNode(` ${label}`));
+    box.append(wrap);
+  });
+  return box;
+}
+
+function readAbilities(scope) {
+  const abilities = {};
+  scope.querySelectorAll("[data-ability]").forEach((input) => {
+    abilities[input.dataset.ability] = input.checked;
+  });
+  return abilities;
+}
+
+function applyRoleUi() {
+  const session = readSession();
+  const volunteer = session?.role === "food";
+  const scan = can("scan");
+  const add = can("add");
+  const search = can("search");
+  const sell = can("sell");
+  const admin = can("admin");
+  const sale = document.querySelector("#new-sale");
+  const entryDesk = document.querySelector("#counter-entry");
+  if (sale) sale.hidden = !sell;
+  if (entryDesk) entryDesk.hidden = !add || volunteer;
+  const foodDesk = document.querySelector("#counter-food");
+  if (foodDesk) foodDesk.hidden = !add;
+  const counterSwitch = document.querySelector(".counter-switch");
+  if (counterSwitch) counterSwitch.hidden = !add;
+  const searchLine = document.querySelector("#order-query")?.closest(".search-line");
+  if (searchLine) searchLine.hidden = !search;
+  const scanButton = document.querySelector("#scan-btn");
+  if (scanButton) scanButton.hidden = !scan;
+  document.querySelectorAll(".demo-toggle, .demo-note, #show-colors").forEach((node) => { node.hidden = !scan && !add; });
+  const fileScan = document.querySelector("label[for='file-scan']");
+  if (fileScan) fileScan.hidden = !scan;
+  document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = !sell; });
+  const deskStats = document.querySelector("#desk-stats");
+  if (deskStats) deskStats.hidden = !admin;
+  const orderList = document.querySelector("#orders")?.closest("section");
+  if (orderList) orderList.hidden = !search && !add && !scan;
+  const findHeading = document.querySelector("[data-page-panel='desk'] h1");
+  if (findHeading) findHeading.hidden = !search && !scan && !add;
+  document.querySelectorAll("[data-page='admin']").forEach((button) => { button.hidden = !admin; });
+  document.querySelectorAll("[data-page='stats']").forEach((button) => { button.hidden = !admin; });
+  document.querySelectorAll(".cleanup-scans").forEach((button) => { button.hidden = !canResetScans(); });
+  localStorage.setItem(storeKey("counter"), volunteer || !add ? "food" : "entry");
+}
+
+function openLogin(username, landing) {
+  loginLanding = landing;
+  document.querySelector("#username").value = username;
   show(login);
   document.querySelector("#password").focus();
-});
+  pullAccounts();
+}
+
+document.querySelector("#show-desk").addEventListener("click", () => { openLogin("desk", "desk"); });
+document.querySelector("#show-admin-login").addEventListener("click", () => { openLogin("admin", "admin"); });
+
+document.querySelector("#show-volunteer").addEventListener("click", () => { openLogin("volunteer", "desk"); });
+
+document.querySelector("#show-admin").addEventListener("click", () => { openLogin("siteadmin", "records"); });
 
 document.querySelector("#login-back").addEventListener("click", showGate);
 
@@ -172,7 +320,8 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   error.hidden = true;
   const button = event.target.querySelector("button[type=submit]");
   button.disabled = true;
-    const username = document.querySelector("#username").value.trim();
+    await Promise.race([pullAccounts(), new Promise((resolve) => { setTimeout(resolve, 4000); })]);
+    const username = document.querySelector("#username").value.trim().toLowerCase();
   const password = document.querySelector("#password").value;
   const displayName = document.querySelector("#display-name").value.trim();
   document.querySelector("#password").value = "";
@@ -185,7 +334,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   }
   try {
     const digest = password ? await sha256(password) : "";
-    const account = ACCOUNTS[username];
+    const account = accountMap()[username];
     const current = readSession();
     const accepted = account && password && sameText(digest, account.hash);
     const sameVisit = current && current.username === username && !password;
@@ -194,7 +343,8 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
       error.textContent = "Incorrect username or password.";
       return;
     }
-    if (accepted) localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, exp: Date.now() + SESSION_MS }));
+    const landing = account.role === "records" ? "records" : account.role === "scanner" || loginLanding === "admin" ? "admin" : "desk";
+    if (accepted) localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, landing, exp: Date.now() + SESSION_MS }));
     sessionStorage.setItem(ALIAS_KEY, displayName);
     enterApp();
   } catch {
@@ -235,6 +385,7 @@ async function stopCamera() {
 }
 
 async function startCamera() {
+  if (!can("scan")) return;
   const Scanner = library();
   if (!Scanner) {
     cameraHelp.hidden = false;
@@ -554,6 +705,7 @@ function volunteerRevertLeft(code) {
 }
 
 function markOne(person, index, unit) {
+  if (!can("add")) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
@@ -587,6 +739,7 @@ function sendDispute(person, itemName) {
 }
 
 function revertOne(person) {
+  if (!can("add")) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
@@ -631,7 +784,7 @@ function ticketPill(person, item, index, lane, locked, now) {
     doneBox.append(check, document.createTextNode(" Done"));
     button.append(doneBox);
   }
-  if (locked) button.disabled = true;
+  if (locked || !can("add")) button.disabled = true;
   else {
     let holdTimer = 0;
     let held = false;
@@ -708,6 +861,7 @@ function itemButtons(person, options = {}) {
 function itemBoard(person, options = {}) {
   const wrap = document.createElement("div");
   wrap.append(itemButtons(person, options));
+  if (!can("add")) return wrap;
   const revert = document.createElement("button");
   revert.type = "button";
   revert.id = "revert-last";
@@ -814,6 +968,7 @@ function runLane(person, lane) {
 }
 
 function searchOrder() {
+  if (!can("search")) return;
   const raw = document.querySelector("#order-query").value.trim();
   const search = document.querySelector("#search-result");
   deskLetter = "";
@@ -1250,7 +1405,8 @@ function menuItems() {
   const names = new Map();
   Object.values(catalogSource()).forEach((person) => {
     (person.items || []).forEach((item) => {
-      if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: item.lane || "entry", tone: item.tone || "" });
+      if (item.lane !== "food") return;
+      if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: "food", tone: item.tone || "food" });
     });
   });
   return [...names.values()].sort((left, right) => left.name.localeCompare(right.name));
@@ -1284,7 +1440,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Tap any ticket to add it. Entry and food stay on one card for the QR.";
+  hint.textContent = "Tap a food item to add it. The QR is for that food only.";
   const grid = document.createElement("div");
   grid.className = "sale-tiles";
   for (const item of items) {
@@ -1308,6 +1464,7 @@ function paintSaleTiles() {
 }
 
 function openSale() {
+  if (!can("sell")) return;
   cart = [];
   document.querySelector("#sale-name").value = "";
   document.querySelector("#sale-email").value = "";
@@ -1370,11 +1527,13 @@ function nextWalkCode() {
 }
 
 function submitSale() {
+  if (!can("sell")) return;
   const name = document.querySelector("#sale-name").value.trim();
   const email = document.querySelector("#sale-email").value.trim();
   const note = document.querySelector("#sale-note");
+  cart = cart.filter((item) => item.lane === "food");
   if (!name || !cart.length) {
-    note.textContent = "Add a name and at least one item.";
+    note.textContent = "Add a name and at least one food item.";
     return;
   }
   const code = nextWalkCode();
@@ -1386,7 +1545,7 @@ function submitSale() {
     event: "On site",
     date: new Date().toLocaleDateString(),
     amount: "",
-    items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: item.lane, tone: item.lane === "entry" ? "entry" : "food" })),
+    items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: "food", tone: "food" })),
   };
   const at = new Date().toISOString();
   queueWrite((book) => {
@@ -1518,6 +1677,7 @@ async function shareTicket() {
 
 let sheetPublishTried = false;
 let sheetQuery = "";
+let sheetFilter = "all";
 let sheetSortCol = 2;
 let sheetSortDir = 1;
 let sheetToolbarBound = false;
@@ -1541,6 +1701,13 @@ function bindSheetToolbar() {
       renderLiveSheet();
     });
   });
+  document.querySelectorAll(".sheet-filter").forEach((select) => {
+    select.addEventListener("change", () => {
+      sheetFilter = select.value || "all";
+      document.querySelectorAll(".sheet-filter").forEach((other) => { other.value = sheetFilter; });
+      renderLiveSheet();
+    });
+  });
 }
 
 function renderLiveSheet() {
@@ -1554,7 +1721,11 @@ function renderLiveSheet() {
   const mainRows = salesBreak > 0 ? rows.slice(1, salesBreak) : rows.slice(1).filter((row) => row[0] !== "On site sales");
   const saleRows = salesBreak > 0 ? rows.slice(salesBreak + 1) : [];
   const tokens = normalized(sheetQuery).split(" ").filter(Boolean);
+  const statusIndex = header.indexOf("Status");
   function matches(row) {
+    const status = statusIndex >= 0 ? row[statusIndex] : "";
+    if (sheetFilter === "done" && status !== "Taken completely") return false;
+    if (sheetFilter === "open" && status === "Taken completely") return false;
     if (!tokens.length) return true;
     const hay = normalized(row.join(" "));
     return tokens.every((token) => hay.includes(token));
@@ -1572,8 +1743,12 @@ function renderLiveSheet() {
       return cmp * sheetSortDir;
     });
   }
-  const shownMain = sortRows(mainRows.filter(matches));
+    const shownMain = sortRows(mainRows.filter(matches));
   const shownSales = sortRows(saleRows.filter(matches));
+  const shownCount = shownMain.length + shownSales.length;
+  const totalCount = mainRows.length + saleRows.length;
+  const editing = canEditSource();
+  const sourceOrders = rawCatalogOrders();
 
   document.querySelectorAll(".sheet-panel").forEach((panel) => {
     const link = panel.querySelector(".google-sheet-link");
@@ -1617,6 +1792,11 @@ function renderLiveSheet() {
       cell.append(button);
       headRow.append(cell);
     });
+    if (editing) {
+      const cell = document.createElement("th");
+      cell.textContent = "Edit";
+      headRow.append(cell);
+    }
     head.append(headRow);
     const body = document.createElement("tbody");
     function appendDataRows(list) {
@@ -1628,12 +1808,13 @@ function renderLiveSheet() {
         if (lockedText) {
           line.className = "sheet-locked";
           line.title = lockedText;
+        } else if (pickup.ratio >= 1 && pickup.total) {
+          line.className = "sheet-done";
+          line.title = "All tickets picked up";
         } else if (pickup.ratio > 0) {
-          line.className = pickup.ratio < 1 ? "sheet-picked sheet-partial" : "sheet-picked";
+          line.className = "sheet-picked sheet-partial";
           line.style.setProperty("--pick", `${Math.round(pickup.ratio * 100)}%`);
-          line.title = pickup.ratio === 1
-            ? "All tickets picked up"
-            : `${pickup.taken} of ${pickup.total} tickets picked up`;
+          line.title = `${pickup.taken} of ${pickup.total} tickets picked up`;
         }
         row.forEach((value, index) => {
           const cell = document.createElement("td");
@@ -1658,6 +1839,25 @@ function renderLiveSheet() {
           }
           line.append(cell);
         });
+        if (editing && person && sourceOrders[person.code]) {
+          const cell = document.createElement("td");
+          cell.className = "sheet-edit";
+          const removeOrder = document.createElement("button");
+          removeOrder.type = "button";
+          removeOrder.className = "secondary";
+          removeOrder.textContent = "Delete order";
+          removeOrder.addEventListener("click", () => editSource({ type: "delete-order", code: person.code }));
+          cell.append(removeOrder);
+          (person.items || []).forEach((item) => {
+            const removeItem = document.createElement("button");
+            removeItem.type = "button";
+            removeItem.className = "text-button";
+            removeItem.textContent = `Remove ${item.name} x ${item.qty}`;
+            removeItem.addEventListener("click", () => editSource({ type: "delete-item", code: person.code, name: item.name }));
+            cell.append(removeItem);
+          });
+          line.append(cell);
+        }
         body.append(line);
       });
     }
@@ -1675,7 +1875,7 @@ function renderLiveSheet() {
     table.append(head, body);
   });
   document.querySelectorAll(".sheet-day-note").forEach((node) => {
-    node.textContent = "Yellow means locked now. Green fills by pickup progress, so partial rows stay partly green. Click a column title to sort.";
+    node.textContent = `Showing ${shownCount} of ${totalCount} orders. Green means done. A green bar means partly picked up. Yellow means locked. Click a column title to sort.`;
   });
   if (!url && !sheetPublishTried && readSession()) {
     sheetPublishTried = true;
@@ -1770,6 +1970,200 @@ function saveTaken(orderId, rawCount) {
   renderOrders();
 }
 
+function rawCatalogOrders() {
+  const fromBook = currentBook.sheet && currentBook.sheet.orders;
+  if (fromBook && Object.keys(fromBook).length) return fromBook;
+  try {
+    const saved = JSON.parse(localStorage.getItem(storeKey("sheet")) || "null");
+    if (saved && saved.orders && Object.keys(saved.orders).length) return saved.orders;
+  } catch {
+    /* use the built-in sheet */
+  }
+  return (window.TicketCatalog && window.TicketCatalog.orders) || {};
+}
+
+function editSource(action) {
+  if (!canEditSource()) return;
+  const label = action.type === "delete-order"
+    ? `Delete order ${action.code} from the source sheet?`
+    : `Remove ${action.name} from order ${action.code}?`;
+  if (!window.confirm(label)) return;
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "admin";
+  const orders = rawCatalogOrders();
+  const applied = queueWrite((book) => {
+    const prepared = TicketLedger.prepareSourceSheet(book, orders);
+    return TicketLedger.editSourceSheet(prepared, action, at, actor);
+  });
+  if (applied.book && applied.book.sheet) {
+    try { localStorage.setItem(storeKey("sheet"), JSON.stringify(applied.book.sheet)); } catch { /* Drive still has it */ }
+  }
+  const message = document.querySelector("#admin-note") || document.querySelector("#admin-message");
+  if (message) {
+    message.hidden = false;
+    message.textContent = applied.write ? "Source sheet updated." : "That row was already gone.";
+  }
+  renderOrders();
+}
+
+function roleSelect(selected) {
+  const select = document.createElement("select");
+  select.className = "login-role";
+  ROLE_OPTIONS.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
+    select.append(option);
+  });
+  return select;
+}
+
+function renderLogins() {
+  const list = document.querySelector("#login-list");
+  if (!list) return;
+  list.replaceChildren();
+  accountList().forEach((account) => {
+    const row = document.createElement("div");
+    row.className = "login-row";
+    const name = document.createElement("input");
+    name.className = "login-username";
+    name.value = account.username;
+    name.autocomplete = "off";
+    name.autocapitalize = "none";
+    const password = document.createElement("input");
+    password.className = "login-password";
+    password.type = "password";
+    password.autocomplete = "new-password";
+    password.placeholder = "New password, leave blank to keep";
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "btn-teal";
+    save.textContent = "Save login";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Remove";
+    const abilities = abilityBox(abilitiesFor(account));
+    save.addEventListener("click", () => saveLoginRow(account, name.value, row.querySelector(".login-role").value, password.value, readAbilities(abilities)));
+    remove.addEventListener("click", () => removeLogin(account.username));
+    const nameLabel = document.createElement("label");
+    nameLabel.textContent = "Username";
+    nameLabel.append(name);
+    const passLabel = document.createElement("label");
+    passLabel.textContent = "Password";
+    passLabel.append(password);
+    const roleLabel = document.createElement("label");
+    roleLabel.textContent = "Role";
+    const role = roleSelect(account.role);
+    role.addEventListener("change", () => {
+      const next = defaultAbilities(role.value);
+      abilities.querySelectorAll("[data-ability]").forEach((input) => { input.checked = Boolean(next[input.dataset.ability]); });
+    });
+    roleLabel.append(role);
+    row.append(nameLabel, passLabel, roleLabel, abilities, save, remove);
+    list.append(row);
+  });
+}
+
+async function accountFromFields(username, role, password, previous, abilities) {
+  const name = String(username || "").trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{1,31}$/.test(name)) return { error: "Username needs 2 to 32 letters or numbers." };
+  if (!["records", "scanner", "desk", "food"].includes(role)) return { error: "Choose a role." };
+  if (!password && !previous) return { error: "Enter a password for the new login." };
+  const hash = password ? await sha256(password) : previous.hash;
+  return { account: { username: name, role, hash, abilities: abilities || defaultAbilities(role) } };
+}
+
+async function persistAccounts(accounts, message) {
+  const at = new Date().toISOString();
+  const actor = readSession()?.username || "siteadmin";
+  const applied = queueWrite((book) => TicketLedger.saveAccounts(book, accounts, at, actor));
+  const noteBox = document.querySelector("#login-note");
+  if (!applied.write) {
+    if (noteBox) {
+      noteBox.hidden = false;
+      noteBox.textContent = "Keep at least one site admin login.";
+    }
+    return;
+  }
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(applied.book.accounts));
+  if (noteBox) {
+    noteBox.hidden = false;
+    noteBox.textContent = message;
+  }
+  const session = readSession();
+  const still = session && applied.book.accounts.some((account) => account.username === session.username && account.role === session.role);
+  if (session && !still) {
+    const renamed = applied.book.accounts.find((account) => account.role === "records");
+    if (renamed) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, username: renamed.username, role: renamed.role }));
+    }
+  }
+  renderLogins();
+  enterApp();
+}
+
+async function saveLoginRow(previous, username, role, password, abilities) {
+  const built = await accountFromFields(username, role, password, previous, abilities);
+  const noteBox = document.querySelector("#login-note");
+  if (built.error) {
+    if (noteBox) {
+      noteBox.hidden = false;
+      noteBox.textContent = built.error;
+    }
+    return;
+  }
+  const accounts = accountList().filter((account) => account.username !== previous.username);
+  if (accounts.some((account) => account.username === built.account.username)) {
+    if (noteBox) {
+      noteBox.hidden = false;
+      noteBox.textContent = "That username is already used.";
+    }
+    return;
+  }
+  accounts.push(built.account);
+  await persistAccounts(accounts, `Saved ${built.account.username}.`);
+}
+
+async function removeLogin(username) {
+  const session = readSession();
+  if (session && session.username === username) {
+    const noteBox = document.querySelector("#login-note");
+    noteBox.hidden = false;
+    noteBox.textContent = "Sign in as another site admin before removing this login.";
+    return;
+  }
+  if (!window.confirm(`Remove login ${username}?`)) return;
+  const accounts = accountList().filter((account) => account.username !== username);
+  await persistAccounts(accounts, `Removed ${username}.`);
+}
+
+async function createLogin(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const built = await accountFromFields(
+    form.querySelector("#new-username").value,
+    form.querySelector("#new-role").value,
+    form.querySelector("#new-password").value,
+    null,
+    readAbilities(form),
+  );
+  const noteBox = document.querySelector("#login-note");
+  if (built.error) {
+    noteBox.hidden = false;
+    noteBox.textContent = built.error;
+    return;
+  }
+  if (accountList().some((account) => account.username === built.account.username)) {
+    noteBox.hidden = false;
+    noteBox.textContent = "That username is already used.";
+    return;
+  }
+  await persistAccounts(accountList().concat(built.account), `Created ${built.account.username}.`);
+  form.reset();
+}
+
 function deleteRecent(orderId) {
   const at = new Date().toISOString();
   const applied = queueWrite((book) => {
@@ -1804,6 +2198,9 @@ async function refreshOrders() {
     return;
   }
   currentBook = loaded.book;
+  cacheAccounts(loaded.book);
+  if (readSession() && readSession().role !== "records") applyRoleUi();
+  if (readSession() && readSession().role !== "records") applyRoleUi();
   const preview = TicketLedger.cleanSheetBook(loaded.book);
   if (preview.changed) {
     queueWrite((book) => {
@@ -2310,16 +2707,38 @@ document.querySelector("#sheet-upload").addEventListener("change", async (event)
   event.target.value = "";
   if (file) await applySheetFile(file);
 });
-document.querySelector("#cleanup-all").addEventListener("click", () => {
-  if (!window.confirm("Clean up everything? This clears every scan, lock, and log.")) return;
+function resetScans() {
+  if (!canResetScans()) return;
+  if (!window.confirm("Clean up all scans? This clears every scan, lock, and log. The order sheet stays.")) return;
   const at = new Date().toISOString();
-  queueWrite((book) => TicketLedger.cleanupAll(book, at));
+  const actor = readSession()?.username || "admin";
+  queueWrite((book) => TicketLedger.cleanupAll(book, at, actor));
   openedCode = "";
-  const noteBox = document.querySelector("#admin-note");
-  noteBox.hidden = false;
-  noteBox.textContent = "Cleanup sent. The status file will be empty after it saves.";
+  for (const id of ["#admin-note", "#admin-message"]) {
+    const noteBox = document.querySelector(id);
+    if (!noteBox) continue;
+    noteBox.hidden = false;
+    noteBox.textContent = "Cleanup sent. Scans reset after the save. The order sheet stays.";
+  }
   renderOrders();
+}
+document.querySelector("#cleanup-all").addEventListener("click", resetScans);
+document.querySelectorAll(".cleanup-scans").forEach((button) => {
+  button.addEventListener("click", resetScans);
 });
+const createLoginForm = document.querySelector("#create-login");
+if (createLoginForm) {
+  createLoginForm.addEventListener("submit", (event) => { createLogin(event); });
+  const newRole = createLoginForm.querySelector("#new-role");
+  if (newRole) {
+    newRole.addEventListener("change", () => {
+      const next = defaultAbilities(newRole.value);
+      createLoginForm.querySelectorAll("[data-ability]").forEach((input) => {
+        input.checked = Boolean(next[input.dataset.ability]);
+      });
+    });
+  }
+}
 
 setInterval(() => {
   if (document.hidden || !readSession() || flushing || pendingWrites.length) return;
@@ -2348,6 +2767,7 @@ function showSitePage(tab) {
   document.querySelectorAll("#admin-screen [data-site-panel]").forEach((panel) => {
     panel.hidden = panel.getAttribute("data-site-panel") !== siteTab;
   });
+  if (siteTab === "logins") renderLogins();
 }
 
 document.querySelectorAll("[data-page]").forEach((button) => {

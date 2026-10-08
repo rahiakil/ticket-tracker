@@ -423,7 +423,14 @@ h2 { font-size: 1.4rem; }
   font-weight: 750;
   text-align: left;
 }
+.sheet-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
 .sheet-table tr.sheet-picked { background-image: linear-gradient(90deg, #86efac var(--pick, 100%), #fffaf4 var(--pick, 100%)); }
+.sheet-table tr.sheet-done td { background: #86efac; }
+.sheet-edit { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; white-space: normal; }
+.sheet-edit button { width: auto; min-height: 36px; }
+.login-row { display: grid; gap: 8px; margin: 12px 0; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.ability-set { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 8px 0; border: 1px solid var(--line); padding: 8px; }
+.ability-set label { display: flex; gap: 6px; align-items: center; margin: 0; }
 .sheet-table tr.sheet-partial { box-shadow: inset 0 0 0 1px #166534; }
 .sheet-table tr.sheet-locked { background: #fde68a; }
 .sheet-table tr.sheet-locked td { font-weight: 650; }
@@ -594,6 +601,9 @@ h2 { font-size: 1.4rem; }
   body[data-print="sheet"] .sheet-table { font-size: 11pt; }
   body[data-print="sheet"] .sheet-day-note { display: block !important; color: #111; }
   body[data-print="sheet"] .sheet-name { display: inline !important; color: #111; text-decoration: none; }
+  body[data-print="sheet"] .sheet-edit,
+  body[data-print="sheet"] .cleanup-scans { display: none !important; }
+  body[data-print="sheet"] tr.sheet-done td { background: #86efac !important; }
   body[data-print="sheet"] tr.sheet-picked,
   body[data-print="sheet"] tr.sheet-picked td {
     -webkit-print-color-adjust: exact;
