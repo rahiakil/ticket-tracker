@@ -282,7 +282,7 @@ function applyRoleUi() {
   if (searchLine) searchLine.hidden = !search;
   const scanButton = document.querySelector("#scan-btn");
   if (scanButton) scanButton.hidden = !scan;
-  document.querySelectorAll(".demo-toggle, .demo-note, #show-colors").forEach((node) => { node.hidden = !scan && !add; });
+  document.querySelectorAll("#show-colors").forEach((node) => { node.hidden = !scan && !add; });
   const fileScan = document.querySelector("label[for='file-scan']");
   if (fileScan) fileScan.hidden = !scan;
   document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = true; });
@@ -674,7 +674,7 @@ function holderNow() {
   return { holder: deviceId(), actor: readAlias() || (session && session.username) || "admin", at: new Date().toISOString() };
 }
 
-let demoMode = true;
+const demoMode = false;
 const DEFAULT_EVENT_DAYS = { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" };
 
 function eventDates(book) {
@@ -2673,15 +2673,6 @@ document.querySelector("#site-orders-search").addEventListener("keydown", (event
   if (event.key === "Enter") runListSearch("#site-orders-search");
 });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
-document.querySelectorAll(".demo-toggle").forEach((button) => {
-  button.addEventListener("click", () => {
-    demoMode = !demoMode;
-    paintDemo();
-    const person = catalogPerson(openedCode);
-    if (person) paintOpen(person);
-    renderOrders();
-  });
-});
 document.querySelector("#search-order").addEventListener("click", searchOrder);
 document.querySelector("#order-query").addEventListener("input", () => {
   deskLetter = "";
@@ -2865,7 +2856,6 @@ document.querySelector("#factory-reset").addEventListener("click", () => {
   if (!window.confirm("Reset the tracker now?")) return;
   localStorage.removeItem(storeKey("sheet"));
   localStorage.removeItem(storeKey("local-log"));
-  demoMode = true;
   const friday = document.querySelector("#day-friday");
   const saturday = document.querySelector("#day-saturday");
   const sunday = document.querySelector("#day-sunday");
