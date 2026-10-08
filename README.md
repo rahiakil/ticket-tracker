@@ -39,3 +39,20 @@ The Drive file is viewable from your Google account. Sharing that file as “any
 A saved status means the shared Drive file has that order. It does not prove that someone photographed the QR or received a product. The camera starts only after **Scan QR**. Photos are decoded on the phone and are not uploaded.
 
 `npm test` checks the scan rules in code. It does not open a phone camera.
+
+## Print QR cards
+
+`scripts/print-qr-cards.mjs` turns an order-list CSV into letter-size food coupons (entry lines and kids pizza are left off). Each coupon is a colored card with a QR of the last five digits of the order number.
+
+```bash
+npm run print-qr-cards -- "E:\Downloads\order_list_10_08_2026_.csv" "E:\Downloads\uttaron-qr-cards-10-08-2026.pdf" --sort --letter-page --nospace
+```
+
+| Flag | What it does |
+| --- | --- |
+| `--sort` | Sort by the first letter of the name, then full name, then item. This is the default. `--no-sort` keeps the CSV order. |
+| `--letter-page` | Start a new page whenever the first letter changes, so A, B, and C are not mixed on one sheet. This is the default. `--no-letter-page` keeps filling the page. |
+| `--nospace` | Shrink the page margin to 0.12 in and tighten the gap between cards. Use this when a normal print leaves a wide white border and you would otherwise scale to about 110%. |
+| `--food-only` / `--entry-only` | Limit the sheet to one lane. Food is already the default because entry rows are skipped. |
+
+Word has to be installed. The script writes an HTML file, then asks Word to save a PDF with those same margins so the border stays tight at 100% scale.

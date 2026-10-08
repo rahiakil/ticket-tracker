@@ -2,20 +2,30 @@ import { readFileSync, writeFileSync } from "node:fs";
 import QRCode from "qrcode";
 import { allowedQty } from "./refunds.mjs";
 
-const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
-const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")));
+const args = [];
+const flags = new Set();
+for (const arg of process.argv.slice(2)) {
+  if (arg.startsWith("--")) flags.add(arg);
+  else args.push(arg);
+}
 const laneFilter = flags.has("--food-only") ? "food"
   : flags.has("--entry-only") ? "entry"
   : null;
-const source = args[0] || "E:\\Downloads\\order_list_10_06_2026_.csv";
+// --sort groups A–Z. --letter-page starts each new letter on its own page.
+// Both stay on unless turned off, matching the sheets we already print.
+const sortCards = !flags.has("--no-sort");
+const letterPage = !flags.has("--no-letter-page");
+const noSpace = flags.has("--nospace");
+const source = args[0] || "E:\\Downloads\\order_list_10_08_2026_.csv";
+const dated = (source.match(/(\d{2}_\d{2}_\d{4})/) || ["", "10_08_2026"])[1].replaceAll("_", "-");
 const outPath = args[1] || (laneFilter === "food"
-  ? "E:\\Downloads\\uttaron-qr-cards-food-10-06-2026.docx"
+  ? `E:\\Downloads\\uttaron-qr-cards-food-${dated}.pdf`
   : laneFilter === "entry"
-    ? "E:\\Downloads\\uttaron-qr-cards-entry-10-06-2026.docx"
-    : "E:\\Downloads\\uttaron-qr-cards-10-06-2026.docx");
+    ? `E:\\Downloads\\uttaron-qr-cards-entry-${dated}.pdf`
+    : `E:\\Downloads\\uttaron-qr-cards-${dated}.pdf`);
 const htmlPath = /\.html?$/i.test(outPath)
   ? outPath
-  : outPath.replace(/\.(docx|doc)$/i, ".htm");
+  : outPath.replace(/\.(docx|doc|pdf)$/i, ".htm");
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -193,13 +203,15 @@ for (const row of body) {
   }
 }
 
-cards.sort((left, right) => {
-  const byLetter = left.letter.localeCompare(right.letter);
-  if (byLetter) return byLetter;
-  const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
-  if (byName) return byName;
-  return left.itemName.localeCompare(right.itemName, undefined, { sensitivity: "base" });
-});
+if (sortCards) {
+  cards.sort((left, right) => {
+    const byLetter = left.letter.localeCompare(right.letter);
+    if (byLetter) return byLetter;
+    const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+    if (byName) return byName;
+    return left.itemName.localeCompare(right.itemName, undefined, { sensitivity: "base" });
+  });
+}
 
 for (const card of cards) {
   card.qr = await QRCode.toDataURL(card.code, {
@@ -220,12 +232,13 @@ const kindCounts = {};
 for (const card of cards) kindCounts[card.kind] = (kindCounts[card.kind] || 0) + 1;
 
 const COLS = 4;
-const QR_PX = 84;
+const QR_PX = noSpace ? 108 : 84;
+const pageMarginIn = noSpace ? 0.12 : 0.3;
 
-const sections = [...groups.entries()].map(([letter, list], sectionIndex) => {
-  const cells = list.map((card) => {
+function cellsFor(list) {
+  return list.map((card) => {
     const itemLabel = card.parts > 1 ? `${card.itemName} (${card.unit} of ${card.parts})` : card.itemName;
-    return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};padding:6pt 8pt 7pt 8pt;">
+    return `<td class="card" style="background:${card.color.bg};color:${card.color.fg};padding:${cardPad};">
       <div class="inner">
         <img src="${card.qr}" width="${QR_PX}" height="${QR_PX}" alt="QR ${escapeHtml(card.code)}">
         <div class="meta">
@@ -236,15 +249,28 @@ const sections = [...groups.entries()].map(([letter, list], sectionIndex) => {
       </div>
     </td>`;
   });
+}
+
+function tableFor(list) {
+  const cells = cellsFor(list);
   const rowsHtml = [];
   for (let index = 0; index < cells.length; index += COLS) {
     const slice = cells.slice(index, index + COLS);
     while (slice.length < COLS) slice.push('<td class="empty"></td>');
     rowsHtml.push(`<tr>${slice.join("")}</tr>`);
   }
-  const breakHtml = sectionIndex === 0 ? "" : `<br clear="all" style="page-break-before:always">`;
-  return `${breakHtml}<div class="letter-page"><table class="grid" width="100%">${rowsHtml.join("")}</table></div>`;
-}).join("\n");
+  return `<table class="grid" width="100%">${rowsHtml.join("")}</table>`;
+}
+
+const gridSpacing = noSpace ? "4pt 5pt" : "18pt 21pt";
+const cardPad = noSpace ? "3pt 4pt 3pt 4pt" : "6pt 8pt 7pt 8pt";
+
+const sections = letterPage
+  ? [...groups.entries()].map(([letter, list], sectionIndex) => {
+    const breakHtml = sectionIndex === 0 ? "" : `<br clear="all" style="page-break-before:always">`;
+    return `${breakHtml}<div class="letter-page">${tableFor(list)}</div>`;
+  }).join("\n")
+  : `<div class="letter-page">${tableFor(cards)}</div>`;
 
 const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
@@ -252,12 +278,12 @@ const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="u
 <title>Uttoron QR cards — food</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-  @page { size: letter; margin: 0.3in; }
+  @page { size: letter; margin: ${pageMarginIn}in; }
   body { font-family: Calibri, Arial, sans-serif; color: #111; margin: 0; }
   .letter-page { page-break-before: always; }
   .letter-page:first-of-type { page-break-before: auto; }
-  .grid { border-collapse: separate; border-spacing: 18pt 21pt; width: 100%; table-layout: fixed; }
-  .card { width: 25%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: 6pt 8pt; mso-padding-alt: 6pt 8pt 7pt 8pt; }
+  .grid { border-collapse: separate; border-spacing: ${gridSpacing}; width: 100%; table-layout: fixed; }
+  .card { width: 25%; vertical-align: top; border: 1pt solid #111; border-radius: 5pt; padding: ${cardPad}; mso-padding-alt: ${cardPad}; }
   .empty { width: 25%; border: none; }
   .inner { padding: 0; text-align: center; }
   .meta { margin-top: 4pt; padding: 0 4pt 0 6pt; text-align: left; mso-padding-alt: 0 4pt 0 6pt; }
@@ -274,20 +300,37 @@ ${sections}
 
 writeFileSync(htmlPath, html, "utf8");
 
-const docxPath = /\.docx$/i.test(outPath) ? outPath : outPath.replace(/\.(htm|html|doc)$/i, ".docx");
+const wantsPdf = /\.pdf$/i.test(outPath);
+const docxPath = wantsPdf
+  ? outPath.replace(/\.pdf$/i, ".docx")
+  : (/\.docx$/i.test(outPath) ? outPath : outPath.replace(/\.(htm|html|doc)$/i, ".docx"));
+const pdfPath = wantsPdf ? outPath : outPath.replace(/\.(docx|doc|htm|html)$/i, ".pdf");
 if (docxPath.toLowerCase() !== htmlPath.toLowerCase()) {
+  const margin = pageMarginIn;
   const ps = `
 $ErrorActionPreference = 'Stop'
 $htmlPath = '${htmlPath.replace(/'/g, "''")}'
 $docxPath = '${docxPath.replace(/'/g, "''")}'
+$pdfPath = '${pdfPath.replace(/'/g, "''")}'
+$marginIn = ${margin}
 $word = $null; $doc = $null
 try {
   $word = New-Object -ComObject Word.Application
   $word.Visible = $false
   $word.DisplayAlerts = 0
   $doc = $word.Documents.Open($htmlPath, $false, $true)
-  # 16 = wdFormatXMLDocument (.docx)
-  $doc.SaveAs([ref]$docxPath, [ref]16)
+  $pts = $word.InchesToPoints($marginIn)
+  $doc.PageSetup.TopMargin = $pts
+  $doc.PageSetup.BottomMargin = $pts
+  $doc.PageSetup.LeftMargin = $pts
+  $doc.PageSetup.RightMargin = $pts
+  $doc.PageSetup.HeaderDistance = 0
+  $doc.PageSetup.FooterDistance = 0
+  # 16 = wdFormatXMLDocument (.docx), 17 = wdFormatPDF
+  if (-not '${wantsPdf ? "pdf" : "docx"}'.Equals('pdf')) {
+    $doc.SaveAs([ref]$docxPath, [ref]16)
+  }
+  $doc.SaveAs([ref]$pdfPath, [ref]17)
 } finally {
   if ($doc) { $doc.Close($false) | Out-Null }
   if ($word) { $word.Quit() | Out-Null }
@@ -301,14 +344,19 @@ try {
   if (result.status !== 0) {
     console.error(result.stdout || "");
     console.error(result.stderr || "");
-    throw new Error(`Word failed to save DOCX (exit ${result.status})`);
+    throw new Error(`Word failed to save the print file (exit ${result.status})`);
   }
 }
 
 console.log(JSON.stringify({
   source,
   htmlPath,
-  outPath: docxPath,
+  pdfPath,
+  outPath: wantsPdf ? pdfPath : docxPath,
+  sort: sortCards,
+  letterPage,
+  noSpace,
+  pageMarginIn,
   laneFilter: laneFilter || "all",
   skipped,
   orders: new Set(cards.map((card) => card.code)).size,
