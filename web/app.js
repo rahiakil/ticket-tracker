@@ -1526,27 +1526,45 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Tap an entry or food item to add it. The QR covers every item on this sale.";
-  const grid = document.createElement("div");
-  grid.className = "sale-tiles";
-  for (const item of items) {
-    const button = document.createElement("button");
-    button.type = "button";
-    const kind = TicketLedger.couponKind(item.name, item.lane);
-    button.className = `sale-tile coupon-${kind}`;
-    if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
-    button.dataset.name = item.name;
-    const title = document.createElement("span");
-    title.className = "sale-tile-name";
-    title.textContent = item.name;
-    const badge = document.createElement("span");
-    badge.className = "sale-qty";
-    badge.hidden = true;
-    button.append(title, badge);
-    button.addEventListener("click", () => addSaleItem(item));
-    grid.append(button);
+  hint.textContent = "Entry first, then food. Each day is its own group. The QR covers every item on this sale.";
+  host.append(hint);
+  const days = ["friday", "saturday", "sunday", "other"];
+  const dayLabel = { friday: "Friday", saturday: "Saturday", sunday: "Sunday", other: "Any day" };
+  for (const lane of ["entry", "food"]) {
+    const laneItems = items.filter((item) => item.lane === lane);
+    if (!laneItems.length) continue;
+    const laneHeading = document.createElement("h2");
+    laneHeading.className = "sale-lane";
+    laneHeading.textContent = lane === "entry" ? "Entry" : "Food";
+    host.append(laneHeading);
+    for (const day of days) {
+      const group = laneItems.filter((item) => (TicketLedger.itemDay(item.name) || "other") === day);
+      if (!group.length) continue;
+      const heading = document.createElement("h3");
+      heading.className = "sale-day";
+      heading.textContent = dayLabel[day];
+      const grid = document.createElement("div");
+      grid.className = "sale-tiles";
+      for (const item of group) {
+        const button = document.createElement("button");
+        button.type = "button";
+        const kind = TicketLedger.couponKind(item.name, item.lane);
+        button.className = `sale-tile coupon-${kind}`;
+        if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
+        button.dataset.name = item.name;
+        const title = document.createElement("span");
+        title.className = "sale-tile-name";
+        title.textContent = item.name;
+        const badge = document.createElement("span");
+        badge.className = "sale-qty";
+        badge.hidden = true;
+        button.append(title, badge);
+        button.addEventListener("click", () => addSaleItem(item));
+        grid.append(button);
+      }
+      host.append(heading, grid);
+    }
   }
-  host.append(hint, grid);
 }
 
 function openSale() {

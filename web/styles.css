@@ -228,6 +228,8 @@ h2 { font-size: 1.4rem; }
 .stat-bar { display: grid; grid-template-columns: 7rem 1fr 2rem; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
 .stat-bar span:nth-child(2) { display: block; height: 14px; background: #efe4d4; border-radius: 7px; overflow: hidden; }
 .stat-bar i { display: block; height: 100%; background: var(--teal); }
+.sale-lane { margin: 18px 0 4px; font-size: 1.35rem; }
+.sale-day { margin: 10px 0 2px; font-size: 1rem; color: #334155; }
 .sale-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 16px; }
 .sale-tile {
   position: relative;
