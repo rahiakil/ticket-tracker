@@ -591,7 +591,9 @@ h2 { font-size: 1.4rem; }
   .search-line label { grid-column: auto; }
   .tool-tabs { grid-template-columns: repeat(4, 1fr); }
 }
-.print-slips { display: grid; gap: 16px; margin-top: 16px; }
+.print-slips { display: none; }
+.pill-wrap { display: grid; gap: 4px; }
+.pill-print { min-height: 36px; padding: 4px 8px; }
 .print-slip { break-inside: avoid; text-align: center; border-top: 1px dashed var(--line); padding-top: 12px; }
 .print-slip-name { font-size: 1.4rem; font-weight: 750; margin: 0; }
 .print-slip-id, .print-slip-item { margin: 4px 0; }
@@ -615,7 +617,8 @@ h2 { font-size: 1.4rem; }
   body[data-print="sheet"] .sheet-edit,
   body[data-print="sheet"] .cleanup-scans { display: none !important; }
   body[data-print="sheet"] tr.sheet-done td { background: #86efac !important; }
-  body[data-print="ticket"] #ticket-body > .card { display: none !important; }
+  body[data-print="ticket"] .print-slips { display: block !important; }
+  body[data-print="ticket"] #ticket-body:has(.print-slips) > .card { display: none !important; }
   body[data-print="ticket"] .print-slip {
     break-after: page;
     page-break-after: always;

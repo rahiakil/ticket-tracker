@@ -492,7 +492,7 @@ function statusDetail(order) {
     const base = role === "records" || role === "scanner"
       ? { scan: true, add: true, edit: true, search: true, sell: true, admin: true }
       : role === "desk"
-        ? { scan: false, add: false, edit: false, search: true, sell: true, admin: false }
+        ? { scan: true, add: false, edit: false, search: true, sell: true, admin: false }
         : { scan: true, add: true, edit: false, search: false, sell: false, admin: false };
     const next = { ...base };
     if (raw && typeof raw === "object") {
@@ -503,6 +503,7 @@ function statusDetail(order) {
     if (role === "records") {
       for (const key of Object.keys(next)) next[key] = true;
     }
+    if (role === "desk") next.scan = true;
     return next;
   }
 

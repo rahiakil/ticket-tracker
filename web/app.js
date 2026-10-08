@@ -201,7 +201,7 @@ function defaultAbilities(role) {
     return { scan: true, add: true, edit: true, search: true, sell: true, admin: true };
   }
   if (role === "desk") {
-    return { scan: false, add: false, edit: false, search: true, sell: true, admin: false };
+    return { scan: true, add: false, edit: false, search: true, sell: true, admin: false };
   }
   return { scan: true, add: true, edit: false, search: false, sell: false, admin: false };
 }
@@ -217,6 +217,7 @@ function abilitiesFor(account) {
   if (account && account.role === "records") {
     for (const [key] of ABILITY_FIELDS) next[key] = true;
   }
+  if (account && account.role === "desk") next.scan = true;
   return next;
 }
 
@@ -284,7 +285,7 @@ function applyRoleUi() {
   document.querySelectorAll(".demo-toggle, .demo-note, #show-colors").forEach((node) => { node.hidden = !scan && !add; });
   const fileScan = document.querySelector("label[for='file-scan']");
   if (fileScan) fileScan.hidden = !scan;
-  document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = !sell; });
+  document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = true; });
   const deskStats = document.querySelector("#desk-stats");
   if (deskStats) deskStats.hidden = !admin;
   const orderList = document.querySelector("#orders")?.closest("section");
@@ -811,22 +812,26 @@ function itemButtons(person, options = {}) {
   const now = new Date();
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
+  const deskUser = readSession()?.role === "desk";
   const desk = activeCounter();
-  const showAll = Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
-  const groups = [
-    ["Friday entry", "friday", "entry"],
-    ["Friday food", "friday", "food"],
-    ["Saturday entry", "saturday", "entry"],
-    ["Saturday food", "saturday", "food"],
-    ["Sunday entry", "sunday", "entry"],
-    ["Sunday food", "sunday", "food"],
-    ["Other entry", "other", "entry"],
-    ["Other food", "other", "food"],
-  ].filter((group) => showAll || group[2] === desk);
+  const showAll = deskUser || Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
+  const grouped = (deskUser || options.allTickets)
+    ? [["Entry", "", "entry"], ["Food", "", "food"]]
+    : [
+      ["Friday entry", "friday", "entry"],
+      ["Friday food", "friday", "food"],
+      ["Saturday entry", "saturday", "entry"],
+      ["Saturday food", "saturday", "food"],
+      ["Sunday entry", "sunday", "entry"],
+      ["Sunday food", "sunday", "food"],
+      ["Other entry", "other", "entry"],
+      ["Other food", "other", "food"],
+    ];
+  const groups = grouped.filter((group) => showAll || group[2] === desk);
   const board = document.createElement("div");
   board.className = "ticket-board";
   for (const [label, bucket, lane] of groups) {
-    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => dayBucket(item.id) === bucket && (item.lane || "food") === lane);
+    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
     const openRows = rows.filter(({ item }) => !item.taken);
     const doneRows = rows.filter(({ item }) => item.taken);
@@ -839,7 +844,7 @@ function itemButtons(person, options = {}) {
     if (openRows.length) {
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of openRows) list.append(ticketPill(person, item, index, lane, locked, now));
+      for (const { item, index } of openRows) list.append(pillWithPrint(person, item, index, lane, locked, now));
       block.append(list);
     }
     if (doneRows.length) {
@@ -849,7 +854,7 @@ function itemButtons(person, options = {}) {
       title.textContent = `Done (${doneRows.length})`;
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of doneRows) list.append(ticketPill(person, item, index, lane, locked, now));
+      for (const { item, index } of doneRows) list.append(pillWithPrint(person, item, index, lane, locked, now));
       tray.append(title, list);
       block.append(tray);
     }
@@ -898,7 +903,6 @@ function paintOpen(person, options) {
     queueWrite((book) => TicketLedger.acquireLock(book, person.code, who.holder, who.actor, who.at));
   }
   if (ticketScreen) show(ticketScreen);
-  paintQr(person.code);
   const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
   const search = document.querySelector("#search-result");
   if (search) {
@@ -909,9 +913,6 @@ function paintOpen(person, options) {
   host.replaceChildren();
   const view = orderView(person);
   const card = document.createElement("article");
-  const qrHost = document.createElement("div");
-  paintQr(person.code, qrHost);
-  card.append(qrHost);
   card.className = `card ${view.allTaken ? "complete" : view.noneTaken ? "untaken" : "partial"}`;
   const title = document.createElement("p");
   title.textContent = `${person.name} · ${person.full}`;
@@ -948,33 +949,70 @@ function paintOpen(person, options) {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
   card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
-  host.append(card, printSlips(person));
+  host.append(card);
   if (options && options.printCopies) window.setTimeout(printTicket, 300);
 }
 
-function printSlips(person) {
+function canPrintQr() {
+  const role = readSession()?.role;
+  return role === "desk" || role === "scanner" || role === "records";
+}
+
+function pillWithPrint(person, item, index, lane, locked, now) {
+  const wrap = document.createElement("div");
+  wrap.className = "pill-wrap";
+  wrap.append(ticketPill(person, item, index, lane, locked, now));
+  if (canPrintQr()) {
+    const printOne = document.createElement("button");
+    printOne.type = "button";
+    printOne.className = "text-button pill-print";
+    printOne.textContent = "Print QR";
+    printOne.addEventListener("click", () => printOneSlip(person, item));
+    wrap.append(printOne);
+  }
+  return wrap;
+}
+
+function slipArticle(person, item) {
+  const slip = document.createElement("article");
+  slip.className = "print-slip";
+  const name = document.createElement("p");
+  name.className = "print-slip-name";
+  name.textContent = person.name;
+  const ticketId = document.createElement("p");
+  ticketId.className = "print-slip-id";
+  ticketId.textContent = person.full || person.code;
+  const label = document.createElement("p");
+  label.className = "print-slip-item";
+  label.textContent = item && item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : (item && item.id) || "Ticket";
+  const qr = document.createElement("div");
+  paintQr(person.code, qr);
+  slip.append(name, ticketId, label, qr);
+  return slip;
+}
+
+function printSlips(person, onlyItem) {
   const stack = document.createElement("div");
   stack.className = "print-slips";
-  const copies = orderView(person).items;
+  const copies = onlyItem ? [onlyItem] : orderView(person).items;
   const slips = copies.length ? copies : [{ id: "Ticket", unit: 0, parts: 1 }];
-  slips.forEach((item) => {
-    const slip = document.createElement("article");
-    slip.className = "print-slip";
-    const name = document.createElement("p");
-    name.className = "print-slip-name";
-    name.textContent = person.name;
-    const ticketId = document.createElement("p");
-    ticketId.className = "print-slip-id";
-    ticketId.textContent = person.full || person.code;
-    const label = document.createElement("p");
-    label.className = "print-slip-item";
-    label.textContent = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
-    const qr = document.createElement("div");
-    paintQr(person.code, qr);
-    slip.append(name, ticketId, label, qr);
-    stack.append(slip);
-  });
+  slips.forEach((item) => stack.append(slipArticle(person, item)));
   return stack;
+}
+
+function runPrint(stack) {
+  const host = document.querySelector("#ticket-body");
+  if (!host) return;
+  host.querySelectorAll(".print-slips").forEach((node) => node.remove());
+  host.append(stack);
+  document.body.dataset.print = "ticket";
+  window.print();
+  delete document.body.dataset.print;
+  stack.remove();
+}
+
+function printOneSlip(person, item) {
+  runPrint(printSlips(person, item));
 }
 
 function runLane(person, lane) {
@@ -1034,7 +1072,7 @@ function submitAttempt() {
       return { write: next.changed, book: next.book, message };
     });
     showMessage(applied.message, String(applied.message).startsWith("Already") ? "already_seen" : "pending");
-    paintOpen(person);
+    paintOpen(person, { allTickets: true });
     renderOrders();
     return;
   }
@@ -1593,9 +1631,7 @@ function receiptText(person) {
 function printTicket() {
   const person = catalogPerson(openedCode);
   if (!person) return;
-  document.body.dataset.print = "ticket";
-  window.print();
-  delete document.body.dataset.print;
+  runPrint(printSlips(person));
 }
 
 async function bluetoothPrint() {

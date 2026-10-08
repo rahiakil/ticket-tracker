@@ -251,7 +251,7 @@ test("site admin can save logins when one site admin remains", () => {
   assert.equal(saved.book.accounts[1].abilities.sell, true);
   assert.equal(saved.book.accounts[1].abilities.search, true);
   assert.equal(saved.book.accounts[1].abilities.edit, false);
-  assert.equal(saved.book.accounts[1].abilities.scan, false);
+  assert.equal(saved.book.accounts[1].abilities.scan, true);
   assert.equal(saved.book.accounts[1].abilities.admin, false);
   assert.equal(saved.book.sheet.logins[1].username, "desk");
   assert.equal(saved.book.sheet.orders["12166"].code, "12166");
