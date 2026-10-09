@@ -690,6 +690,17 @@ h2 { font-size: 1.4rem; }
   .tool-tabs { grid-template-columns: repeat(4, 1fr); }
 }
 .print-slips { display: none; }
+.guest-qr {
+  background: #fff;
+  color: var(--ink);
+  border-radius: 16px;
+  padding: 16px 12px 20px;
+  margin: 0 0 16px;
+  text-align: center;
+}
+.guest-qr-lead { font-size: 1.25rem; font-weight: 750; margin: 0 0 8px; }
+.guest-qr-code { font-size: 1.7rem; font-weight: 800; letter-spacing: 0.04em; margin: 8px 0; }
+.guest-qr .qr-view svg { width: min(100%, 320px); height: auto; background: #fff; }
 .pill-wrap { display: grid; gap: 4px; }
 .pill-print { min-height: 36px; padding: 4px 8px; }
 .print-slip { break-inside: avoid; text-align: center; border-top: 1px dashed var(--line); padding-top: 12px; }
@@ -716,6 +727,7 @@ h2 { font-size: 1.4rem; }
   body[data-print="sheet"] .cleanup-scans { display: none !important; }
   body[data-print="sheet"] tr.sheet-done td { background: #86efac !important; }
   body[data-print="ticket"] .print-slips { display: block !important; }
+  body[data-print="ticket"] .guest-qr { display: none !important; }
   body[data-print="ticket"] #ticket-body:has(.print-slips) > .card { display: none !important; }
   body[data-print="ticket"] .print-slip {
     break-after: page;

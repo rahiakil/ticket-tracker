@@ -1037,8 +1037,8 @@ function paintOpen(person, options) {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
   card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
+  if (options && options.showGuest) host.append(guestQrPanel(person));
   host.append(card);
-  if (options && options.printCopies) window.setTimeout(printTicket, 300);
 }
 
 function canPrintQr() {
@@ -1101,6 +1101,31 @@ function runPrint(stack) {
 
 function printOneSlip(person, item) {
   runPrint(printSlips(person, item));
+}
+
+function guestQrPanel(person) {
+  const panel = document.createElement("section");
+  panel.className = "guest-qr";
+  const lead = document.createElement("p");
+  lead.className = "guest-qr-lead";
+  lead.textContent = "Show this QR to the guest so they can photograph it.";
+  const qr = document.createElement("div");
+  paintQr(person.code, qr);
+  const code = document.createElement("p");
+  code.className = "guest-qr-code";
+  code.textContent = person.full || person.code;
+  const view = orderView(person);
+  const items = document.createElement("p");
+  items.textContent = view.items.length
+    ? view.items.map((item) => (item.parts > 1 ? `${item.id} ${item.unit + 1}/${item.parts}` : item.id)).join(" · ")
+    : "Ticket";
+  const print = document.createElement("button");
+  print.type = "button";
+  print.className = "btn-teal";
+  print.textContent = "Print";
+  print.addEventListener("click", () => printTicket());
+  panel.append(lead, qr, code, items, print);
+  return panel;
 }
 
 function runLane(person, lane) {
@@ -1910,7 +1935,7 @@ function submitSale() {
   cart = [];
   const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
   note.textContent = `Order ${code} is ready. ${copies} ticket${copies === 1 ? "" : "s"} use the same QR.`;
-  paintOpen(person, { allTickets: true, printCopies: true });
+  paintOpen(person, { allTickets: true, showGuest: true });
 }
 
 function receiptText(person) {
