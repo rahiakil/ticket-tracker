@@ -1146,8 +1146,10 @@ function searchOrder() {
   search.className = "result pending";
 }
 
-function submitAttempt() {
+async function submitAttempt() {
   if (!lastAttempt) return;
+  showMessage("Checking the latest scans…", "pending");
+  await refreshOrders({ force: true });
   const person = catalogPerson(lastAttempt.raw);
   if (person) {
     const at = new Date().toISOString();
@@ -2531,31 +2533,44 @@ function deleteRecent(orderId) {
 
 let showedCache = false;
 let readingRecord = false;
-async function refreshOrders() {
+let recordRead = Promise.resolve();
+async function refreshOrders(options) {
+  const force = Boolean(options && options.force);
   if (!showedCache) {
     showedCache = true;
     renderOrders();
   }
-  if (readingRecord || flushing) return;
+  if (readingRecord) {
+    try { await recordRead; } catch { /* the in-flight check reports its own result */ }
+    if (!force) return false;
+  }
+  const run = loadRecord(force);
+  recordRead = run;
+  return run;
+}
+
+async function loadRecord(force) {
+  if (!force && flushing) return false;
+  while (flushing) await new Promise((resolve) => setTimeout(resolve, 40));
   readingRecord = true;
   try {
   if (pendingWrites.length) await flushWrites();
   const options = recordOptions();
-  if (!TicketRecord.recordUrl(options.recordUrl)) return;
+  if (!TicketRecord.recordUrl(options.recordUrl)) return false;
   const loaded = await TicketRecord.commit(options, (book) => ({
     write: false,
     book,
     message: "",
     commitMessage: "",
   }));
-  if (loaded.missing) return;
+  if (loaded.missing) return false;
   if (!loaded.ok) {
     const message = document.querySelector("#admin-message");
     if (message) {
       message.hidden = false;
       message.textContent = loaded.message || "Could not save—retry";
     }
-    return;
+    return false;
   }
   currentBook = loaded.book;
   if (stripPrepaidCopy(currentBook)) {
@@ -2576,6 +2591,7 @@ async function refreshOrders() {
     });
   }
   renderOrders();
+  return true;
   } finally {
     readingRecord = false;
   }
