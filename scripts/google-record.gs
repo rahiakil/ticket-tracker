@@ -117,7 +117,26 @@ function ensureSalesBook_() {
 }
 
 function keepEventDays_(current, incoming) {
-  if (incoming && incoming.eventDays && incoming.eventDays.friday) current.eventDays = incoming.eventDays;
+  if (!(incoming && incoming.eventDays && incoming.eventDays.friday)) return;
+  var priorSkus = current.eventDays && current.eventDays.skus;
+  current.eventDays = incoming.eventDays;
+  if (!Array.isArray(current.eventDays.skus) && Array.isArray(priorSkus)) current.eventDays.skus = priorSkus;
+}
+
+function keepSkus_(current, incoming) {
+  var skus = incoming && (incoming.skus || (incoming.eventDays && incoming.eventDays.skus));
+  if (!Array.isArray(skus)) return;
+  current.skus = skus.filter(function (sku) {
+    return sku && sku.id && sku.name && (sku.day === "friday" || sku.day === "saturday" || sku.day === "sunday");
+  }).map(function (sku) {
+    return {
+      id: String(sku.id).slice(0, 60),
+      name: String(sku.name).replace(/\s+/g, " ").trim().slice(0, 80),
+      day: sku.day,
+      lane: sku.lane === "entry" ? "entry" : "food",
+      enabled: sku.enabled !== false,
+    };
+  });
 }
 
 function keepSheet_(current, incoming) {
@@ -158,7 +177,8 @@ function mergeBook_(current, incoming) {
     current.walkups = {};
     current.disputes = [];
     current.sheet = { orders: {} };
-    current.eventDays = null;
+    current.eventDays = incoming.eventDays && incoming.eventDays.friday ? incoming.eventDays : null;
+    current.skus = Array.isArray(incoming.skus) ? incoming.skus : [];
     current.factoryReset = false;
     current.cleanupAll = false;
     current.allowCleanup = false;
@@ -180,6 +200,7 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepSkus_(current, incoming);
     return current;
   }
   if (incoming && incoming.cleanupAll && incoming.allowCleanup) {
@@ -195,6 +216,7 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepSkus_(current, incoming);
     return current;
   }
   if (incoming && incoming.releaseAllLocks && incoming.actor === "siteadmin") {
@@ -206,6 +228,7 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepSkus_(current, incoming);
     keepLogEpoch_(current, incoming);
     applyLogEpoch_(current);
     return current;
@@ -228,6 +251,7 @@ function mergeBook_(current, incoming) {
     keepSheet_(current, incoming);
     keepAccounts_(current, incoming);
     keepEventDays_(current, incoming);
+    keepSkus_(current, incoming);
     keepLogEpoch_(current, incoming);
     applyLogEpoch_(current);
     return current;
@@ -293,6 +317,7 @@ function mergeBook_(current, incoming) {
   keepSheet_(current, incoming);
   keepAccounts_(current, incoming);
   keepEventDays_(current, incoming);
+    keepSkus_(current, incoming);
   keepLogEpoch_(current, incoming);
   applyLogEpoch_(current);
   return current;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=56">
+  <link rel="stylesheet" href="styles.css?v=58">
 </head>
 <body>
 <div class="app-shell">
@@ -117,6 +117,7 @@
           <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
         </div>
         <button id="new-sale" class="btn-orange" type="button">New sale</button>
+        <button class="show-pay btn-teal" type="button">Take payment</button>
         <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
         <div id="qr-box"></div>
         <div id="open-order"></div>
@@ -222,13 +223,48 @@
         <input id="record-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
       </label>
       <button id="save-link" class="secondary" type="button">Save link on this phone</button>
+      <label>GitHub save key
+        <input id="github-token" type="password" autocomplete="off" spellcheck="false" placeholder="Fine-grained token, contents on this repo">
+      </label>
+      <button id="save-github-token" class="secondary" type="button">Save key on this phone</button>
+      <p class="note">Prepaid orders are in this website. Locks and Friday sales are saved as a commit to the public live.json file.</p>
     </section>
 
     <section class="panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <h2>Log</h2>
       <button type="button" class="reset-log secondary">Reset log</button>
-      <button type="button" class="factory-reset secondary">Factory reset</button>
-      <p class="note">Reset log clears past actions on every phone. Factory reset also clears scans, walk-up sales, and the uploaded sheet. Logins stay.</p>
+      <button type="button" class="factory-reset secondary">Clear all data and start</button>
+      <p class="note">Reset log clears past actions on every phone. Clear all data also clears scans, walk-up sales, and the uploaded sheet, then opens Friday, Saturday, and Sunday. Logins stay. Factory reset does not remove the order list saved in the website.</p>
+      <h2>Tickets for sale</h2>
+      <p class="note">Create a ticket and turn it on for one day. Closing a day stops new sales and scans for that day.</p>
+      <div class="day-actions">
+        <button type="button" class="open-all-days btn-teal">Open Friday, Saturday, and Sunday</button>
+        <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
+        <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
+        <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
+        <button type="button" class="show-pay btn-teal">Take payment</button>
+      </div>
+      <div class="sku-list"></div>
+      <form class="sku-form">
+        <label>Ticket name
+          <input class="sku-name" autocomplete="off" placeholder="Saturday Snack">
+        </label>
+        <label>Day
+          <select class="sku-day">
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+          </select>
+        </label>
+        <label>Kind
+          <select class="sku-lane">
+            <option value="food">Food</option>
+            <option value="entry">Entry</option>
+          </select>
+        </label>
+        <button class="btn-orange" type="submit">Add ticket</button>
+      </form>
+      <p class="sku-note result" role="status" hidden></p>
       <label>Search log
         <input id="log-search" autocomplete="off" placeholder="Name, email, or order number">
       </label>
@@ -252,6 +288,7 @@
       <div id="sale-tiles"></div>
       <article id="sale-checkout" class="checkout-card"></article>
       <button id="sale-submit" class="btn-orange" type="button">Create QR</button>
+      <button class="show-pay btn-teal" type="button">Take payment</button>
       <p id="sale-note" class="result" role="status"></p>
     </section>
   </main>
@@ -306,6 +343,36 @@
       </label>
       <label class="check-line"><input id="open-sunday" type="checkbox" checked> Sunday open</label>
       <button id="save-event-days" class="btn-teal" type="button">Save event days</button>
+      <div class="day-actions">
+        <button type="button" class="open-all-days btn-teal">Open Friday, Saturday, and Sunday</button>
+        <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
+        <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
+        <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
+        <button type="button" class="show-pay btn-teal">Take payment</button>
+      </div>
+      <h2>Tickets for sale</h2>
+      <p class="note">Create a ticket and turn it on for one day. Friday Veg and Friday Non-Vegetarian are ready for QR codes.</p>
+      <div class="sku-list"></div>
+      <form class="sku-form">
+        <label>Ticket name
+          <input class="sku-name" autocomplete="off" placeholder="Friday Veg">
+        </label>
+        <label>Day
+          <select class="sku-day">
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+          </select>
+        </label>
+        <label>Kind
+          <select class="sku-lane">
+            <option value="food">Food</option>
+            <option value="entry">Entry</option>
+          </select>
+        </label>
+        <button class="btn-orange" type="submit">Add ticket</button>
+      </form>
+      <p class="sku-note result" role="status" hidden></p>
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -335,7 +402,7 @@
       <button id="release-locks" class="secondary" type="button">Release all locks</button>
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
       <button type="button" class="reset-log secondary">Reset log</button>
-      <button id="factory-reset" class="factory-reset secondary" type="button">Factory reset</button>
+      <button id="factory-reset" class="factory-reset secondary" type="button">Clear all data and start</button>
       <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
       <input id="sheet-upload" class="visually-hidden" type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values">
       <p id="sheet-note" class="note"></p>
@@ -426,6 +493,28 @@
 
 </div>
 </div>
+  <div id="pay-screen" class="backdrop" hidden>
+    <div class="dialog pay-dialog" role="dialog" aria-modal="true" aria-labelledby="pay-title">
+      <h2 id="pay-title">Take payment</h2>
+      <div class="pay-grid">
+        <section>
+          <h3>Pay on uttoron.org</h3>
+          <div class="pay-qr">
+            <img class="pay-direct" src="pay-direct.png" alt="QR code to pay on uttoron.org">
+            <img class="pay-mark" src="logo.png" alt="">
+          </div>
+          <p class="note">Uttoron payment QR. The guest scans this and pays on the site.</p>
+        </section>
+        <section>
+          <h3>Pay with Zelle</h3>
+          <img class="pay-zelle" src="pay-zelle.jpg" alt="Zelle QR code for Uttoron">
+          <p class="note">Zelle tag for Uttoron.</p>
+        </section>
+      </div>
+      <button id="pay-close" class="btn-orange" type="button">Close</button>
+    </div>
+  </div>
+
   <div id="dialog" class="backdrop" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <h2 id="dialog-title"></h2>
@@ -437,14 +526,14 @@
     </div>
   </div>
 
-  <script src="config.js?v=14"></script>
+  <script src="config.js?v=15"></script>
   <script src="vendor/qrcode-generator.js"></script>
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
-  <script src="catalog.js?v=8"></script>
-  <script src="ledger.js?v=37"></script>
-  <script src="record.js?v=9"></script>
+  <script src="catalog.js?v=9"></script>
+  <script src="ledger.js?v=38"></script>
+  <script src="record.js?v=11"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=71"></script>
+  <script src="app.js?v=77"></script>
 </body>
 </html>

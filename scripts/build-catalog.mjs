@@ -93,7 +93,42 @@ for (const row of body) {
 
 const refunds = applyOrderRefunds(orders);
 
-const out = `window.TicketCatalog = ${JSON.stringify({ orders, refunds: REFUNDS.map(({ code, item, keep, note }) => ({ code, item, keep, note })) }, null, 2)};
+const catalogPath = new URL("../web/catalog.js", import.meta.url);
+let previousOrders = {};
+let previousRefunds = [];
+try {
+  const existing = readFileSync(catalogPath, "utf8");
+  const start = existing.indexOf("{");
+  const end = existing.indexOf("window.TicketCatalog.lookup");
+  const parsed = JSON.parse(existing.slice(start, end).trim().replace(/;\s*$/, ""));
+  if (parsed && parsed.orders) {
+    previousOrders = parsed.orders;
+    previousRefunds = Array.isArray(parsed.refunds) ? parsed.refunds : [];
+  }
+} catch {
+  previousOrders = {};
+}
+
+const merged = { ...previousOrders, ...orders };
+const seenRefund = new Set(previousRefunds.map((rule) => `${rule.code}|${rule.item}|${rule.keep}`));
+const refundRules = previousRefunds.slice();
+for (const rule of REFUNDS.map(({ code, item, keep, note }) => ({ code, item, keep, note }))) {
+  const key = `${rule.code}|${rule.item}|${rule.keep}`;
+  if (seenRefund.has(key)) continue;
+  seenRefund.add(key);
+  refundRules.push(rule);
+}
+
+const catalog = {
+  epoch: "2026-10-08",
+  orders: merged,
+  refunds: refundRules,
+  skus: [
+    { id: "friday-veg", name: "Friday Veg", day: "friday", lane: "food", enabled: true },
+    { id: "friday-nonveg", name: "Friday Non-Vegetarian", day: "friday", lane: "food", enabled: true },
+  ],
+};
+const out = `window.TicketCatalog = ${JSON.stringify(catalog, null, 2)};
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();
   const orderCode = text.match(/order-(\\d+)/i);
@@ -106,10 +141,12 @@ window.TicketCatalog.lookup = function lookup(raw) {
   return null;
 };
 `;
-writeFileSync(new URL("../web/catalog.js", import.meta.url), out);
+writeFileSync(catalogPath, out);
 console.log(JSON.stringify({
   source,
-  orders: Object.keys(orders).length,
+  added: Object.keys(orders).filter((code) => !previousOrders[code]).length,
+  updated: Object.keys(orders).filter((code) => previousOrders[code]).length,
+  orders: Object.keys(merged).length,
   refunds,
   items: [...itemNames.entries()].sort((left, right) => right[1] - left[1]),
 }, null, 2));

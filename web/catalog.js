@@ -1,4 +1,5 @@
 window.TicketCatalog = {
+  "epoch": "2026-10-08",
   "orders": {
     "11792": {
       "code": "11792",
@@ -11595,7 +11596,7 @@ window.TicketCatalog = {
       "email": "rouknasengupta@gmail.com",
       "event": "Sharodotsav 2026",
       "date": "September 29th, 2026",
-      "amount": "$85.5",
+      "amount": "$85.50",
       "items": [
         {
           "name": "Sunday Lunch Non-Vegetarian",
@@ -12454,7 +12455,7 @@ window.TicketCatalog = {
       "email": "riknro@gmail.com",
       "event": "Sharodotsav 2026",
       "date": "September 30th, 2026",
-      "amount": "$133.5",
+      "amount": "$133.50",
       "items": [
         {
           "name": "Friday Adult Member Entry",
@@ -12512,7 +12513,7 @@ window.TicketCatalog = {
         },
         {
           "name": "Saturday Lunch Vegetarian",
-          "qty": 3,
+          "qty": 2,
           "lane": "food",
           "tone": "sat-veg"
         },
@@ -12524,13 +12525,13 @@ window.TicketCatalog = {
         },
         {
           "name": "Sunday Lunch Non-Vegetarian",
-          "qty": 3,
+          "qty": 2,
           "lane": "food",
           "tone": "sun-nonveg"
         },
         {
           "name": "Sunday Machher Kalia",
-          "qty": 3,
+          "qty": 2,
           "lane": "food",
           "tone": "sun-nonveg"
         },
@@ -21178,6 +21179,1484 @@ window.TicketCatalog = {
           "tone": "sun-nonveg"
         }
       ]
+    },
+    "12520": {
+      "code": "12520",
+      "full": "UTT20261000012520",
+      "name": "Alok Chakrabarti",
+      "email": "rini_c@hotmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$13",
+      "items": [
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12521": {
+      "code": "12521",
+      "full": "UTT20261000012521",
+      "name": "Anna Cui",
+      "email": "endapril@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$84",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12522": {
+      "code": "12522",
+      "full": "UTT20261000012522",
+      "name": "Aniket Chakrabarti",
+      "email": "aniket.chakrabarti@yahoo.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$192",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12523": {
+      "code": "12523",
+      "full": "UTT20261000012523",
+      "name": "Oieswarya Bhowmik",
+      "email": "oieswarya.cs@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Friday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12524": {
+      "code": "12524",
+      "full": "UTT20261000012524",
+      "name": "Piyali BiswasDe",
+      "email": "piyali.biswas@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$38",
+      "items": [
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12525": {
+      "code": "12525",
+      "full": "UTT20261000012525",
+      "name": "Anushka Banerjee",
+      "email": "anbanstonybrook@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$174",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12526": {
+      "code": "12526",
+      "full": "UTT20261000012526",
+      "name": "Kanishka Roychoudhury",
+      "email": "rkanishka@hotmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$236",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 4,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12527": {
+      "code": "12527",
+      "full": "UTT20261000012527",
+      "name": "Amita Banerjee",
+      "email": "maniya.ab@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$148",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids (5 Years Old and Below) Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12528": {
+      "code": "12528",
+      "full": "UTT20261000012528",
+      "name": "Shreya Singh",
+      "email": "singhshreya196@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Friday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12529": {
+      "code": "12529",
+      "full": "UTT20261000012529",
+      "name": "Dipta Chowdhury",
+      "email": "dipanita3@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$256",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sun-veg"
+        }
+      ]
+    },
+    "12530": {
+      "code": "12530",
+      "full": "UTT20261000012530",
+      "name": "Lulu Wu",
+      "email": "luwu2002@outlook.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Saturday Student Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12531": {
+      "code": "12531",
+      "full": "UTT20261000012531",
+      "name": "Manasn Majhi",
+      "email": "manash.majhi@yahoo.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$0",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Kids Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12532": {
+      "code": "12532",
+      "full": "UTT20261000012532",
+      "name": "Isaac Weislow",
+      "email": "interwebs.angular567@passinbox.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Saturday Student Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12533": {
+      "code": "12533",
+      "full": "UTT20261000012533",
+      "name": "Sanchari Gautam",
+      "email": "sanchari.gautam@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$44",
+      "items": [
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12534": {
+      "code": "12534",
+      "full": "UTT20261000012534",
+      "name": "Kirtimoy Guha",
+      "email": "kirtimoy@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$82.50",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12535": {
+      "code": "12535",
+      "full": "UTT20261000012535",
+      "name": "Shoham Dasgupta",
+      "email": "shoham123@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$32",
+      "items": [
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        }
+      ]
+    },
+    "12536": {
+      "code": "12536",
+      "full": "UTT20261000012536",
+      "name": "Suman Pal",
+      "email": "suman@alumni.duke.edu",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$98",
+      "items": [
+        {
+          "name": "Friday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12537": {
+      "code": "12537",
+      "full": "UTT20261000012537",
+      "name": "Aniket Chakrabarti",
+      "email": "aniket.chakrabarti@yahoo.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$64",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12538": {
+      "code": "12538",
+      "full": "UTT20261000012538",
+      "name": "Satyen Chatterjee",
+      "email": "satyenchatterjee@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$76",
+      "items": [
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-veg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12539": {
+      "code": "12539",
+      "full": "UTT20261000012539",
+      "name": "Manish Jayaswal",
+      "email": "jayaswalmk@yahoo.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$31",
+      "items": [
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12540": {
+      "code": "12540",
+      "full": "UTT20261000012540",
+      "name": "Jayanta Paul",
+      "email": "jayantapaul18@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$64",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12541": {
+      "code": "12541",
+      "full": "UTT20261000012541",
+      "name": "Sreeja Das",
+      "email": "sreejadas.jucse@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$130.50",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12542": {
+      "code": "12542",
+      "full": "UTT20261000012542",
+      "name": "Aarushi Biswas",
+      "email": "aarushib28@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$64",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12543": {
+      "code": "12543",
+      "full": "UTT20261000012543",
+      "name": "Nilaksh Das",
+      "email": "nilakshdas@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$116",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12544": {
+      "code": "12544",
+      "full": "UTT20261000012544",
+      "name": "Nithi Thillaivanam",
+      "email": "nithi@outlook.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$120",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12547": {
+      "code": "12547",
+      "full": "UTT20261000012547",
+      "name": "Pallabi Deb",
+      "email": "pallabideb88@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$232",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 4,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12548": {
+      "code": "12548",
+      "full": "UTT20261000012548",
+      "name": "Swarnadeep Saha",
+      "email": "writetoswarna@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$44",
+      "items": [
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12549": {
+      "code": "12549",
+      "full": "UTT20261000012549",
+      "name": "Roukna Sengupta",
+      "email": "rouknasengupta@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$32",
+      "items": [
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12550": {
+      "code": "12550",
+      "full": "UTT20261000012550",
+      "name": "Orchid Majumder",
+      "email": "orchidmajumder@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$88",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12551": {
+      "code": "12551",
+      "full": "UTT20261000012551",
+      "name": "Chandim Chatterjee",
+      "email": "chandimc2004@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12552": {
+      "code": "12552",
+      "full": "UTT20261000012552",
+      "name": "Baishali Kanjilal",
+      "email": "baishali.kanjilal@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12553": {
+      "code": "12553",
+      "full": "UTT20261000012553",
+      "name": "Tristan Griggs",
+      "email": "tristang312@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$64",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-veg"
+        }
+      ]
+    },
+    "12554": {
+      "code": "12554",
+      "full": "UTT20261000012554",
+      "name": "Roukna Sengupta",
+      "email": "rouknasengupta@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$16",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12555": {
+      "code": "12555",
+      "full": "UTT20261000012555",
+      "name": "Dipannita Dutta Roy",
+      "email": "dipannita89@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids (5 Years Old and Below) Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12556": {
+      "code": "12556",
+      "full": "UTT20261000012556",
+      "name": "Abner Saha",
+      "email": "abnersaha@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$64",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12557": {
+      "code": "12557",
+      "full": "UTT20261000012557",
+      "name": "Amit Ghosh",
+      "email": "amit.kumar.ghosh@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$158.50",
+      "items": [
+        {
+          "name": "Student Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Student Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Student Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Student Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 4,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 4,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12558": {
+      "code": "12558",
+      "full": "UTT20261000012558",
+      "name": "Shamik Ghosh",
+      "email": "shamikg@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$44",
+      "items": [
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12559": {
+      "code": "12559",
+      "full": "UTT20261000012559",
+      "name": "Supriay Saha",
+      "email": "supriyo005@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$116",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12562": {
+      "code": "12562",
+      "full": "UTT20261000012562",
+      "name": "Biswadip Dey",
+      "email": "biswa-dey@ieee.org",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$116",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12563": {
+      "code": "12563",
+      "full": "UTT20261000012563",
+      "name": "Kunal Purohit",
+      "email": "Kunal.purohit94@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        }
+      ]
+    },
+    "12564": {
+      "code": "12564",
+      "full": "UTT20261000012564",
+      "name": "Anirban Nandi",
+      "email": "joy.nandi@hotmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$0",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Kids Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Kids Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Kids Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12565": {
+      "code": "12565",
+      "full": "UTT20261000012565",
+      "name": "Soumya Debnath",
+      "email": "soumya.debnath@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$126",
+      "items": [
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-veg"
+        },
+        {
+          "name": "Sunday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12566": {
+      "code": "12566",
+      "full": "UTT20261000012566",
+      "name": "Suprio Pal",
+      "email": "suprio_pal@yahoo.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$258",
+      "items": [
+        {
+          "name": "Saturday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
+    },
+    "12567": {
+      "code": "12567",
+      "full": "UTT20261000012567",
+      "name": "Sayan Chatterjee",
+      "email": "sayanc00@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Sunday Adult Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12568": {
+      "code": "12568",
+      "full": "UTT20261000012568",
+      "name": "Amber Ghosh",
+      "email": "amberghosh@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 7th, 2026",
+      "amount": "$32",
+      "items": [
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 2,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Saturday Pizza for Kids",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-nonveg"
+        }
+      ]
+    },
+    "12570": {
+      "code": "12570",
+      "full": "UTT20261000012570",
+      "name": "Rebanta Roy",
+      "email": "rebanta1997@gmail.com",
+      "event": "Sharodotsav 2026",
+      "date": "October 8th, 2026",
+      "amount": "$120.50",
+      "items": [
+        {
+          "name": "Friday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Friday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Sunday Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 3,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        }
+      ]
     }
   },
   "refunds": [
@@ -21270,6 +22749,22 @@ window.TicketCatalog = {
       "item": "Sunday Kids Non-Member Entry",
       "keep": 0,
       "note": "Vishal Bajaj Sunday 1 kid"
+    }
+  ],
+  "skus": [
+    {
+      "id": "friday-veg",
+      "name": "Friday Veg",
+      "day": "friday",
+      "lane": "food",
+      "enabled": true
+    },
+    {
+      "id": "friday-nonveg",
+      "name": "Friday Non-Vegetarian",
+      "day": "friday",
+      "lane": "food",
+      "enabled": true
     }
   ]
 };

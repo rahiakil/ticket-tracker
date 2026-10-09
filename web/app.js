@@ -33,7 +33,7 @@ const SESSION_KEY = storeKey("session");
 const ALIAS_KEY = storeKey("alias");
 const ACCOUNTS_KEY = storeKey("accounts");
 let loginLanding = "desk";
-const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
+const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
 
 const gate = document.querySelector("#gate");
 const login = document.querySelector("#login");
@@ -60,8 +60,7 @@ let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
 let flushing = false;
-const BATCH_WAIT_MS = 2500;
-const BATCH_MAX = 8;
+const BATCH_WAIT_MS = 0;
 
 function show(view) {
   gate.hidden = view !== gate;
@@ -149,20 +148,22 @@ function readSession() {
 }
 
 function readAlias() {
-  return sessionStorage.getItem(ALIAS_KEY) || "";
+  return localStorage.getItem(ALIAS_KEY) || sessionStorage.getItem(ALIAS_KEY) || "";
+}
+
+function writeAlias(name) {
+  const text = String(name || "").trim();
+  if (!text) return;
+  localStorage.setItem(ALIAS_KEY, text);
+  sessionStorage.setItem(ALIAS_KEY, text);
 }
 
 function enterApp() {
   const session = readSession();
   if (!session) return showGate();
-  if (!readAlias()) {
-    document.querySelector("#username").value = session.username;
-    document.querySelector("#login-error").hidden = false;
-    document.querySelector("#login-error").textContent = "Enter your name for this visit. It is not saved on the account.";
-    show(login);
-    document.querySelector("#display-name").focus();
-    return;
-  }
+  if (!readAlias()) writeAlias(session.username);
+  const renewed = { ...session, exp: Date.now() + SESSION_MS };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(renewed));
   if (config.recordUrl) {
     document.querySelector("#record-link").closest("label").hidden = true;
     document.querySelector("#save-link").hidden = true;
@@ -178,7 +179,7 @@ function enterApp() {
   document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
   applyRoleUi();
-  showWorkspacePage(can("admin") ? "admin" : "desk");
+  showWorkspacePage("desk");
   paintCounter();
   refreshOrders();
 }
@@ -273,6 +274,7 @@ function applyRoleUi() {
   const sale = document.querySelector("#new-sale");
   const entryDesk = document.querySelector("#counter-entry");
   if (sale) sale.hidden = !sell;
+  document.querySelectorAll(".show-pay").forEach((node) => { node.hidden = !sell && !admin; });
   if (entryDesk) entryDesk.hidden = !add || volunteer;
   const foodDesk = document.querySelector("#counter-food");
   if (foodDesk) foodDesk.hidden = !add;
@@ -346,7 +348,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     }
     const landing = account.role === "records" ? "records" : account.role === "scanner" || loginLanding === "admin" ? "admin" : "desk";
     if (accepted) localStorage.setItem(SESSION_KEY, JSON.stringify({ username, role: account.role, landing, exp: Date.now() + SESSION_MS }));
-    sessionStorage.setItem(ALIAS_KEY, displayName);
+    writeAlias(displayName);
     enterApp();
   } catch {
     error.hidden = false;
@@ -358,7 +360,10 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
 
 function logout() {
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(ALIAS_KEY);
   sessionStorage.removeItem(ALIAS_KEY);
+  const pay = document.querySelector("#pay-screen");
+  if (pay) pay.hidden = true;
   showGate();
 }
 
@@ -472,13 +477,12 @@ function showMessage(message, kind) {
 
 function queueWrite(mutate) {
   const applied = mutate(currentBook);
-  if (applied.book) currentBook = applied.book;
-  if (applied.write) pendingWrites.push(mutate);
-  if (pendingWrites.length >= BATCH_MAX) flushWrites();
-  else if (pendingWrites.length) {
-    clearTimeout(flushTimer);
-    flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+  if (applied.book) {
+    currentBook = applied.book;
+    cacheLiveBook(currentBook);
   }
+  if (applied.write) pendingWrites.push(mutate);
+  if (pendingWrites.length) flushWrites();
   return applied;
 }
 
@@ -498,11 +502,7 @@ async function flushWrites() {
       if (applied.message) message = applied.message;
     }
     working.baseWriteId = book.lastWriteId || "";
-    if (write) {
-      working.statusGrid = statusGrid(working);
-      working.onSiteGrid = onSiteGrid(working);
-      working.statsGrid = statsGrid();
-    }
+    stripPrepaidCopy(working);
     return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
   });
   flushing = false;
@@ -510,10 +510,11 @@ async function flushWrites() {
     pendingWrites.unshift(...batch);
     note(saved.message || "Could not save—retry");
     showMessage(saved.message || "Could not save—retry", "save_failed");
-    flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+    flushTimer = setTimeout(flushWrites, 1500);
     return;
   }
   currentBook = saved.book || currentBook;
+  cacheLiveBook(currentBook);
   for (const mutate of pendingWrites) {
     const applied = mutate(currentBook);
     if (applied.book) currentBook = applied.book;
@@ -542,15 +543,17 @@ function refundedOrders(orders) {
   return next;
 }
 
+function stripPrepaidCopy(book) {
+  if (!book || typeof book !== "object") return false;
+  const bulky = Boolean(book.sheet && book.sheet.orders && Object.keys(book.sheet.orders).length);
+  book.sheet = { epoch: (window.TicketCatalog && window.TicketCatalog.epoch) || "", fileName: "website", orders: {} };
+  delete book.statusGrid;
+  delete book.onSiteGrid;
+  delete book.statsGrid;
+  return bulky;
+}
+
 function catalogSource() {
-  const fromBook = currentBook.sheet && currentBook.sheet.orders;
-  if (fromBook && Object.keys(fromBook).length) return refundedOrders(fromBook);
-  try {
-    const saved = JSON.parse(localStorage.getItem(storeKey("sheet")) || "null");
-    if (saved && saved.orders && Object.keys(saved.orders).length) return refundedOrders(saved.orders);
-  } catch {
-    /* use the built-in sheet */
-  }
   return refundedOrders((window.TicketCatalog && window.TicketCatalog.orders) || {});
 }
 
@@ -658,6 +661,52 @@ function orderView(person) {
   const allTaken = items.length > 0 && items.every((item) => item.taken);
   const noneTaken = items.every((item) => !item.taken);
   return { items, allTaken, noneTaken, phrase: TicketLedger.sheetPhrase(items) || "Not seen" };
+}
+
+function cacheLiveBook(book) {
+  if (!book || book.schemaVersion !== 1) return;
+  try {
+    const copy = {
+      schemaVersion: 1,
+      orders: book.orders || {},
+      locks: book.locks || {},
+      log: (book.log || []).slice(-500),
+      lines: (book.lines || []).slice(-200),
+      disputes: book.disputes || [],
+      eventDays: book.eventDays || null,
+      accounts: book.accounts || null,
+      skus: book.skus || null,
+      walkups: book.walkups || {},
+    };
+    localStorage.setItem(storeKey("book-cache"), JSON.stringify(copy));
+  } catch {
+    /* scans still save to Drive */
+  }
+}
+
+function restoreCachedBook() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storeKey("book-cache")) || "null");
+    if (!saved || saved.schemaVersion !== 1 || !saved.orders) return;
+    const savedCount = Object.keys(saved.orders).length + Object.keys(saved.walkups || {}).length;
+    const currentCount = Object.keys(currentBook.orders || {}).length + Object.keys(currentBook.walkups || {}).length;
+    if (!savedCount && currentCount) return;
+    currentBook = { ...TicketLedger.emptyBook(), ...saved, walkups: saved.walkups || {} };
+  } catch {
+    /* start from the baked order list */
+  }
+}
+
+async function loadPackagedLive() {
+  try {
+    const response = await fetch(config.liveFile || "live.json", { cache: "no-store" });
+    if (!response.ok) return;
+    const book = await response.json();
+    if (!book || book.schemaVersion !== 1 || !book.orders) return;
+    currentBook = { ...TicketLedger.emptyBook(), ...book, walkups: book.walkups || {} };
+  } catch {
+    /* the packaged file is the fallback */
+  }
 }
 
 function deviceId() {
@@ -1389,6 +1438,7 @@ function paintFlowTabs() {
 function renderOrders() {
   paintDemo();
   paintEventDays();
+  renderSkus();
   paintFlowTabs();
   const scanned = listedPeople("", "scanned");
   const breakdown = laneBreakdown(scanned);
@@ -1488,6 +1538,127 @@ function hiddenSaleItem(name) {
   return false;
 }
 
+function normalizeSku(raw) {
+  if (!raw) return null;
+  const day = ["friday", "saturday", "sunday"].includes(raw.day) ? raw.day : "";
+  let name = String(raw.name || "").replace(/\s+/g, " ").trim();
+  if (!name || !day) return null;
+  const dayWord = day.charAt(0).toUpperCase() + day.slice(1);
+  if (!new RegExp(`\\b${day}\\b`, "i").test(name)) name = `${dayWord} ${name}`;
+  const lane = raw.lane === "entry" ? "entry" : "food";
+  const id = String(raw.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-")).replace(/^-|-$/g, "").slice(0, 60);
+  if (!id) return null;
+  return { id, name: name.slice(0, 80), day, lane, enabled: raw.enabled !== false };
+}
+
+function storedSkuRows() {
+  const fromDays = currentBook.eventDays && currentBook.eventDays.skus;
+  if (Array.isArray(fromDays)) return fromDays;
+  if (Array.isArray(currentBook.skus)) return currentBook.skus;
+  try {
+    const local = JSON.parse(localStorage.getItem(storeKey("skus")) || "null");
+    if (Array.isArray(local)) return local;
+  } catch {
+    /* catalog tickets still show */
+  }
+  return null;
+}
+
+function mergedSkus() {
+  const map = new Map();
+  ((window.TicketCatalog && window.TicketCatalog.skus) || []).forEach((sku) => {
+    const clean = normalizeSku(sku);
+    if (clean) map.set(clean.id, clean);
+  });
+  (storedSkuRows() || []).forEach((sku) => {
+    const clean = normalizeSku(sku);
+    if (!clean) return;
+    map.set(clean.id, { ...map.get(clean.id), ...clean });
+  });
+  return [...map.values()];
+}
+
+function skuNote(message) {
+  document.querySelectorAll(".sku-note, #admin-note, #admin-message").forEach((node) => {
+    if (!node) return;
+    node.hidden = false;
+    node.textContent = message;
+  });
+}
+
+function persistSkus(list, message) {
+  const clean = list.map(normalizeSku).filter(Boolean);
+  try { localStorage.setItem(storeKey("skus"), JSON.stringify(clean)); } catch { /* Drive still receives it */ }
+  const applied = queueWrite((book) => {
+    const days = eventDates(book);
+    book.eventDays = {
+      friday: days.friday,
+      saturday: days.saturday,
+      sunday: days.sunday,
+      open: days.open,
+      skus: clean,
+    };
+    book.skus = clean;
+    return { write: true, book, message: message || "Tickets saved." };
+  });
+  skuStamp = "";
+  skuNote(applied.message);
+  renderSkus();
+  paintSaleTiles();
+}
+
+function setDaysOpen(openMap, message) {
+  const applied = queueWrite((book) => {
+    const days = eventDates(book);
+    const skus = (book.eventDays && Array.isArray(book.eventDays.skus) && book.eventDays.skus) || storedSkuRows() || mergedSkus();
+    book.eventDays = {
+      friday: days.friday,
+      saturday: days.saturday,
+      sunday: days.sunday,
+      open: { ...days.open, ...openMap },
+      skus,
+    };
+    return { write: true, book, message };
+  });
+  paintEventDays();
+  paintDemo();
+  paintSaleTiles();
+  skuNote(applied.message);
+  const person = catalogPerson(openedCode);
+  if (person) paintOpen(person);
+}
+
+let skuStamp = "";
+function renderSkus() {
+  const rows = mergedSkus().sort((left, right) => left.day.localeCompare(right.day) || left.name.localeCompare(right.name));
+  const stamp = JSON.stringify(rows);
+  if (stamp === skuStamp) return;
+  skuStamp = stamp;
+  document.querySelectorAll(".sku-list").forEach((host) => {
+    host.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No extra tickets yet.";
+      host.append(empty);
+      return;
+    }
+    rows.forEach((sku) => {
+      const line = document.createElement("label");
+      line.className = "check-line";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = sku.enabled !== false;
+      input.addEventListener("change", () => {
+        if (!can("admin")) return;
+        const next = mergedSkus().map((item) => (item.id === sku.id ? { ...item, enabled: input.checked } : item));
+        persistSkus(next, `${sku.name} is ${input.checked ? "on" : "off"} for ${sku.day}.`);
+      });
+      line.append(input, document.createTextNode(` ${sku.name} · ${sku.day} · ${sku.lane === "entry" ? "entry" : "food"}`));
+      host.append(line);
+    });
+  });
+}
+
 function menuItems() {
   const names = new Map();
   Object.values(catalogSource()).forEach((person) => {
@@ -1496,6 +1667,10 @@ function menuItems() {
       if (hiddenSaleItem(item.name)) return;
       if (!names.has(item.name)) names.set(item.name, { name: item.name, lane: item.lane, tone: item.tone || item.lane });
     });
+  });
+  mergedSkus().forEach((sku) => {
+    if (sku.enabled === false || hiddenSaleItem(sku.name)) return;
+    if (!names.has(sku.name)) names.set(sku.name, { name: sku.name, lane: sku.lane, tone: sku.lane });
   });
   return [...names.values()].sort((left, right) => {
     if (left.lane !== right.lane) return left.lane === "entry" ? -1 : 1;
@@ -1522,7 +1697,8 @@ function paintSaleTiles() {
   const host = document.querySelector("#sale-tiles");
   if (!host) return;
   host.replaceChildren();
-  const items = menuItems();
+  const dates = eventDates(currentBook);
+  const items = menuItems().filter((item) => TicketLedger.dayIsOpen(TicketLedger.itemDay(item.name), dates));
   if (!items.length) {
     const empty = document.createElement("p");
     empty.textContent = "No tickets are available for sale.";
@@ -1932,6 +2108,11 @@ function renderLiveSheet() {
         }
         row.forEach((value, index) => {
           const cell = document.createElement("td");
+          const label = header[index];
+          if (label === "Name" || label === "Email" || label === "Pending items" || label === "Picked up items" || label === "Status") {
+            cell.classList.add("sheet-wrap");
+          }
+          if (index === nameIndex) cell.classList.add("sheet-name-cell");
           if (index === nameIndex) {
             const button = document.createElement("button");
             button.type = "button";
@@ -2085,14 +2266,6 @@ function saveTaken(orderId, rawCount) {
 }
 
 function rawCatalogOrders() {
-  const fromBook = currentBook.sheet && currentBook.sheet.orders;
-  if (fromBook && Object.keys(fromBook).length) return fromBook;
-  try {
-    const saved = JSON.parse(localStorage.getItem(storeKey("sheet")) || "null");
-    if (saved && saved.orders && Object.keys(saved.orders).length) return saved.orders;
-  } catch {
-    /* use the built-in sheet */
-  }
   return (window.TicketCatalog && window.TicketCatalog.orders) || {};
 }
 
@@ -2294,7 +2467,16 @@ function deleteRecent(orderId) {
   renderOrders();
 }
 
+let showedCache = false;
+let readingRecord = false;
 async function refreshOrders() {
+  if (!showedCache) {
+    showedCache = true;
+    renderOrders();
+  }
+  if (readingRecord || flushing) return;
+  readingRecord = true;
+  try {
   if (pendingWrites.length) await flushWrites();
   const options = recordOptions();
   if (!TicketRecord.recordUrl(options.recordUrl)) return;
@@ -2304,14 +2486,23 @@ async function refreshOrders() {
     message: "",
     commitMessage: "",
   }));
+  if (loaded.missing) return;
   if (!loaded.ok) {
     const message = document.querySelector("#admin-message");
-    message.hidden = false;
-    message.textContent = loaded.message || "Could not save—retry";
-    note(message.textContent);
+    if (message) {
+      message.hidden = false;
+      message.textContent = loaded.message || "Could not save—retry";
+    }
     return;
   }
   currentBook = loaded.book;
+  if (stripPrepaidCopy(currentBook)) {
+    queueWrite((book) => {
+      stripPrepaidCopy(book);
+      return { write: true, book, message: "" };
+    });
+  }
+  cacheLiveBook(currentBook);
   cacheAccounts(loaded.book);
   if (readSession() && readSession().role !== "records") applyRoleUi();
   if (readSession() && readSession().role !== "records") applyRoleUi();
@@ -2323,6 +2514,9 @@ async function refreshOrders() {
     });
   }
   renderOrders();
+  } finally {
+    readingRecord = false;
+  }
 }
 
 function scanMoments() {
@@ -2598,6 +2792,21 @@ async function emailStatus() {
   sayExport("Opened the mail app with the totals. Download CSV saves the full file.");
 }
 
+const githubTokenButton = document.querySelector("#save-github-token");
+if (githubTokenButton) {
+  githubTokenButton.addEventListener("click", () => {
+    const value = document.querySelector("#github-token").value.trim();
+    const message = document.querySelector("#admin-message");
+    if (message) {
+      message.hidden = false;
+      message.textContent = value ? "GitHub save key saved on this phone." : "GitHub save key cleared on this phone.";
+    }
+    if (value) localStorage.setItem(storeKey("github-token"), value);
+    else localStorage.removeItem(storeKey("github-token"));
+    document.querySelector("#github-token").value = "";
+  });
+}
+
 document.querySelector("#save-link").addEventListener("click", () => {
   const value = document.querySelector("#record-link").value.trim();
   const link = TicketRecord.recordUrl(value);
@@ -2717,7 +2926,8 @@ document.querySelector("#save-event-days").addEventListener("click", () => {
     return;
   }
   const applied = queueWrite((book) => {
-    book.eventDays = { friday, saturday, sunday, open };
+    const skus = (book.eventDays && book.eventDays.skus) || storedSkuRows() || mergedSkus();
+    book.eventDays = { friday, saturday, sunday, open, skus };
     const names = ["friday", "saturday", "sunday"].filter((day) => open[day]);
     return { write: true, book, message: `Open days saved: ${names.join(", ")}.` };
   });
@@ -2808,7 +3018,7 @@ async function applySheetFile(file) {
     noteBox.textContent = error && error.message ? error.message : "Could not read that sheet.";
     return;
   }
-  const sheet = { orders, fileName: file.name, uploadedAt: new Date().toISOString() };
+  const sheet = { orders, fileName: file.name, uploadedAt: new Date().toISOString(), epoch: (window.TicketCatalog && window.TicketCatalog.epoch) || "" };
   try { localStorage.setItem(storeKey("sheet"), JSON.stringify(sheet)); } catch { /* the Drive file still receives it */ }
   queueWrite((book) => {
     book.sheet = sheet;
@@ -2873,13 +3083,14 @@ function resetActivityLog() {
 document.querySelectorAll(".reset-log").forEach((button) => {
   button.addEventListener("click", resetActivityLog);
 });
-document.querySelectorAll(".factory-reset").forEach((button) => {
-  button.addEventListener("click", () => {
-  const sure = window.confirm("Factory reset clears every scan, lock, log, walk-up sale, dispute, uploaded order sheet, and saved event days. Logins stay. The built-in order list comes back. This cannot be undone.");
+async function clearAndStart() {
+  const sure = window.confirm("Clear all data and start over? This clears every scan, lock, log, walk-up sale, dispute, and uploaded order sheet on every phone. Logins stay. The order list saved in the website comes back. This cannot be undone.");
   if (!sure) return;
-  if (!window.confirm("Reset the tracker now?")) return;
+  if (!window.confirm("Clear the tracker now?")) return;
   localStorage.removeItem(storeKey("sheet"));
   localStorage.removeItem(storeKey("local-log"));
+  localStorage.removeItem(storeKey("book-cache"));
+  localStorage.removeItem(storeKey("skus"));
   const friday = document.querySelector("#day-friday");
   const saturday = document.querySelector("#day-saturday");
   const sunday = document.querySelector("#day-sunday");
@@ -2893,22 +3104,40 @@ document.querySelectorAll(".factory-reset").forEach((button) => {
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   queueWrite((book) => TicketLedger.factoryReset(book, at, actor));
+  await flushWrites();
+  const starter = ((window.TicketCatalog && window.TicketCatalog.skus) || []).map(normalizeSku).filter(Boolean);
+  queueWrite((book) => {
+    book.eventDays = {
+      ...DEFAULT_EVENT_DAYS,
+      open: { friday: true, saturday: true, sunday: true },
+      skus: starter,
+    };
+    book.skus = starter;
+    return { write: true, book, message: "Cleared. Friday, Saturday, and Sunday are open." };
+  });
+  await flushWrites();
   openedCode = "";
+  skuStamp = "";
+  showedCache = true;
   paintDemo();
   for (const id of ["#admin-note", "#admin-message"]) {
     const noteBox = document.querySelector(id);
     if (!noteBox) continue;
     noteBox.hidden = false;
-    noteBox.textContent = "Factory reset sent. Scans and the uploaded sheet are cleared. The built-in order list is back.";
+    noteBox.textContent = "Cleared. The website order list is back. Friday, Saturday, and Sunday are open. New sales start from here.";
   }
   renderOrders();
-  });
+  renderSkus();
+}
+
+document.querySelectorAll(".factory-reset").forEach((button) => {
+  button.addEventListener("click", () => { clearAndStart(); });
 });
 
 setInterval(() => {
   if (document.hidden || !readSession() || flushing || pendingWrites.length) return;
   refreshOrders();
-}, 20000);
+}, 10000);
 
 function showWorkspacePage(page) {
   document.querySelectorAll("[data-page]").forEach((item) => {
@@ -2998,6 +3227,60 @@ window.setInterval(() => {
   button.textContent = left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed";
 }, 1000);
 
-paintDemo();
-show(gate);
-if (readSession()) enterApp();
+document.querySelectorAll(".sku-form").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!can("admin")) return;
+    const name = form.querySelector(".sku-name").value;
+    const day = form.querySelector(".sku-day").value;
+    const lane = form.querySelector(".sku-lane").value;
+    const clean = normalizeSku({ name, day, lane, enabled: true });
+    const noteBox = form.parentElement && form.parentElement.querySelector(".sku-note");
+    if (!clean) {
+      if (noteBox) {
+        noteBox.hidden = false;
+        noteBox.textContent = "Enter a ticket name and a day.";
+      }
+      return;
+    }
+    const next = mergedSkus().filter((sku) => sku.id !== clean.id);
+    next.push(clean);
+    form.querySelector(".sku-name").value = "";
+    persistSkus(next, `${clean.name} is on for ${clean.day}.`);
+  });
+});
+document.querySelectorAll(".close-day").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!can("admin")) return;
+    const day = button.getAttribute("data-day");
+    const label = day ? day.charAt(0).toUpperCase() + day.slice(1) : "That day";
+    if (!window.confirm(`Close all ${label} sales? ${label} tickets cannot be sold or scanned until you open that day again.`)) return;
+    setDaysOpen({ [day]: false }, `${label} sales are closed.`);
+  });
+});
+document.querySelectorAll(".open-all-days").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!can("admin")) return;
+    setDaysOpen({ friday: true, saturday: true, sunday: true }, "Friday, Saturday, and Sunday are open.");
+  });
+});
+document.querySelectorAll(".show-pay").forEach((button) => {
+  button.addEventListener("click", () => {
+    const pay = document.querySelector("#pay-screen");
+    if (pay) pay.hidden = false;
+  });
+});
+const payClose = document.querySelector("#pay-close");
+if (payClose) payClose.addEventListener("click", () => {
+  const pay = document.querySelector("#pay-screen");
+  if (pay) pay.hidden = true;
+});
+
+async function startApp() {
+  await loadPackagedLive();
+  restoreCachedBook();
+  paintDemo();
+  show(gate);
+  if (readSession()) enterApp();
+}
+startApp();
