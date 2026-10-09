@@ -2909,6 +2909,13 @@ function showNameSpinner() {
     box.append(status);
   }
 }
+document.addEventListener("pointerdown", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target && target.closest("button, .file-btn, a.text-button");
+  if (!button || button.disabled) return;
+  button.classList.add("pressed");
+  window.setTimeout(() => button.classList.remove("pressed"), 220);
+});
 document.querySelector("#site-orders-search").addEventListener("input", () => {
   siteLetter = "";
   showNameSpinner();
