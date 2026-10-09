@@ -1,11 +1,7 @@
 name = "ticket-tracker"
-main = "src/worker.mjs"
+main = "src/door-worker.mjs"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
-
-[assets]
-directory = "web"
-binding = "ASSETS"
 
 [vars]
 DATA_REPO = "rahiakil/ticket-tracker-data"

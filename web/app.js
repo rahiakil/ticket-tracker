@@ -419,7 +419,31 @@ async function startCamera() {
     scanButton.hidden = false;
     cancelButton.hidden = true;
     cameraHelp.hidden = false;
-    cameraHelp.textContent = "Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.";
+    cameraHelp.textContent = cameraDeniedMessage();
+  }
+}
+
+function cameraDeniedMessage() {
+  const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  if (apple) return "Tap Allow on the phone prompt. If no prompt appears, open Settings, then Safari, then Camera, and choose Allow. Come back and tap Allow camera again.";
+  return "Tap Allow on the phone prompt. If no prompt appears, tap the lock icon in the address bar, set Camera to Allow, then tap Allow camera again.";
+}
+
+async function requestCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    cameraHelp.hidden = false;
+    cameraHelp.textContent = "Open this page in Safari on iPhone or Chrome on Android, then tap Allow camera.";
+    return false;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    stream.getTracks().forEach((track) => track.stop());
+    cameraHelp.hidden = true;
+    return true;
+  } catch {
+    cameraHelp.hidden = false;
+    cameraHelp.textContent = cameraDeniedMessage();
+    return false;
   }
 }
 
@@ -434,6 +458,12 @@ function onDecoded(text, generation) {
 }
 
 document.querySelector("#scan-btn").addEventListener("click", () => { startCamera(); });
+const allowCamera = document.querySelector("#allow-camera");
+if (allowCamera) {
+  allowCamera.addEventListener("click", async () => {
+    if (await requestCamera()) startCamera();
+  });
+}
 document.querySelector("#cancel-scan").addEventListener("click", () => {
   scanGeneration += 1;
   scanLock = false;
