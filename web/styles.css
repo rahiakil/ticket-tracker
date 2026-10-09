@@ -44,6 +44,11 @@ button, .file-btn {
   transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
 }
 
+a.text-button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+
 button.pressed,
 button:active:not(:disabled),
 .file-btn.pressed,
