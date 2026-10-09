@@ -32,7 +32,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /Invalid QR/);
   assert.match(app, /Could not save—retry/);
   assert.match(html, /Search orders/);
-  assert.match(html, /Main page/);
+  assert.match(html, /id="main-page"/);
   assert.match(html, /Clean up everything/);
   assert.match(html, /Factory reset/);
   assert.match(html, /open-saturday/);

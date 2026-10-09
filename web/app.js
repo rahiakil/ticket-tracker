@@ -3194,6 +3194,8 @@ function showWorkspacePage(page) {
   document.querySelectorAll("[data-tool]").forEach((item) => {
     item.className = item.getAttribute("data-tool") === toolTab ? "btn-teal" : "btn-quiet";
   });
+  const back = document.querySelector("#workspace-back");
+  if (back) back.hidden = page === "desk";
 }
 
 function showSitePage(tab) {
@@ -3205,8 +3207,14 @@ function showSitePage(tab) {
     panel.hidden = panel.getAttribute("data-site-panel") !== siteTab;
   });
   if (siteTab === "logins") renderLogins();
+  const back = document.querySelector("#site-back");
+  if (back) back.hidden = siteTab === "orders";
 }
 
+const workspaceBack = document.querySelector("#workspace-back");
+if (workspaceBack) workspaceBack.addEventListener("click", () => { showWorkspacePage("desk"); });
+const siteBack = document.querySelector("#site-back");
+if (siteBack) siteBack.addEventListener("click", () => { showSitePage("orders"); });
 document.querySelectorAll("[data-page]").forEach((button) => {
   button.addEventListener("click", () => {
     showWorkspacePage(button.getAttribute("data-page"));
