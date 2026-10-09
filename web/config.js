@@ -4,7 +4,7 @@ window.TICKET_TRACKER_CONFIG = {
   recordUrl: "https://api.github.com/repos/rahiakil/ticket-tracker/contents/web/live.json",
   githubBranch: "live",
   githubToken: "",
-  saveUrl: "https://charlie-wishing-longest-poly.trycloudflare.com/api/live",
+  saveUrl: "https://ticket-tracker.uttoron-tickets.workers.dev/api/live",
   liveFile: "live.json",
   backupPageUrl: "https://rahiakil.github.io/ticket-tracker/backup/",
 };
