@@ -565,7 +565,7 @@ function statusDetail(order) {
     const demo = Boolean(options && options.demo);
     const dates = options && options.eventDays;
     const day = named && itemDay(named.name);
-    if (!demo && day && (!dayIsOpen(day, dates) || daysAhead(day, when, dates) > 0)) {
+    if (!demo && day && !dayIsOpen(day, dates)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
       return { book: pruneBook(current), changed: false, blocked: true, already: false, phrase: "" };
     }

@@ -160,9 +160,12 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(entered.phrase, "Entry done for Saturday. Food not taken");
   assert.equal(entered.book.orders["12166"].variants["item:1:0:Regular Member Entry"].taken, true);
   assert.equal(entered.book.orders["12166"].variants["item:0:0:Saturday Lunch Vegetarian"].taken, false);
-  const early = ledger.markItem(entered.book, person, 0, "2026-09-30T18:00:00.000Z", "admin");
-  assert.equal(early.blocked, true);
-  assert.equal(early.book.orders["12166"].variants["item:0:0:Saturday Lunch Vegetarian"].taken, false);
+  const early = ledger.markItem(entered.book, person, 0, "2026-09-30T18:00:00.000Z", "admin", "phone-a", {
+    eventDays: { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11", open: { friday: true, saturday: true, sunday: true } },
+  });
+  assert.equal(early.blocked, undefined);
+  assert.equal(early.changed, true);
+  assert.equal(early.book.orders["12166"].variants["item:0:0:Saturday Lunch Vegetarian"].taken, true);
   const fed = ledger.markItem(entered.book, person, 0, "2026-10-03T18:00:00.000Z", "admin");
   assert.equal(fed.phrase, "Entry done for Saturday. Food taken");
   const undone = ledger.revertLast(fed.book, person, "2026-10-03T18:05:00.000Z", "admin");

@@ -820,10 +820,9 @@ function ticketPill(person, item, index, lane, locked, now) {
   const button = document.createElement("button");
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
-  const ahead = TicketLedger.daysAhead(TicketLedger.itemDay(item.id), now, eventDates(currentBook));
   const day = TicketLedger.itemDay(item.id);
   const closed = !demoMode && Boolean(day) && !TicketLedger.dayIsOpen(day, eventDates(currentBook));
-  const future = !demoMode && Boolean(day) && (ahead > 0 || closed);
+  const future = closed;
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
   button.className = `item-pill coupon-${kind} ${state}`;
   if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
