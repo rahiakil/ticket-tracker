@@ -516,41 +516,52 @@ function queueWrite(mutate) {
   return applied;
 }
 
+let flushPromise = Promise.resolve(true);
 async function flushWrites() {
   clearTimeout(flushTimer);
-  if (flushing || !pendingWrites.length) return;
-  const batch = pendingWrites.splice(0, pendingWrites.length);
+  if (flushing) return flushPromise;
+  if (!pendingWrites.length) return true;
   flushing = true;
-  const saved = await TicketRecord.commit(recordOptions(), (book) => {
-    let working = book;
-    let message = "";
-    let write = false;
-    for (const mutate of batch) {
-      const applied = mutate(working);
-      if (applied.book) working = applied.book;
-      if (applied.write) write = true;
-      if (applied.message) message = applied.message;
+  flushPromise = finishFlush();
+  return flushPromise;
+}
+
+async function finishFlush() {
+  const batch = pendingWrites.splice(0, pendingWrites.length);
+  try {
+    const saved = await TicketRecord.commit(recordOptions(), (book) => {
+      let working = book;
+      let message = "";
+      let write = false;
+      for (const mutate of batch) {
+        const applied = mutate(working);
+        if (applied.book) working = applied.book;
+        if (applied.write) write = true;
+        if (applied.message) message = applied.message;
+      }
+      working.baseWriteId = book.lastWriteId || "";
+      stripPrepaidCopy(working);
+      return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
+    });
+    if (!saved.ok) {
+      pendingWrites.unshift(...batch);
+      note(saved.message || "Could not save—retry");
+      showMessage(saved.message || "Could not save—retry", "save_failed");
+      flushTimer = setTimeout(flushWrites, 1500);
+      return false;
     }
-    working.baseWriteId = book.lastWriteId || "";
-    stripPrepaidCopy(working);
-    return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
-  });
-  flushing = false;
-  if (!saved.ok) {
-    pendingWrites.unshift(...batch);
-    note(saved.message || "Could not save—retry");
-    showMessage(saved.message || "Could not save—retry", "save_failed");
-    flushTimer = setTimeout(flushWrites, 1500);
-    return;
+    currentBook = saved.book || currentBook;
+    cacheLiveBook(currentBook);
+    for (const mutate of pendingWrites) {
+      const applied = mutate(currentBook);
+      if (applied.book) currentBook = applied.book;
+    }
+    renderOrders();
+    if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
+    return true;
+  } finally {
+    flushing = false;
   }
-  currentBook = saved.book || currentBook;
-  cacheLiveBook(currentBook);
-  for (const mutate of pendingWrites) {
-    const applied = mutate(currentBook);
-    if (applied.book) currentBook = applied.book;
-  }
-  renderOrders();
-  if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
 }
 
 function refundedOrders(orders) {
@@ -1191,7 +1202,7 @@ async function submitAttempt() {
     renderOrders();
     return;
   }
-  showMessage(/order-\d+|UTT\d+|^\d{5}$/i.test(lastAttempt.raw.trim()) ? "That order number is not on the sheet." : "Invalid QR", "invalid");
+  showMessage(/order-\d+|UTT\d+|^\d{5}$/i.test(lastAttempt.raw.trim()) ? "That order number is not on the shared list yet." : "Invalid QR", "invalid");
 }
 
 retryButton.addEventListener("click", () => { flushWrites(); });
@@ -1591,6 +1602,42 @@ const PINNED_SALE_ITEMS = [
   { name: "Friday Veg", lane: "food", tone: "veg" },
   { name: "Friday Non-Vegetarian", lane: "food", tone: "nonveg" },
 ];
+const FRIDAY_STOCK = {
+  "Friday Veg": 10,
+  "Friday Non-Vegetarian": 90,
+};
+const FRIDAY_FOOD_CAP = 100;
+
+function soldQty(name) {
+  let total = 0;
+  Object.values(currentBook.walkups || {}).forEach((person) => {
+    (person.items || []).forEach((item) => {
+      if (item && item.name === name) total += Number(item.qty) || 0;
+    });
+  });
+  return total;
+}
+
+function fridaySold() {
+  return Object.keys(FRIDAY_STOCK).reduce((sum, name) => sum + soldQty(name), 0);
+}
+
+function fridayLeft(name) {
+  const cap = FRIDAY_STOCK[name];
+  if (cap == null) return Infinity;
+  const inCart = cart.filter((row) => row.name === name).reduce((sum, row) => sum + row.qty, 0);
+  const otherCart = cart.filter((row) => FRIDAY_STOCK[row.name] && row.name !== name).reduce((sum, row) => sum + row.qty, 0);
+  const itemLeft = cap - soldQty(name) - inCart;
+  const totalLeft = FRIDAY_FOOD_CAP - fridaySold() - inCart - otherCart;
+  return Math.max(0, Math.min(itemLeft, totalLeft));
+}
+
+function fridayCountText() {
+  const vegLeft = Math.max(0, FRIDAY_STOCK["Friday Veg"] - soldQty("Friday Veg"));
+  const nonvegLeft = Math.max(0, FRIDAY_STOCK["Friday Non-Vegetarian"] - soldQty("Friday Non-Vegetarian"));
+  const totalLeft = Math.max(0, FRIDAY_FOOD_CAP - fridaySold());
+  return `Friday food ${totalLeft} of ${FRIDAY_FOOD_CAP} left. Non-veg ${nonvegLeft} of 90. Veg ${vegLeft} of 10.`;
+}
 
 let cart = [];
 
@@ -1745,9 +1792,15 @@ function menuItems() {
 }
 
 function addSaleItem(item) {
+  if (FRIDAY_STOCK[item.name] != null && fridayLeft(item.name) < 1) {
+    const note = document.querySelector("#sale-note");
+    if (note) note.textContent = `${item.name} is sold out. ${fridayCountText()}`;
+    return;
+  }
   const found = cart.find((row) => row.name === item.name);
   if (found) found.qty += 1;
   else cart.push({ name: item.name, qty: 1, lane: item.lane, tone: item.tone || "" });
+  paintSaleTiles();
   paintCart();
 }
 
@@ -1756,6 +1809,7 @@ function changeSaleQty(name, delta) {
   if (index < 0) return;
   cart[index].qty += delta;
   if (cart[index].qty <= 0) cart.splice(index, 1);
+  paintSaleTiles();
   paintCart();
 }
 
@@ -1774,7 +1828,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Friday food is at the top. Then entry, then the other food. The QR covers every item on this sale.";
+  hint.textContent = `${fridayCountText()} Friday food is at the top. The QR covers every item on this sale.`;
   host.append(hint);
   const fridayFood = document.createElement("h2");
   fridayFood.className = "sale-lane";
@@ -1786,13 +1840,18 @@ function paintSaleTiles() {
     button.type = "button";
     button.className = `sale-tile coupon-${item.tone}`;
     button.dataset.name = item.name;
+    const left = Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name));
+    if (left < 1) button.disabled = true;
     const title = document.createElement("span");
     title.className = "sale-tile-name";
     title.textContent = item.name;
+    const stock = document.createElement("span");
+    stock.className = "sale-stock";
+    stock.textContent = left < 1 ? "Sold out" : `${left} left`;
     const badge = document.createElement("span");
     badge.className = "sale-qty";
     badge.hidden = true;
-    button.append(title, badge);
+    button.append(title, stock, badge);
     button.addEventListener("click", () => addSaleItem(item));
     fridayGrid.append(button);
   });
@@ -1848,10 +1907,13 @@ function openSale() {
     email.disabled = false;
   }
   if (noEmail) noEmail.checked = false;
-  document.querySelector("#sale-note").textContent = "";
-  paintSaleTiles();
-  paintCart();
+  document.querySelector("#sale-note").textContent = "Checking how many Friday meals are left…";
   show(saleScreen);
+  refreshOrders({ force: true }).then(() => {
+    paintSaleTiles();
+    paintCart();
+    document.querySelector("#sale-note").textContent = fridayCountText();
+  });
 }
 
 function paintCart() {
@@ -1906,7 +1968,7 @@ function nextWalkCode() {
   return String(code);
 }
 
-function submitSale() {
+async function submitSale() {
   if (!can("sell")) return;
   const name = document.querySelector("#sale-name").value.trim();
   const noEmail = document.querySelector("#sale-no-email");
@@ -1914,6 +1976,15 @@ function submitSale() {
   const note = document.querySelector("#sale-note");
   if (!name || !cart.length) {
     note.textContent = "Add a name and at least one ticket.";
+    return;
+  }
+  note.textContent = "Saving this sale to the shared list…";
+  await refreshOrders({ force: true });
+  const over = cart.find((item) => FRIDAY_STOCK[item.name] != null && item.qty > Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name)));
+  if (over || cart.reduce((sum, item) => sum + (FRIDAY_STOCK[item.name] ? item.qty : 0), 0) > Math.max(0, FRIDAY_FOOD_CAP - fridaySold())) {
+    note.textContent = `Not enough Friday meals left. ${fridayCountText()}`;
+    paintSaleTiles();
+    paintCart();
     return;
   }
   const code = nextWalkCode();
@@ -1928,13 +1999,26 @@ function submitSale() {
     items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: item.lane === "entry" ? "entry" : "food", tone: item.tone || item.lane })),
   };
   const at = new Date().toISOString();
+  const saleMessage = `Order ${code} created.`;
   queueWrite((book) => {
     const next = TicketLedger.addWalkup(book, person, at, holderNow().actor);
-    return { write: next.changed, book: next.book, message: `Order ${code} created.` };
+    return { write: next.changed, book: next.book, message: saleMessage };
   });
+  const saved = await flushWrites();
+  if (!saved) {
+    if (currentBook.walkups) delete currentBook.walkups[code];
+    pendingWrites = pendingWrites.filter((mutate) => {
+      const applied = mutate(structuredClone(currentBook));
+      return applied.message !== saleMessage;
+    });
+    note.textContent = "The shared list did not save this sale. The QR is not ready. Tap Create QR again.";
+    paintSaleTiles();
+    paintCart();
+    return;
+  }
   cart = [];
   const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
-  note.textContent = `Order ${code} is ready. ${copies} ticket${copies === 1 ? "" : "s"} use the same QR.`;
+  note.textContent = `Order ${code} is in the shared list. ${copies} ticket${copies === 1 ? "" : "s"} use this QR. ${fridayCountText()}`;
   paintOpen(person, { allTickets: true, showGuest: true });
 }
 
