@@ -1529,6 +1529,11 @@ function renderDisputes() {
   }
 }
 
+const PINNED_SALE_ITEMS = [
+  { name: "Friday Veg", lane: "food", tone: "veg" },
+  { name: "Friday Non-Vegetarian", lane: "food", tone: "nonveg" },
+];
+
 let cart = [];
 
 function hiddenSaleItem(name) {
@@ -1672,6 +1677,9 @@ function menuItems() {
     if (sku.enabled === false || hiddenSaleItem(sku.name)) return;
     if (!names.has(sku.name)) names.set(sku.name, { name: sku.name, lane: sku.lane, tone: sku.lane });
   });
+  PINNED_SALE_ITEMS.forEach((item) => {
+    names.set(item.name, { name: item.name, lane: item.lane, tone: item.tone });
+  });
   return [...names.values()].sort((left, right) => {
     if (left.lane !== right.lane) return left.lane === "entry" ? -1 : 1;
     return left.name.localeCompare(right.name);
@@ -1698,7 +1706,8 @@ function paintSaleTiles() {
   if (!host) return;
   host.replaceChildren();
   const dates = eventDates(currentBook);
-  const items = menuItems().filter((item) => TicketLedger.dayIsOpen(TicketLedger.itemDay(item.name), dates));
+  const pinned = new Set(PINNED_SALE_ITEMS.map((item) => item.name));
+  const items = menuItems().filter((item) => pinned.has(item.name) || TicketLedger.dayIsOpen(TicketLedger.itemDay(item.name), dates));
   if (!items.length) {
     const empty = document.createElement("p");
     empty.textContent = "No tickets are available for sale.";
@@ -1720,6 +1729,7 @@ function paintSaleTiles() {
     host.append(laneHeading);
     for (const day of days) {
       const group = laneItems.filter((item) => (TicketLedger.itemDay(item.name) || "other") === day);
+      group.sort((left, right) => Number(pinned.has(right.name)) - Number(pinned.has(left.name)) || left.name.localeCompare(right.name));
       if (!group.length) continue;
       const heading = document.createElement("h3");
       heading.className = "sale-day";
