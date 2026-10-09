@@ -72,6 +72,10 @@
     return String(pageConfig().githubBranch || "live");
   }
 
+  function saveUrl() {
+    return String(pageConfig().saveUrl || "").trim();
+  }
+
   function isGithub(url) {
     return /^https:\/\/api\.github\.com\/repos\//.test(String(url || ""));
   }
@@ -102,7 +106,41 @@
     return headers;
   }
 
+  async function loadShared(url) {
+    const response = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
+    if (response.status === 404) {
+      contentSha = "";
+      throw new Error("missing");
+    }
+    if (!response.ok) throw new Error("timeout");
+    const body = await response.json();
+    contentSha = body.sha || "";
+    const book = body.book;
+    if (!book || book.schemaVersion !== 1 || !book.orders) throw new Error("access");
+    return book;
+  }
+
+  async function postShared(url, book) {
+    const payload = { ...book };
+    delete payload._sha;
+    delete payload.statusGrid;
+    delete payload.onSiteGrid;
+    delete payload.statsGrid;
+    if (payload.sheet) payload.sheet = { epoch: payload.sheet.epoch || "", fileName: "website", orders: {} };
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Content-Sha": contentSha || "" },
+      body: JSON.stringify(payload),
+    });
+    if (response.status === 409 || response.status === 422) throw new Error("conflict");
+    if (!response.ok) throw new Error("timeout");
+    const body = await response.json();
+    contentSha = body.sha || contentSha;
+  }
+
   async function loadGithub(url) {
+    const shared = saveUrl();
+    if (shared && !githubToken()) return loadShared(shared);
     const token = githubToken();
     const response = await fetch(`${url}?ref=${encodeURIComponent(githubBranch())}`, { headers: githubHeaders(token, false) });
     if (response.status === 404) {
@@ -119,6 +157,8 @@
   }
 
   async function postGithub(url, book) {
+    const shared = saveUrl();
+    if (shared && !githubToken()) return postShared(shared, book);
     const token = githubToken();
     if (!token) throw new Error("token");
     const payload = { ...book };

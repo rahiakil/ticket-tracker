@@ -1,3 +1,4 @@
+import { handleLive } from "./live-door.mjs";
 import { githubStore } from "./github-store.mjs";
 import { createApiHandler } from "./handler.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
@@ -37,6 +38,7 @@ export default {
       await warmupPasswords();
     }
     const url = new URL(request.url);
+    if (url.pathname === "/api/live") return handleLive(request, env);
     if (url.pathname.startsWith("/api/") || request.method === "OPTIONS") {
       const ip = request.headers.get("cf-connecting-ip") || "";
       return handlerFor(env)(request, { ip });
