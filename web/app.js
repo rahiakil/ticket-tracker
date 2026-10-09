@@ -883,8 +883,8 @@ function itemButtons(person, options = {}) {
       ["Saturday food", "saturday", "food"],
       ["Sunday entry", "sunday", "entry"],
       ["Sunday food", "sunday", "food"],
-      ["Other entry", "other", "entry"],
-      ["Other food", "other", "food"],
+      ["3 day visit", "other", "entry"],
+      ["3 day visit", "other", "food"],
     ];
   const groups = grouped.filter((group) => showAll || group[2] === desk);
   const board = document.createElement("div");
@@ -1254,10 +1254,12 @@ function todayEventDay() {
 function paintEventDays() {
   const dates = eventDates(currentBook);
   for (const day of ["friday", "saturday", "sunday"]) {
-    const input = document.querySelector(`#day-${day}`);
-    if (input && document.activeElement !== input) input.value = dates[day];
-    const open = document.querySelector(`#open-${day}`);
-    if (open && document.activeElement !== open) open.checked = dates.open[day];
+    document.querySelectorAll(`.day-date[data-day="${day}"]`).forEach((input) => {
+      if (document.activeElement !== input) input.value = dates[day];
+    });
+    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => {
+      if (document.activeElement !== input) input.checked = dates.open[day];
+    });
   }
 }
 
@@ -1716,10 +1718,31 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Entry first, then food. Each day is its own group. The QR covers every item on this sale.";
+  hint.textContent = "Friday food is at the top. Then entry, then the other food. The QR covers every item on this sale.";
   host.append(hint);
+  const fridayFood = document.createElement("h2");
+  fridayFood.className = "sale-lane";
+  fridayFood.textContent = "Friday food";
+  const fridayGrid = document.createElement("div");
+  fridayGrid.className = "sale-tiles";
+  PINNED_SALE_ITEMS.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `sale-tile coupon-${item.tone}`;
+    button.dataset.name = item.name;
+    const title = document.createElement("span");
+    title.className = "sale-tile-name";
+    title.textContent = item.name;
+    const badge = document.createElement("span");
+    badge.className = "sale-qty";
+    badge.hidden = true;
+    button.append(title, badge);
+    button.addEventListener("click", () => addSaleItem(item));
+    fridayGrid.append(button);
+  });
+  host.append(fridayFood, fridayGrid);
   const days = ["friday", "saturday", "sunday", "other"];
-  const dayLabel = { friday: "Friday", saturday: "Saturday", sunday: "Sunday", other: "Any day" };
+  const dayLabel = { friday: "Friday", saturday: "Saturday", sunday: "Sunday", other: "3 day visit" };
   for (const lane of ["entry", "food"]) {
     const laneItems = items.filter((item) => item.lane === lane);
     if (!laneItems.length) continue;
@@ -1728,7 +1751,7 @@ function paintSaleTiles() {
     laneHeading.textContent = lane === "entry" ? "Entry" : "Food";
     host.append(laneHeading);
     for (const day of days) {
-      const group = laneItems.filter((item) => (TicketLedger.itemDay(item.name) || "other") === day);
+      const group = laneItems.filter((item) => (TicketLedger.itemDay(item.name) || "other") === day && !pinned.has(item.name));
       group.sort((left, right) => Number(pinned.has(right.name)) - Number(pinned.has(left.name)) || left.name.localeCompare(right.name));
       if (!group.length) continue;
       const heading = document.createElement("h3");
@@ -2915,24 +2938,41 @@ document.querySelectorAll(".print-sheet").forEach((button) => {
   button.addEventListener("click", printSheet);
 });
 document.querySelector("#admin-print").addEventListener("click", printSheet);
-document.querySelector("#save-event-days").addEventListener("click", () => {
-  const friday = document.querySelector("#day-friday").value;
-  const saturday = document.querySelector("#day-saturday").value;
-  const sunday = document.querySelector("#day-sunday").value;
-  const open = {
-    friday: document.querySelector("#open-friday").checked,
-    saturday: document.querySelector("#open-saturday").checked,
-    sunday: document.querySelector("#open-sunday").checked,
-  };
-  const noteBox = document.querySelector("#admin-note");
-  if (![friday, saturday, sunday].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) {
+function dayValue(day) {
+  const input = document.querySelector(`.day-date[data-day="${day}"]`);
+  return input ? input.value : "";
+}
+
+function dayOpen(day) {
+  const input = document.querySelector(`.day-open[data-day="${day}"]`);
+  return Boolean(input && input.checked);
+}
+
+function sayAdmin(text) {
+  for (const id of ["#admin-note", "#admin-message"]) {
+    const noteBox = document.querySelector(id);
+    if (!noteBox) continue;
     noteBox.hidden = false;
-    noteBox.textContent = "Choose a date for Friday, Saturday, and Sunday.";
+    noteBox.textContent = text;
+  }
+}
+
+document.querySelectorAll(".save-event-days").forEach((button) => {
+  button.addEventListener("click", () => {
+  const friday = dayValue("friday");
+  const saturday = dayValue("saturday");
+  const sunday = dayValue("sunday");
+  const open = {
+    friday: dayOpen("friday"),
+    saturday: dayOpen("saturday"),
+    sunday: dayOpen("sunday"),
+  };
+  if (![friday, saturday, sunday].every((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))) {
+    sayAdmin("Choose a date for Friday, Saturday, and Sunday.");
     return;
   }
   if (!open.friday && !open.saturday && !open.sunday) {
-    noteBox.hidden = false;
-    noteBox.textContent = "Turn on at least one day.";
+    sayAdmin("Turn on at least one day.");
     return;
   }
   const applied = queueWrite((book) => {
@@ -2941,11 +2981,11 @@ document.querySelector("#save-event-days").addEventListener("click", () => {
     const names = ["friday", "saturday", "sunday"].filter((day) => open[day]);
     return { write: true, book, message: `Open days saved: ${names.join(", ")}.` };
   });
-  noteBox.hidden = false;
-  noteBox.textContent = applied.message;
+  sayAdmin(applied.message);
   paintDemo();
   const person = catalogPerson(openedCode);
   if (person) paintOpen(person);
+  });
 });
 function attachVoiceSearch(button, input, after) {
   if (!button || !input) return;
@@ -3101,15 +3141,9 @@ async function clearAndStart() {
   localStorage.removeItem(storeKey("local-log"));
   localStorage.removeItem(storeKey("book-cache"));
   localStorage.removeItem(storeKey("skus"));
-  const friday = document.querySelector("#day-friday");
-  const saturday = document.querySelector("#day-saturday");
-  const sunday = document.querySelector("#day-sunday");
-  if (friday) friday.value = DEFAULT_EVENT_DAYS.friday;
-  if (saturday) saturday.value = DEFAULT_EVENT_DAYS.saturday;
-  if (sunday) sunday.value = DEFAULT_EVENT_DAYS.sunday;
   for (const day of ["friday", "saturday", "sunday"]) {
-    const open = document.querySelector(`#open-${day}`);
-    if (open) open.checked = true;
+    document.querySelectorAll(`.day-date[data-day="${day}"]`).forEach((input) => { input.value = DEFAULT_EVENT_DAYS[day]; });
+    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => { input.checked = true; });
   }
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";

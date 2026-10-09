@@ -159,6 +159,30 @@
       <button id="export-stats" class="btn-teal" type="button">Export stats</button>
     </section>
 
+    <section class="panel" data-page-panel="admin">
+      <h2>Event days</h2>
+      <p class="note">Turn a day on when that day's tickets should be accepted.</p>
+      <label>Friday
+        <input id="day-friday" class="day-date" data-day="friday" type="date" value="2026-10-09">
+      </label>
+      <label class="check-line"><input id="open-friday" class="day-open" data-day="friday" type="checkbox" checked> Friday open</label>
+      <label>Saturday
+        <input id="day-saturday" class="day-date" data-day="saturday" type="date" value="2026-10-10">
+      </label>
+      <label class="check-line"><input id="open-saturday" class="day-open" data-day="saturday" type="checkbox" checked> Saturday open</label>
+      <label>Sunday
+        <input id="day-sunday" class="day-date" data-day="sunday" type="date" value="2026-10-11">
+      </label>
+      <label class="check-line"><input id="open-sunday" class="day-open" data-day="sunday" type="checkbox" checked> Sunday open</label>
+      <button class="save-event-days btn-teal" type="button">Save event days</button>
+      <div class="day-actions">
+        <button type="button" class="open-all-days btn-teal">Open Friday, Saturday, and Sunday</button>
+        <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
+        <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
+        <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
+      </div>
+    </section>
+
     <div class="page-tabs tool-tabs" data-page-panel="admin" hidden>
       <button type="button" data-tool="sheet" class="btn-teal">Sheet</button>
       <button type="button" data-tool="download" class="btn-quiet">Download</button>
@@ -331,18 +355,18 @@
       <h2>Event days</h2>
       <p class="note">Turn a day on when that day's tickets should be accepted. Leave the others off.</p>
       <label>Friday
-        <input id="day-friday" type="date" value="2026-10-09">
+        <input class="day-date" data-day="friday" type="date" value="2026-10-09">
       </label>
-      <label class="check-line"><input id="open-friday" type="checkbox" checked> Friday open</label>
+      <label class="check-line"><input class="day-open" data-day="friday" type="checkbox" checked> Friday open</label>
       <label>Saturday
-        <input id="day-saturday" type="date" value="2026-10-10">
+        <input class="day-date" data-day="saturday" type="date" value="2026-10-10">
       </label>
-      <label class="check-line"><input id="open-saturday" type="checkbox" checked> Saturday open</label>
+      <label class="check-line"><input class="day-open" data-day="saturday" type="checkbox" checked> Saturday open</label>
       <label>Sunday
-        <input id="day-sunday" type="date" value="2026-10-11">
+        <input class="day-date" data-day="sunday" type="date" value="2026-10-11">
       </label>
-      <label class="check-line"><input id="open-sunday" type="checkbox" checked> Sunday open</label>
-      <button id="save-event-days" class="btn-teal" type="button">Save event days</button>
+      <label class="check-line"><input class="day-open" data-day="sunday" type="checkbox" checked> Sunday open</label>
+      <button class="save-event-days btn-teal" type="button">Save event days</button>
       <div class="day-actions">
         <button type="button" class="open-all-days btn-teal">Open Friday, Saturday, and Sunday</button>
         <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
@@ -534,6 +558,6 @@
   <script src="ledger.js?v=38"></script>
   <script src="record.js?v=11"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=81"></script>
 </body>
 </html>
