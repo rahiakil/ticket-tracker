@@ -236,6 +236,7 @@ function statusDetail(order) {
       actor: existing?.actor || actor,
       takenCount: existing?.takenCount || 0,
       variants,
+      magazine: existing?.magazine || null,
     };
     return { order: next.orders[person.code], existing: Boolean(existing) };
   }
@@ -629,14 +630,19 @@ function statusDetail(order) {
       return !/non-?member/i.test(name) && /\bmember\b/i.test(name);
     });
     if (!member) return { book: pruneBook(next), changed: false, member: false };
+    const email = String(person.email || "").trim().toLowerCase();
     const placed = ensureSheetOrder(next, person, person.full, at, actor);
-    if (placed.order.magazine && placed.order.magazine.taken) {
+    const already = email
+      ? Object.values(next.orders).some((order) => order && order.magazine && order.magazine.taken && String(order.email || (order.magazine && order.magazine.email) || "").trim().toLowerCase() === email)
+      : Boolean(placed.order.magazine && placed.order.magazine.taken);
+    if (already) {
       return { book: pruneBook(next), changed: false, already: true, left: magazineLeft(next) };
     }
     if (magazineLeft(next) < 1) {
       return { book: pruneBook(next), changed: false, soldOut: true, left: 0 };
     }
-    placed.order.magazine = { taken: true, takenAt: at, takenBy: actor || "" };
+    placed.order.magazine = { taken: true, takenAt: at, takenBy: actor || "", email };
+    placed.order.email = person.email || placed.order.email || "";
     placed.order.updatedAt = at;
     placed.order.actor = actor || placed.order.actor;
     const text = `${person.code} magazine given${actor ? ` by ${actor}` : ""}`;

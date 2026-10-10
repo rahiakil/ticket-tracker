@@ -1221,6 +1221,15 @@ function magazineOpen() {
   return day === "saturday" || day === "sunday";
 }
 
+function magazineAlready(person) {
+  const email = String(person.email || "").trim().toLowerCase();
+  return Object.values(currentBook.orders || {}).some((order) => {
+    if (!order || !order.magazine || !order.magazine.taken) return false;
+    if (!email) return order.orderId === person.code;
+    return String(order.email || (order.magazine && order.magazine.email) || "").trim().toLowerCase() === email;
+  });
+}
+
 function ticketHasMember(person) {
   return (person.items || []).some((item) => {
     const name = String(item && item.name || "");
@@ -1244,7 +1253,7 @@ function giveMagazine(person) {
       : next.soldOut
       ? `No magazines left. 0 of ${MAGAZINE_STOCK}.`
       : next.already
-      ? `Magazine already given. ${magazinesLeft()} of ${MAGAZINE_STOCK} left.`
+      ? `Magazine already given for this email. ${magazinesLeft()} of ${MAGAZINE_STOCK} left.`
       : `Magazine given. ${magazinesLeft()} of ${MAGAZINE_STOCK} left.`;
     return { write: next.changed, book: next.book, message };
   });
@@ -1255,8 +1264,7 @@ function giveMagazine(person) {
 
 function magazineCard(person, locked) {
   if (!ticketHasMember(person)) return null;
-  const saved = currentBook.orders[person.code];
-  const given = Boolean(saved && saved.magazine && saved.magazine.taken);
+  const given = magazineAlready(person);
   const card = document.createElement("article");
   card.className = "day-checks";
   const left = magazinesLeft();
@@ -1279,7 +1287,7 @@ function magazineCard(person, locked) {
     if (input.checked) giveMagazine(person);
     else input.checked = given;
   });
-  const note = given ? " Already given to the member" : left < 1 ? " None left" : open ? " One per member ticket" : " Closed today";
+  const note = given ? " Already given for this email" : left < 1 ? " None left" : open ? " One per email" : " Closed today";
   line.append(input, document.createTextNode(note));
   card.append(head, line);
   return card;
