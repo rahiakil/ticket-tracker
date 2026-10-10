@@ -624,6 +624,11 @@ function statusDetail(order) {
       return { book: pruneBook(current), changed: false, locked: true, already: false };
     }
     const next = structuredClone(ready(book) ? book : emptyBook());
+    const member = (person.items || []).some((item) => {
+      const name = String(item && item.name || "");
+      return !/non-?member/i.test(name) && /\bmember\b/i.test(name);
+    });
+    if (!member) return { book: pruneBook(next), changed: false, member: false };
     const placed = ensureSheetOrder(next, person, person.full, at, actor);
     if (placed.order.magazine && placed.order.magazine.taken) {
       return { book: pruneBook(next), changed: false, already: true, left: magazineLeft(next) };

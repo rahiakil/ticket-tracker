@@ -1190,7 +1190,11 @@ function paintOpen(person, options) {
   const boardOptions = {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
-  card.append(title, mail, eventLine, phrase, magazineCard(person, locked), itemBoard(person, boardOptions), activity);
+  const magazine = magazineCard(person, locked);
+  const parts = [title, mail, eventLine, phrase];
+  if (magazine) parts.push(magazine);
+  parts.push(itemBoard(person, boardOptions), activity);
+  card.append(...parts);
   if (showGuest) host.append(guestQrPanel(person));
   host.append(card);
 }
@@ -1217,15 +1221,26 @@ function magazineOpen() {
   return day === "saturday" || day === "sunday";
 }
 
+function ticketHasMember(person) {
+  return (person.items || []).some((item) => {
+    const name = String(item && item.name || "");
+    if (/non-?member/i.test(name)) return false;
+    return /\bmember\b/i.test(name);
+  });
+}
+
 function giveMagazine(person) {
   if (!can("scan") && !can("add")) return;
   if (!magazineOpen()) return;
+  if (!ticketHasMember(person)) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
     const next = TicketLedger.markMagazine(book, person, at, actor, deviceId());
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
+      : next.member === false
+      ? `Magazine is only for a ticket with a member.`
       : next.soldOut
       ? `No magazines left. 0 of ${MAGAZINE_STOCK}.`
       : next.already
@@ -1239,6 +1254,7 @@ function giveMagazine(person) {
 }
 
 function magazineCard(person, locked) {
+  if (!ticketHasMember(person)) return null;
   const saved = currentBook.orders[person.code];
   const given = Boolean(saved && saved.magazine && saved.magazine.taken);
   const card = document.createElement("article");
@@ -1263,7 +1279,7 @@ function magazineCard(person, locked) {
     if (input.checked) giveMagazine(person);
     else input.checked = given;
   });
-  const note = given ? " Already given" : left < 1 ? " None left" : open ? " One time, open Saturday and Sunday" : " Closed today";
+  const note = given ? " Already given to the member" : left < 1 ? " None left" : open ? " One per member ticket" : " Closed today";
   line.append(input, document.createTextNode(note));
   card.append(head, line);
   return card;
