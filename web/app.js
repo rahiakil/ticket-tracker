@@ -1822,6 +1822,7 @@ function menuItems() {
 }
 
 function addSaleItem(item) {
+  if (item && item.open === false) return;
   if (FRIDAY_STOCK[item.name] != null && fridayLeft(item.name) < 1) {
     const note = document.querySelector("#sale-note");
     if (note) note.textContent = `${item.name} is sold out. ${fridayCountText()}`;
@@ -1844,17 +1845,11 @@ function changeSaleQty(name, delta) {
 }
 
 function saleMenu() {
-  const order = ["friday", "saturday", "sunday"];
-  const today = todayEventDay();
-  const tomorrow = order[order.indexOf(today) + 1] || "";
-  const word = (day) => day.charAt(0).toUpperCase() + day.slice(1);
-  const items = [];
-  if (today) items.push({ name: `${word(today)} Veg`, lane: "food", tone: "veg", when: "Today" });
-  if (tomorrow) {
-    items.push({ name: `${word(tomorrow)} Veg`, lane: "food", tone: "veg", when: "Tomorrow" });
-    items.push({ name: `${word(tomorrow)} Non-Vegetarian`, lane: "food", tone: "nonveg", when: "Tomorrow" });
-  }
-  return items;
+  return [
+    { name: "Saturday Veg", lane: "food", tone: "veg", when: "Saturday", open: true },
+    { name: "Sunday Veg", lane: "food", tone: "veg", when: "Sunday", open: false },
+    { name: "Sunday Non-Vegetarian", lane: "food", tone: "nonveg", when: "Sunday", open: false },
+  ];
 }
 
 function paintSaleTiles() {
@@ -1870,9 +1865,9 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Today is veg only. Tomorrow has veg and non-veg.";
+  hint.textContent = "Saturday veg is open. Sunday is closed.";
   host.append(hint);
-  for (const when of ["Today", "Tomorrow"]) {
+  for (const when of ["Saturday", "Sunday"]) {
     const group = items.filter((item) => item.when === when);
     if (!group.length) continue;
     const heading = document.createElement("h2");
@@ -1885,9 +1880,10 @@ function paintSaleTiles() {
       button.type = "button";
       button.className = `sale-tile coupon-${item.tone}`;
       button.dataset.name = item.name;
+      button.disabled = !item.open;
       const title = document.createElement("span");
       title.className = "sale-tile-name";
-      title.textContent = item.tone === "nonveg" ? "Non-veg" : "Veg";
+      title.textContent = item.open ? (item.tone === "nonveg" ? "Non-veg" : "Veg") : `${item.tone === "nonveg" ? "Non-veg" : "Veg"} · closed`;
       const badge = document.createElement("span");
       badge.className = "sale-qty";
       badge.hidden = true;
@@ -1915,12 +1911,12 @@ function openSale() {
     email.disabled = false;
   }
   if (noEmail) noEmail.checked = false;
-  document.querySelector("#sale-note").textContent = "Opening today's meals…";
+  document.querySelector("#sale-note").textContent = "Opening Saturday meals…";
   show(saleScreen);
   refreshOrders({ force: true }).then(() => {
     paintSaleTiles();
     paintCart();
-    document.querySelector("#sale-note").textContent = "Today is veg only. Tomorrow has veg and non-veg.";
+    document.querySelector("#sale-note").textContent = "Saturday veg is open. Sunday is closed.";
   });
 }
 
@@ -2036,7 +2032,11 @@ async function submitSale() {
   const email = noEmail && noEmail.checked ? "" : document.querySelector("#sale-email").value.trim();
   const note = document.querySelector("#sale-note");
   if (!name || !cart.length) {
-    note.textContent = "Add a name and at least one ticket.";
+    note.textContent = "Add a name and at least one meal.";
+    return;
+  }
+  if (cart.some((item) => /^Sunday\b/.test(item.name))) {
+    note.textContent = "Sunday meals are closed.";
     return;
   }
   note.textContent = "Saving this sale to the shared list…";
