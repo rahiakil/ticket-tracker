@@ -618,6 +618,26 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
   }
 
+  function markMagazine(book, person, at, actor, holder) {
+    if (foreignLock(book, person.code, holder, at)) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, locked: true, already: false };
+    }
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const placed = ensureSheetOrder(next, person, person.full, at, actor);
+    if (placed.order.magazine && placed.order.magazine.taken) {
+      return { book: pruneBook(next), changed: false, already: true };
+    }
+    placed.order.magazine = { taken: true, takenAt: at, takenBy: actor || "" };
+    placed.order.updatedAt = at;
+    placed.order.actor = actor || placed.order.actor;
+    const text = `${person.code} magazine given${actor ? ` by ${actor}` : ""}`;
+    addLine(next, at, text);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text });
+    return { book: pruneBook(next), changed: true, already: false };
+  }
+
   function allDayEntry(item) {
     const name = String((item && (item.name || item.id)) || "");
     const lane = item && item.lane;
@@ -968,6 +988,7 @@ function statusDetail(order) {
     exportCsv,
     sheetPhrase,
     markItem,
+    markMagazine,
     markEntryDay,
     revertLast,
     foreignLock,

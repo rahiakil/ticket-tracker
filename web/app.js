@@ -1190,9 +1190,57 @@ function paintOpen(person, options) {
   const boardOptions = {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
-  card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
+  card.append(title, mail, eventLine, phrase, magazineCard(person, locked), itemBoard(person, boardOptions), activity);
   if (showGuest) host.append(guestQrPanel(person));
   host.append(card);
+}
+
+function magazineOpen() {
+  const day = todayEventDay();
+  return day === "saturday" || day === "sunday";
+}
+
+function giveMagazine(person) {
+  if (!can("scan") && !can("add")) return;
+  if (!magazineOpen()) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.markMagazine(book, person, at, actor, deviceId());
+    const message = next.locked
+      ? `This line is locked. ${person.name}. ${person.email}.`
+      : next.already
+      ? `Magazine already given. ${person.name}. ${person.email}.`
+      : `Magazine given. ${person.name}. ${person.email}.`;
+    return { write: next.changed, book: next.book, message };
+  });
+  showMessage(applied.message, String(applied.message).includes("already") || String(applied.message).startsWith("This line") ? "already_seen" : "pending");
+  paintOpen(person);
+  renderOrders();
+}
+
+function magazineCard(person, locked) {
+  const saved = currentBook.orders[person.code];
+  const given = Boolean(saved && saved.magazine && saved.magazine.taken);
+  const card = document.createElement("article");
+  card.className = "day-checks";
+  const title = document.createElement("h3");
+  title.textContent = "Magazine";
+  const line = document.createElement("label");
+  line.className = "day-check";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = given;
+  const open = magazineOpen();
+  input.disabled = given || Boolean(locked) || !open || (!can("scan") && !can("add"));
+  input.addEventListener("change", () => {
+    if (input.checked) giveMagazine(person);
+    else input.checked = given;
+  });
+  const note = given ? " Already given" : open ? " One time, open Saturday and Sunday" : " Closed today";
+  line.append(input, document.createTextNode(note));
+  card.append(title, line);
+  return card;
 }
 
 function canPrintQr() {
@@ -1320,10 +1368,11 @@ function searchOrder() {
   if (!can("search")) return;
   const raw = document.querySelector("#order-query").value.trim();
   const search = document.querySelector("#search-result");
+  deskSearch = raw;
   deskLetter = "";
   renderOrders();
   if (!raw) {
-    search.textContent = "Choose a letter, or say a name.";
+    search.textContent = "Type a name, then tap Search.";
     search.className = "result pending";
     return;
   }
@@ -1471,6 +1520,8 @@ let deskLetter = "";
 let siteLetter = "";
 let saleLetter = "";
 let entryLetter = "";
+let deskSearch = "";
+let siteSearch = "";
 let toolTab = "sheet";
 let siteTab = "orders";
 
@@ -1691,8 +1742,8 @@ function renderOrders() {
   const orders = document.querySelector("#orders");
   const filter = document.querySelector("#order-query");
   const siteFilter = document.querySelector("#site-orders-search");
-  const query = filter ? filter.value : "";
-  const siteQuery = siteFilter ? siteFilter.value : "";
+  const query = deskSearch;
+  const siteQuery = siteSearch;
   const pool = listedPeople("", flowTab, "");
   const people = listedPeople(query, flowTab, query.trim() ? "" : deskLetter);
   const sitePeople = listedPeople(siteQuery, flowTab, siteQuery.trim() ? "" : siteLetter);
@@ -1700,11 +1751,13 @@ function renderOrders() {
   const sitePicked = siteQuery.trim() ? "" : siteLetter;
   renderLetterBoard(document.querySelector("#letter-cards"), pool, deskPicked, (letter) => {
     deskLetter = letter;
+    deskSearch = "";
     if (letter && filter) filter.value = "";
     renderOrders();
   }, deskPicked ? people : null);
   renderLetterBoard(document.querySelector("#site-letter-cards"), listedPeople("", flowTab, ""), sitePicked, (letter) => {
     siteLetter = letter;
+    siteSearch = "";
     if (letter && siteFilter) siteFilter.value = "";
     renderOrders();
   }, sitePicked ? sitePeople : null);
@@ -2925,8 +2978,7 @@ function renderSoldQrs() {
 function renderRecent() {
   const recent = document.querySelector("#recent-orders");
   if (!recent) return;
-  const filter = document.querySelector("#site-orders-search");
-  const query = filter ? filter.value : "";
+  const query = siteSearch;
   if (siteLetter && !query.trim()) {
     recent.replaceChildren();
     return;
@@ -3611,14 +3663,17 @@ document.addEventListener("pointerdown", (event) => {
   button.classList.add("pressed");
   window.setTimeout(() => button.classList.remove("pressed"), 220);
 });
-document.querySelector("#site-orders-search").addEventListener("input", () => {
+document.querySelector("#site-orders-search-btn").addEventListener("click", () => {
+  siteSearch = (document.querySelector("#site-orders-search").value || "").trim();
   siteLetter = "";
-  showNameSpinner();
-  window.setTimeout(renderOrders, 40);
+  runListSearch("#site-orders-search");
 });
-document.querySelector("#site-orders-search-btn").addEventListener("click", () => { runListSearch("#site-orders-search"); });
 document.querySelector("#site-orders-search").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") runListSearch("#site-orders-search");
+  if (event.key === "Enter") {
+    siteSearch = (document.querySelector("#site-orders-search").value || "").trim();
+    siteLetter = "";
+    runListSearch("#site-orders-search");
+  }
 });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
 document.querySelector("#search-order").addEventListener("click", searchOrder);
@@ -3629,11 +3684,6 @@ document.querySelector("#entry-query").addEventListener("input", () => {
 document.querySelector("#sold-query").addEventListener("input", () => {
   saleLetter = "";
   renderSoldQrs();
-});
-document.querySelector("#order-query").addEventListener("input", () => {
-  deskLetter = "";
-  showNameSpinner();
-  window.setTimeout(renderOrders, 40);
 });
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchOrder();
