@@ -212,6 +212,14 @@ h2 { font-size: 1.4rem; }
 .qr-view { display: flex; justify-content: center; margin: 8px 0 12px; }
 .qr-view svg { width: 180px; height: 180px; background: #fff; }
 .day-heading { margin: 14px 0 0; font-size: 14px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-dark); }
+button.day-tab {
+  width: 100%;
+  text-align: left;
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal-dark);
+}
+button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b7280; }
 .all-done { margin: 8px 0 16px; font-size: 4rem; line-height: 1; color: var(--teal); }
 .ticket-board { display: grid; gap: 16px; }
 .day-block { display: grid; gap: 8px; }

@@ -806,12 +806,27 @@ function volunteerRevertLeft(code) {
   return Math.max(0, VOLUNTEER_REVERT_MS - (Date.now() - started));
 }
 
+function canMarkTicket(lane, day) {
+  if (can("add")) return true;
+  const today = todayEventDay() || "saturday";
+  return can("scan") && lane === "entry" && day === today;
+}
+
+function eventDatesForMark(book) {
+  const dates = eventDates(book);
+  const today = todayEventDay() || "saturday";
+  dates.open = { ...dates.open, [today]: true };
+  return dates;
+}
+
 function markOne(person, index, unit) {
-  if (!can("add")) return;
+  const item = orderView(person).items.find((row) => row.index === index && row.unit === unit);
+  const day = item ? TicketLedger.itemDay(item.id) : "";
+  if (!canMarkTicket(item && item.lane, day)) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit, eventDays: eventDates(book) });
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit, eventDays: eventDatesForMark(book) });
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
       : next.blocked
@@ -823,6 +838,37 @@ function markOne(person, index, unit) {
   if (isVolunteer() && !String(applied.message || "").startsWith("Already") && !String(applied.message || "").startsWith("Unavailable") && !String(applied.message || "").startsWith("This line")) {
     volunteerMarks.set(person.code, Date.now());
   }
+  paintOpen(person);
+  renderOrders();
+}
+
+function markEntryDay(person, bucket) {
+  const targets = orderView(person).items.filter((item) => item.lane === "entry" && !item.taken && dayBucket(item.id) === bucket);
+  if (!targets.length || !canMarkTicket("entry", bucket)) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const applied = queueWrite((book) => {
+    let current = book;
+    let changed = false;
+    let phrase = "";
+    let blocked = false;
+    for (const item of targets) {
+      const next = TicketLedger.markItem(current, person, item.index, at, actor, deviceId(), { demo: demoMode, unit: item.unit, eventDays: eventDatesForMark(current) });
+      current = next.book;
+      changed = changed || next.changed;
+      phrase = next.phrase || phrase;
+      if (next.locked || next.blocked) {
+        blocked = true;
+        break;
+      }
+    }
+    const message = blocked && !changed
+      ? `Unavailable yet. ${person.name}. ${person.email}.`
+      : `${phrase || "Entry done"}. ${person.name}. ${person.email}.`;
+    return { write: changed, book: current, message };
+  });
+  showMessage(applied.message, String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
+  if (isVolunteer() && !String(applied.message || "").startsWith("Unavailable")) volunteerMarks.set(person.code, Date.now());
   paintOpen(person);
   renderOrders();
 }
@@ -865,7 +911,8 @@ function ticketPill(person, item, index, lane, locked, now) {
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
-  const closed = !demoMode && Boolean(day) && !TicketLedger.dayIsOpen(day, eventDates(currentBook));
+  const today = todayEventDay() || "saturday";
+  const closed = !demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook));
   const future = closed;
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
   button.className = `item-pill coupon-${kind} ${state}`;
@@ -887,7 +934,7 @@ function ticketPill(person, item, index, lane, locked, now) {
     doneBox.append(check, document.createTextNode(" Done"));
     button.append(doneBox);
   }
-  if (locked || !can("add")) button.disabled = true;
+  if (locked || !canMarkTicket(lane, day)) button.disabled = true;
   else {
     let holdTimer = 0;
     let held = false;
@@ -929,7 +976,8 @@ function itemButtons(person, options = {}) {
       ["3 day visit", "other", "entry"],
       ["3 day visit", "other", "food"],
     ];
-  const groups = grouped.filter((group) => showAll || group[2] === desk);
+  const today = todayEventDay() || "saturday";
+  const groups = grouped.filter((group) => showAll || group[2] === desk || (group[2] === "entry" && group[1] === today));
   const board = document.createElement("div");
   board.className = "ticket-board";
   for (const [label, bucket, lane] of groups) {
@@ -939,9 +987,14 @@ function itemButtons(person, options = {}) {
     const doneRows = rows.filter(({ item }) => item.taken);
     const block = document.createElement("section");
     block.className = openRows.length ? "day-block has-open" : "day-block";
-    const heading = document.createElement("p");
-    heading.className = "day-heading";
+    const heading = document.createElement(lane === "entry" && bucket === (todayEventDay() || "saturday") ? "button" : "p");
+    heading.className = heading.tagName === "BUTTON" ? "day-heading day-tab" : "day-heading";
     heading.textContent = label;
+    if (heading.tagName === "BUTTON") {
+      heading.type = "button";
+      heading.disabled = !openRows.length || Boolean(locked) || !canMarkTicket("entry", bucket);
+      heading.addEventListener("click", () => markEntryDay(person, bucket));
+    }
     block.append(heading);
     if (openRows.length) {
       const list = document.createElement("div");
