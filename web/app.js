@@ -892,7 +892,7 @@ function sendDispute(person, itemName) {
 }
 
 function revertOne(person) {
-  if (!can("add")) return;
+  if (!can("add") && !can("scan")) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
@@ -1104,7 +1104,7 @@ function itemButtons(person, options = {}) {
 function itemBoard(person, options = {}) {
   const wrap = document.createElement("div");
   wrap.append(itemButtons(person, options));
-  if (!can("add")) return wrap;
+  if (!can("add") && !can("scan")) return wrap;
   const revert = document.createElement("button");
   revert.type = "button";
   revert.id = "revert-last";
@@ -1113,7 +1113,7 @@ function itemBoard(person, options = {}) {
   const lockedOut = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const left = isVolunteer() ? volunteerRevertLeft(person.code) : VOLUNTEER_REVERT_MS;
   revert.disabled = Boolean(lockedOut) || (isVolunteer() && left <= 0);
-  revert.textContent = isVolunteer() ? (left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed") : "Revert last";
+  revert.textContent = isVolunteer() ? (left > 0 ? `Revert last (${Math.ceil(left / 1000)}s)` : "Revert closed") : "Revert last scan";
   revert.addEventListener("click", () => {
     if (isVolunteer() && volunteerRevertLeft(person.code) <= 0) return;
     revertOne(person);
