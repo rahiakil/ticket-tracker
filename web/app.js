@@ -1205,7 +1205,7 @@ function magazinesLeft() {
 
 function paintMagazineCount() {
   const left = magazinesLeft();
-  const text = `Magazines ${left} of ${MAGAZINE_STOCK} left.`;
+  const text = `${left} magazines left`;
   document.querySelectorAll("#magazine-count").forEach((node) => {
     node.textContent = text;
   });
@@ -1244,8 +1244,14 @@ function magazineCard(person, locked) {
   const card = document.createElement("article");
   card.className = "day-checks";
   const left = magazinesLeft();
+  const head = document.createElement("div");
+  head.className = "magazine-head";
   const title = document.createElement("h3");
-  title.textContent = `Magazine · ${left} of ${MAGAZINE_STOCK} left`;
+  title.textContent = "Magazine";
+  const count = document.createElement("p");
+  count.className = "magazine-left";
+  count.textContent = `${left} left`;
+  head.append(title, count);
   const line = document.createElement("label");
   line.className = "day-check";
   const input = document.createElement("input");
@@ -1259,7 +1265,7 @@ function magazineCard(person, locked) {
   });
   const note = given ? " Already given" : left < 1 ? " None left" : open ? " One time, open Saturday and Sunday" : " Closed today";
   line.append(input, document.createTextNode(note));
-  card.append(title, line);
+  card.append(head, line);
   return card;
 }
 
