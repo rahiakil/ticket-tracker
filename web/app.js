@@ -269,6 +269,7 @@ function readAbilities(scope) {
 function applyRoleUi() {
   const session = readSession();
   const volunteer = session?.role === "food";
+  const deskRole = session?.role === "desk";
   const scan = can("scan");
   const add = can("add");
   const search = can("search");
@@ -276,13 +277,16 @@ function applyRoleUi() {
   const admin = can("admin");
   const sale = document.querySelector("#new-sale");
   const entryDesk = document.querySelector("#counter-entry");
+  const showCounters = !volunteer && (add || deskRole);
   if (sale) sale.hidden = !sell;
   document.querySelectorAll(".show-pay").forEach((node) => { node.hidden = !sell && !admin; });
-  if (entryDesk) entryDesk.hidden = !add || volunteer;
+  if (entryDesk) entryDesk.hidden = !showCounters;
   const foodDesk = document.querySelector("#counter-food");
-  if (foodDesk) foodDesk.hidden = !add;
+  if (foodDesk) foodDesk.hidden = !showCounters;
   const counterSwitch = document.querySelector(".counter-switch");
-  if (counterSwitch) counterSwitch.hidden = !add;
+  if (counterSwitch) counterSwitch.hidden = !showCounters;
+  if (volunteer) localStorage.setItem(storeKey("counter"), "food");
+  else if (!localStorage.getItem(storeKey("counter-picked"))) localStorage.setItem(storeKey("counter"), showCounters ? "entry" : "food");
   const searchLine = document.querySelector("#order-query")?.closest(".search-line");
   if (searchLine) searchLine.hidden = !search;
   const scanButton = document.querySelector("#scan-btn");
@@ -300,7 +304,6 @@ function applyRoleUi() {
   document.querySelectorAll("[data-page='admin']").forEach((button) => { button.hidden = !admin; });
   document.querySelectorAll("[data-page='stats']").forEach((button) => { button.hidden = !admin; });
   document.querySelectorAll(".cleanup-scans").forEach((button) => { button.hidden = !canResetScans(); });
-  localStorage.setItem(storeKey("counter"), volunteer || !add ? "food" : "entry");
 }
 
 function openLogin(username, landing) {
@@ -696,7 +699,9 @@ function variantEntries(variants) {
     lane: variants[id].lane || "",
     tone: variants[id].tone || "",
     taken: Boolean(variants[id].taken),
+    takenAt: variants[id].takenAt || null,
     takenBy: variants[id].takenBy || "",
+    days: variants[id].days || null,
   }));
 }
 
@@ -906,20 +911,96 @@ function dayBucket(name) {
   return TicketLedger.itemDay(name) || "other";
 }
 
+function allDayEntry(item) {
+  return item && item.lane === "entry" && !TicketLedger.itemDay(item.id);
+}
+
+function shownEntryDays(item) {
+  if (!allDayEntry(item)) return null;
+  if (item.days) return item.days;
+  const filled = Boolean(item.taken);
+  const slot = { taken: filled, takenAt: filled ? item.takenAt : null, takenBy: filled ? (item.takenBy || "") : "" };
+  return { friday: { ...slot }, saturday: { ...slot }, sunday: { ...slot } };
+}
+
+function entryComplete(item) {
+  const days = shownEntryDays(item);
+  if (!days) return Boolean(item.taken);
+  return ["friday", "saturday", "sunday"].every((day) => days[day] && days[day].taken);
+}
+
+function markEntrySlot(person, item, day, taken) {
+  if (!can("scan") && !can("add")) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const label = day.charAt(0).toUpperCase() + day.slice(1);
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.markEntryDay(book, person, item.index, item.unit, day, taken, at, actor, deviceId());
+    const message = next.locked
+      ? `This line is locked. ${person.name}. ${person.email}.`
+      : next.changed
+      ? `${taken ? label + " checked" : label + " reverted"}. ${person.name}. ${person.email}.`
+      : `Already ${taken ? "checked" : "open"}. ${person.name}. ${person.email}.`;
+    return { write: next.changed, book: next.book, message };
+  });
+  showMessage(applied.message, nextAlready(applied.message) ? "already_seen" : "pending");
+  paintOpen(person);
+  renderOrders();
+}
+
+function nextAlready(message) {
+  return String(message).startsWith("Already") || String(message).startsWith("Unavailable") || String(message).startsWith("This line");
+}
+
+function dayCheckCard(person, item, locked) {
+  const card = document.createElement("article");
+  card.className = "day-checks";
+  const title = document.createElement("h3");
+  title.textContent = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
+  card.append(title);
+  const days = shownEntryDays(item);
+  for (const day of ["friday", "saturday", "sunday"]) {
+    const line = document.createElement("label");
+    line.className = "day-check";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = Boolean(days[day] && days[day].taken);
+    input.disabled = Boolean(locked) || (!can("scan") && !can("add"));
+    input.addEventListener("change", () => markEntrySlot(person, item, day, input.checked));
+    line.append(input, document.createTextNode(` ${day.charAt(0).toUpperCase() + day.slice(1)}`));
+    card.append(line);
+  }
+  const revert = document.createElement("button");
+  revert.type = "button";
+  revert.className = "secondary";
+  revert.textContent = "Revert";
+  const any = ["friday", "saturday", "sunday"].some((day) => days[day] && days[day].taken);
+  revert.disabled = !any || Boolean(locked) || (!can("scan") && !can("add"));
+  revert.addEventListener("click", () => {
+    const latest = ["friday", "saturday", "sunday"]
+      .filter((day) => days[day] && days[day].taken)
+      .sort((left, right) => Date.parse(days[right].takenAt || 0) - Date.parse(days[left].takenAt || 0))[0];
+    if (latest) markEntrySlot(person, item, latest, false);
+  });
+  card.append(revert);
+  return card;
+}
+
 function ticketPill(person, item, index, lane, locked, now) {
   const button = document.createElement("button");
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
   const today = todayEventDay() || "saturday";
-  const closed = !demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook));
+  const foodBlocked = activeCounter() === "entry" && lane === "food";
+  const closed = foodBlocked || (!demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook)));
   const future = closed;
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
   button.className = `item-pill coupon-${kind} ${state}`;
   if (kind.startsWith("entry-any") && (state === "ready" || state === "semi")) button.style.background = `hsl(${TicketLedger.entryHue(item.id)} 42% 36%)`;
   const icons = { fish: "🐟", chicken: "🍗", mutton: "🐑", veg: "🥦", paneer: "🥦" };
   const icon = icons[kind] || (String(kind).startsWith("entry") ? "🚪" : "");
-  const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : future ? "Unavailable yet" : "";
+  const note = item.taken ? (item.takenBy ? `Done · ${item.takenBy}` : "Done") : foodBlocked ? "Unavailable" : future ? "Unavailable yet" : "";
   const ticketLabel = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
   button.textContent = [icon, ticketLabel, note].filter(Boolean).join("\n");
   if (lane === "food" && state === "ready") {
@@ -934,7 +1015,7 @@ function ticketPill(person, item, index, lane, locked, now) {
     doneBox.append(check, document.createTextNode(" Done"));
     button.append(doneBox);
   }
-  if (locked || !canMarkTicket(lane, day)) button.disabled = true;
+  if (foodBlocked || locked || !canMarkTicket(lane, day)) button.disabled = true;
   else {
     let holdTimer = 0;
     let held = false;
@@ -964,32 +1045,30 @@ function itemButtons(person, options = {}) {
   const deskUser = readSession()?.role === "desk";
   const desk = activeCounter();
   const showAll = deskUser || Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
-  const grouped = (deskUser || options.allTickets)
-    ? [["Entry", "", "entry"], ["Food", "", "food"]]
-    : [
-      ["Friday entry", "friday", "entry"],
-      ["Friday food", "friday", "food"],
-      ["Saturday entry", "saturday", "entry"],
-      ["Saturday food", "saturday", "food"],
-      ["Sunday entry", "sunday", "entry"],
-      ["Sunday food", "sunday", "food"],
-      ["3 day visit", "other", "entry"],
-      ["3 day visit", "other", "food"],
-    ];
+  const grouped = [
+    ["Friday entry", "friday", "entry"],
+    ["Friday food", "friday", "food"],
+    ["Saturday entry", "saturday", "entry"],
+    ["Saturday food", "saturday", "food"],
+    ["Sunday entry", "sunday", "entry"],
+    ["Sunday food", "sunday", "food"],
+    ["3 day entry", "other", "entry"],
+    ["3 day visit", "other", "food"],
+  ];
   const today = todayEventDay() || "saturday";
-  const groups = grouped.filter((group) => showAll || group[2] === desk || (group[2] === "entry" && group[1] === today));
+  const groups = grouped.filter((group) => showAll || group[2] === desk || (group[2] === "entry" && group[1] === today) || (activeCounter() === "entry" && group[2] === "food"));
   const board = document.createElement("div");
   board.className = "ticket-board";
   for (const [label, bucket, lane] of groups) {
     const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
-    const openRows = rows.filter(({ item }) => !item.taken);
-    const doneRows = rows.filter(({ item }) => item.taken);
+    const openRows = rows.filter(({ item }) => !entryComplete(item));
+    const doneRows = rows.filter(({ item }) => entryComplete(item));
     const block = document.createElement("section");
     block.className = openRows.length ? "day-block has-open" : "day-block";
     const heading = document.createElement(lane === "entry" && bucket === (todayEventDay() || "saturday") ? "button" : "p");
     heading.className = heading.tagName === "BUTTON" ? "day-heading day-tab" : "day-heading";
-    heading.textContent = label;
+    heading.textContent = lane === "food" && activeCounter() === "entry" ? `${label} · unavailable` : label;
     if (heading.tagName === "BUTTON") {
       heading.type = "button";
       heading.disabled = !openRows.length || Boolean(locked) || !canMarkTicket("entry", bucket);
@@ -999,7 +1078,9 @@ function itemButtons(person, options = {}) {
     if (openRows.length) {
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of openRows) list.append(pillWithPrint(person, item, index, lane, locked, now));
+      for (const { item, index } of openRows) {
+        list.append(allDayEntry(item) ? dayCheckCard(person, item, locked) : pillWithPrint(person, item, index, lane, locked, now));
+      }
       block.append(list);
     }
     if (doneRows.length) {
@@ -1009,7 +1090,9 @@ function itemButtons(person, options = {}) {
       title.textContent = `Done (${doneRows.length})`;
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of doneRows) list.append(pillWithPrint(person, item, index, lane, locked, now));
+      for (const { item, index } of doneRows) {
+        list.append(allDayEntry(item) ? dayCheckCard(person, item, locked) : pillWithPrint(person, item, index, lane, locked, now));
+      }
       tray.append(title, list);
       block.append(tray);
     }
@@ -2669,7 +2752,12 @@ function appendSoldRow(box, person) {
 
 function entryDoneRows() {
   return Object.values(activeOrders()).map((person) => {
-    const items = orderView(person).items.filter((item) => item.lane === "entry" && item.taken);
+    const items = orderView(person).items.filter((item) => {
+      if (item.lane !== "entry") return false;
+      const days = shownEntryDays(item);
+      if (days) return ["friday", "saturday", "sunday"].some((day) => days[day] && days[day].taken);
+      return item.taken;
+    });
     if (!items.length) return null;
     const saved = currentBook.orders[person.code] || {};
     const when = items.reduce((latest, item) => Math.max(latest, Date.parse(item.takenAt || 0) || 0), 0)
@@ -2702,7 +2790,12 @@ function renderEntries() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "secondary name-row";
-      const items = row.items.map((item) => item.name).join(", ");
+      const items = row.items.map((item) => {
+        const days = shownEntryDays(item);
+        if (!days) return item.name;
+        const done = ["friday", "saturday", "sunday"].filter((day) => days[day] && days[day].taken).map((day) => day.charAt(0).toUpperCase() + day.slice(1));
+        return done.length ? `${item.name} (${done.join(", ")})` : item.name;
+      }).join(", ");
       button.textContent = `${row.person.name} · ${row.person.code}${items ? ` · ${items}` : ""}`;
       button.addEventListener("click", () => paintOpen(row.person));
       box.append(button);
@@ -3471,11 +3564,13 @@ document.querySelector("#show-site-totals").addEventListener("click", (event) =>
 
 document.querySelector("#counter-entry").addEventListener("click", () => {
   localStorage.setItem(storeKey("counter"), "entry");
+  localStorage.setItem(storeKey("counter-picked"), "1");
   paintCounter();
   renderOrders();
 });
 document.querySelector("#counter-food").addEventListener("click", () => {
   localStorage.setItem(storeKey("counter"), "food");
+  localStorage.setItem(storeKey("counter-picked"), "1");
   paintCounter();
   renderOrders();
 });

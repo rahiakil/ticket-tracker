@@ -208,6 +208,7 @@ function statusDetail(order) {
           lane: item.lane || "",
           tone: item.tone || "",
         };
+        if (variants[key].days) variants[key].days = structuredClone(variants[key].days);
       }
     });
     return variants;
@@ -617,6 +618,74 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
   }
 
+  function allDayEntry(item) {
+    const name = String((item && (item.name || item.id)) || "");
+    const lane = item && item.lane;
+    return (lane === "entry" || /\bentry\b/i.test(name)) && !itemDay(name);
+  }
+
+  function entryDayRecord(item) {
+    const names = ["friday", "saturday", "sunday"];
+    if (item.days) return item.days;
+    const filled = Boolean(item.taken);
+    const slot = { taken: filled, takenAt: filled ? (item.takenAt || null) : null, takenBy: filled ? (item.takenBy || "") : "" };
+    item.days = {
+      friday: { ...slot },
+      saturday: { ...slot },
+      sunday: { ...slot },
+    };
+    return item.days;
+  }
+
+  function syncEntryDays(item) {
+    const days = item.days;
+    if (!days) return;
+    const names = ["friday", "saturday", "sunday"];
+    const done = names.filter((day) => days[day] && days[day].taken);
+    item.taken = done.length === names.length;
+    const latest = done.map((day) => days[day]).sort((left, right) => Date.parse(right.takenAt || 0) - Date.parse(left.takenAt || 0))[0];
+    item.takenAt = latest ? latest.takenAt : null;
+    item.takenBy = latest ? (latest.takenBy || "") : "";
+  }
+
+  function markEntryDay(book, person, itemIndex, unit, dayName, taken, at, actor, holder) {
+    const day = ["friday", "saturday", "sunday"].includes(dayName) ? dayName : "";
+    if (!day) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, already: true, phrase: "" };
+    }
+    if (foreignLock(book, person.code, holder, at)) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, locked: true, already: false, phrase: "" };
+    }
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const placed = ensureSheetOrder(next, person, person.full, at, actor);
+    const key = Object.keys(placed.order.variants).find((id) => id.startsWith(`item:${itemIndex}:${unit}:`));
+    if (!key) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
+    const item = placed.order.variants[key];
+    if (!allDayEntry(item)) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
+    const days = entryDayRecord(item);
+    const slot = days[day];
+    if (Boolean(slot.taken) === Boolean(taken)) {
+      return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(placed.order)) };
+    }
+    slot.taken = Boolean(taken);
+    slot.takenAt = taken ? at : null;
+    slot.takenBy = taken ? (actor || "") : "";
+    syncEntryDays(item);
+    placed.order.updatedAt = at;
+    placed.order.actor = actor || placed.order.actor;
+    syncTakenCount(placed.order);
+    const label = day.charAt(0).toUpperCase() + day.slice(1);
+    const text = taken
+      ? `${person.code} ${label} entry done: ${item.name}${actor ? ` by ${actor}` : ""}`
+      : `${person.code} reverted ${label} entry: ${item.name}${actor ? ` by ${actor}` : ""}`;
+    addLine(next, at, text);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text });
+    return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
+  }
+
   function revertLast(book, person, at, actor, holder) {
     if (foreignLock(book, person.code, holder, at)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
@@ -626,24 +695,47 @@ function statusDetail(order) {
     const order = next.orders[person.code];
     if (!order) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
     let latestKey = "";
+    let latestDay = "";
     let latestTime = -1;
     for (const [key, item] of Object.entries(order.variants || {})) {
+      if (item.days) {
+        for (const [day, slot] of Object.entries(item.days)) {
+          if (!slot || !slot.taken) continue;
+          const time = Date.parse(slot.takenAt || 0);
+          if (time >= latestTime) {
+            latestTime = time;
+            latestKey = key;
+            latestDay = day;
+          }
+        }
+        continue;
+      }
       if (!item.taken) continue;
       const time = Date.parse(item.takenAt || 0);
       if (time >= latestTime) {
         latestTime = time;
         latestKey = key;
+        latestDay = "";
       }
     }
     if (!latestKey) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
     next.revertKey = latestKey;
     const item = order.variants[latestKey];
-    item.taken = false;
-    item.takenAt = null;
+    let label = item.name;
+    if (latestDay && item.days && item.days[latestDay]) {
+      item.days[latestDay].taken = false;
+      item.days[latestDay].takenAt = null;
+      item.days[latestDay].takenBy = "";
+      syncEntryDays(item);
+      label = `${latestDay.charAt(0).toUpperCase() + latestDay.slice(1)} ${item.name}`;
+    } else {
+      item.taken = false;
+      item.takenAt = null;
+    }
     syncTakenCount(order);
     order.updatedAt = at;
     order.actor = actor || order.actor;
-    const text = `${person.code} reverted ${item.name}${actor ? ` by ${actor}` : ""}`;
+    const text = `${person.code} reverted ${label}${actor ? ` by ${actor}` : ""}`;
     addLine(next, at, text);
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text });
@@ -876,6 +968,7 @@ function statusDetail(order) {
     exportCsv,
     sheetPhrase,
     markItem,
+    markEntryDay,
     revertLast,
     foreignLock,
     acquireLock,

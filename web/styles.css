@@ -219,7 +219,10 @@ button.day-tab {
   color: #fff;
   border-color: var(--teal-dark);
 }
-button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b7280; }
+.day-checks { display: grid; gap: 8px; margin: 0; padding: 12px; border: 2px solid var(--line); border-radius: 16px; background: var(--card); text-align: left; grid-column: 1 / -1; }
+.day-checks h3 { margin: 0; font-size: 1.05rem; }
+.day-check { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 700; }
+.day-check input { width: 28px; height: 28px; min-height: 0; margin: 0; }
 .all-done { margin: 8px 0 16px; font-size: 4rem; line-height: 1; color: var(--teal); }
 .ticket-board { display: grid; gap: 16px; }
 .day-block { display: grid; gap: 8px; }
