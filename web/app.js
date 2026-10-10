@@ -3587,6 +3587,58 @@ function sayExport(text) {
   }
 }
 
+function newSaleDay(name) {
+  const text = String(name || "").toLowerCase();
+  if (text.includes("friday")) return "Friday";
+  if (text.includes("saturday")) return "Saturday";
+  if (text.includes("sunday")) return "Sunday";
+  return "Other";
+}
+
+function newSaleRows() {
+  const days = { Friday: [], Saturday: [], Sunday: [], Other: [] };
+  fridaySaleRows().slice().reverse().forEach((person) => {
+    const actor = saleActor(person.code);
+    const when = saleCreatedAt(person.code);
+    const stamp = when ? new Date(when).toLocaleString() : (person.date || "");
+    (person.items || []).forEach((item) => {
+      const day = newSaleDay(item && item.name);
+      days[day].push([
+        person.name || "",
+        person.email || "",
+        person.full || person.code,
+        item.name || "",
+        Number(item.qty) || 0,
+        actor,
+        stamp,
+      ]);
+    });
+  });
+  return days;
+}
+
+function downloadNewSales() {
+  const days = newSaleRows();
+  const header = ["Name", "Email", "QR", "Item", "Qty", "Sold by", "When"];
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (typeof XLSX !== "undefined" && XLSX.utils && typeof XLSX.writeFile === "function") {
+    const book = XLSX.utils.book_new();
+    const summary = [["Day", "Item", "Qty"]];
+    for (const day of ["Friday", "Saturday", "Sunday", "Other"]) {
+      const totals = new Map();
+      days[day].forEach((row) => totals.set(row[3], (totals.get(row[3]) || 0) + row[4]));
+      totals.forEach((qty, item) => summary.push([day, item, qty]));
+      const sheet = XLSX.utils.aoa_to_sheet([header, ...days[day]]);
+      XLSX.utils.book_append_sheet(book, sheet, day);
+    }
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(summary), "Summary");
+    XLSX.writeFile(book, `new-sales-by-day-${stamp}.xlsx`);
+    sayExport("New sales Excel saved to Downloads, one sheet per day.");
+    return;
+  }
+  sayExport("Excel export is not available in this browser.");
+}
+
 function downloadExcel() {
   const rows = statusGrid();
   const stamp = new Date().toISOString().slice(0, 10);
@@ -3868,6 +3920,8 @@ document.querySelector("#export-csv").addEventListener("click", exportStatus);
 document.querySelector("#admin-export-csv").addEventListener("click", exportStatus);
 document.querySelector("#download-xlsx").addEventListener("click", downloadExcel);
 document.querySelector("#admin-download-xlsx").addEventListener("click", downloadExcel);
+document.querySelector("#download-new-sales").addEventListener("click", downloadNewSales);
+document.querySelector("#admin-download-new-sales").addEventListener("click", downloadNewSales);
 document.querySelector("#email-csv").addEventListener("click", () => { emailStatus(); });
 document.querySelector("#admin-email-csv").addEventListener("click", () => { emailStatus(); });
 document.querySelector("#release-locks").addEventListener("click", () => {
