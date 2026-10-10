@@ -80,6 +80,8 @@ a.text-button:active {
 
 .primary, .btn-teal { background: var(--teal); color: white; border-color: var(--teal-dark); }
 .btn-orange { background: var(--orange); color: white; border-color: var(--orange-dark); }
+.sold-veg { background: #157a62; color: #fff; border-color: #0e5c4a; }
+.sold-nonveg { background: #c81e1e; color: #fff; border-color: #8f1212; }
 .btn-quiet { background: #fff7f0; color: var(--ink); border-color: var(--line); }
 .primary:disabled, .btn-teal:disabled, .btn-orange:disabled { background: #c8b8a4; color: #fff; }
 .secondary, .file-btn {
@@ -283,6 +285,9 @@ h2 { font-size: 1.4rem; }
 .sale-tile-name { display: block; }
 .sale-stock { display: block; margin-top: 6px; font-size: 1rem; font-weight: 750; }
 .sold-row { display: grid; grid-template-columns: 1fr 110px 110px; gap: 8px; margin: 0 0 8px; }
+#sold-query { width: 100%; margin: 8px 0; }
+.sale-letters { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+.sale-letters .letter-card { min-height: 72px; align-items: center; text-align: center; }
 .sale-qty {
   position: absolute;
   right: 8px;
@@ -498,6 +503,9 @@ h2 { font-size: 1.4rem; }
 .sheet-table tr.sheet-locked { background: #fde68a; }
 .sheet-table tr.sheet-locked td { font-weight: 650; }
 .food-stat, .lock-stat, .sale-check { margin: 6px 0; font-size: 1.05rem; font-weight: 650; text-align: left; }
+.sale-veg { color: #0e5c4a; }
+.sale-nonveg { color: #9f1239; }
+.sale-mixed { color: var(--orange-dark); }
 .sale-issue { color: var(--bad); font-weight: 750; }
 .lock-stat { color: #92400e; }
 .today-mark { display: block; margin-top: 2px; font-size: 13px; font-weight: 750; color: #14532d; }

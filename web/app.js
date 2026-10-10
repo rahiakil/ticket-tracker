@@ -1333,6 +1333,7 @@ function laneBreakdown(people) {
 let flowTab = "waiting";
 let deskLetter = "";
 let siteLetter = "";
+let saleLetter = "";
 let toolTab = "sheet";
 let siteTab = "orders";
 
@@ -2583,7 +2584,7 @@ function saleAuditNode() {
   }
   sales.forEach((person) => {
     const row = document.createElement("p");
-    row.className = "sale-check";
+    row.className = `sale-check sale-${mealKind(person)}`;
     const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 0}`).join(", ") || "no tickets";
     const actor = saleActor(person.code);
     row.textContent = `${person.name || "No name"} · ${person.full || person.code} · ${items}${actor ? ` · sold by ${actor}` : ""}`;
@@ -2592,40 +2593,122 @@ function saleAuditNode() {
   return section;
 }
 
+function mealKind(person) {
+  let veg = 0;
+  let nonveg = 0;
+  for (const item of person.items || []) {
+    const qty = Number(item && item.qty) || 0;
+    if (qty <= 0) continue;
+    if (item.name === "Friday Non-Vegetarian") nonveg += qty;
+    else if (item.name === "Friday Veg") veg += qty;
+  }
+  if (veg && nonveg) return "mixed";
+  if (veg) return "veg";
+  if (nonveg) return "nonveg";
+  return "mixed";
+}
+
+function soldButtonClass(person) {
+  const kind = mealKind(person);
+  if (kind === "veg") return "sold-veg";
+  if (kind === "nonveg") return "sold-nonveg";
+  return "btn-orange";
+}
+
+function appendSoldRow(box, person) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = soldButtonClass(person);
+  const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ");
+  button.textContent = `${person.name} · ${person.full || person.code}${items ? ` · ${items}` : ""}`;
+  button.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
+  const change = document.createElement("button");
+  change.type = "button";
+  change.className = "secondary";
+  change.textContent = "Change";
+  change.addEventListener("click", () => startEditSale(person));
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "secondary";
+  remove.textContent = "Delete";
+  remove.addEventListener("click", () => { deleteSale(person); });
+  const row = document.createElement("div");
+  row.className = "sold-row";
+  row.append(button, change, remove);
+  box.append(row);
+}
+
 function renderSoldQrs() {
   const box = document.querySelector("#sold-qrs");
+  const search = document.querySelector("#sold-query");
+  const searchLabel = search && search.closest("label");
+  if (searchLabel) searchLabel.hidden = !can("sell");
   if (!box) return;
   box.replaceChildren();
   if (!can("sell")) return;
+  const all = fridaySaleRows();
+  const query = document.querySelector("#sold-query") ? document.querySelector("#sold-query").value : "";
+  const tokens = normalized(query).split(" ").filter(Boolean);
+  const searching = tokens.length > 0;
+  const matches = all.filter((person) => {
+    if (!searching) return true;
+    const items = (person.items || []).map((item) => `${item.name} ${item.qty || ""}`).join(" ");
+    const hay = normalized(`${person.name} ${person.full} ${person.code} ${items}`);
+    return tokens.every((token) => hay.includes(token));
+  });
   const heading = document.createElement("h2");
   heading.className = "sale-lane";
   heading.textContent = "Sold QR codes";
   const note = document.createElement("p");
   note.className = "note";
-  note.textContent = fridaySaleRows().length ? "Newest first. Tap a sale to show its QR again." : "New sales appear here so you can open the QR again.";
+  note.textContent = all.length
+    ? "Newest first. Red is non-veg, green is veg, orange is both."
+    : "New sales appear here so you can open the QR again.";
   box.append(heading, note);
-  fridaySaleRows().forEach((person) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn-orange";
-    const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ");
-    button.textContent = `${person.name} · ${person.full || person.code}${items ? ` · ${items}` : ""}`;
-    button.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
-    const change = document.createElement("button");
-    change.type = "button";
-    change.className = "secondary";
-    change.textContent = "Change";
-    change.addEventListener("click", () => startEditSale(person));
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "secondary";
-    remove.textContent = "Delete";
-    remove.addEventListener("click", () => { deleteSale(person); });
-    const row = document.createElement("div");
-    row.className = "sold-row";
-    row.append(button, change, remove);
-    box.append(row);
-  });
+  if (!searching && all.length > 50) {
+    const counts = new Map();
+    all.forEach((person) => {
+      const letter = nameLetter(person);
+      counts.set(letter, (counts.get(letter) || 0) + 1);
+    });
+    if (saleLetter && !counts.has(saleLetter)) saleLetter = "";
+    const hint = document.createElement("p");
+    hint.className = "note";
+    hint.textContent = saleLetter ? "Tap the letter to see every letter." : "More than 50 sales. Tap a letter.";
+    box.append(hint);
+    const board = document.createElement("div");
+    board.className = saleLetter ? "letter-board is-picked" : "letter-board sale-letters";
+    const letters = [...counts.keys()].sort((left, right) => left.localeCompare(right));
+    (saleLetter ? letters.filter((letter) => letter === saleLetter) : letters).forEach((letter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = saleLetter === letter ? "letter-card is-on" : "letter-card";
+      const mark = document.createElement("span");
+      mark.className = "letter-card-letter";
+      mark.textContent = letter;
+      const count = document.createElement("span");
+      count.className = "letter-card-count";
+      count.textContent = String(counts.get(letter));
+      button.append(mark, count);
+      button.addEventListener("click", () => {
+        saleLetter = saleLetter === letter ? "" : letter;
+        renderSoldQrs();
+      });
+      board.append(button);
+    });
+    box.append(board);
+    if (!saleLetter) return;
+    matches.filter((person) => nameLetter(person) === saleLetter).forEach((person) => appendSoldRow(box, person));
+    return;
+  }
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = searching ? "No matching sales." : "";
+    if (searching) box.append(empty);
+    return;
+  }
+  matches.forEach((person) => appendSoldRow(box, person));
 }
 
 function renderRecent() {
@@ -3106,7 +3189,7 @@ function renderSaleAudit() {
   const panel = document.querySelector("#sale-audit-panel");
   const box = document.querySelector("#sale-audit");
   const allowed = can("sell") || can("admin");
-  if (panel) panel.hidden = !allowed;
+  if (panel && !allowed) panel.hidden = true;
   if (box) {
     box.replaceChildren();
     if (allowed) box.append(saleAuditNode());
@@ -3326,6 +3409,10 @@ document.querySelector("#site-orders-search").addEventListener("keydown", (event
 });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
 document.querySelector("#search-order").addEventListener("click", searchOrder);
+document.querySelector("#sold-query").addEventListener("input", () => {
+  saleLetter = "";
+  renderSoldQrs();
+});
 document.querySelector("#order-query").addEventListener("input", () => {
   deskLetter = "";
   showNameSpinner();
