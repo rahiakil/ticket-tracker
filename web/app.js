@@ -1334,6 +1334,7 @@ let flowTab = "waiting";
 let deskLetter = "";
 let siteLetter = "";
 let saleLetter = "";
+let entryLetter = "";
 let toolTab = "sheet";
 let siteTab = "orders";
 
@@ -1590,6 +1591,7 @@ function renderOrders() {
   renderLog();
   renderRecent();
   renderSoldQrs();
+  renderEntries();
   renderSaleAudit();
   renderLiveSheet();
   renderDisputes();
@@ -2612,6 +2614,95 @@ function appendSoldRow(box, person) {
   box.append(row);
 }
 
+function entryDoneRows() {
+  return Object.values(activeOrders()).map((person) => {
+    const items = orderView(person).items.filter((item) => item.lane === "entry" && item.taken);
+    if (!items.length) return null;
+    const saved = currentBook.orders[person.code] || {};
+    const when = items.reduce((latest, item) => Math.max(latest, Date.parse(item.takenAt || 0) || 0), 0)
+      || Date.parse(saved.updatedAt || saved.scannedAt || 0)
+      || 0;
+    return { person, items, when };
+  }).filter(Boolean).sort((left, right) => right.when - left.when || String(right.person.code).localeCompare(String(left.person.code)));
+}
+
+function renderEntries() {
+  const box = document.querySelector("#entry-done");
+  if (!box) return;
+  box.replaceChildren();
+  const all = entryDoneRows();
+  const query = document.querySelector("#entry-query") ? document.querySelector("#entry-query").value : "";
+  const tokens = normalized(query).split(" ").filter(Boolean);
+  const searching = tokens.length > 0;
+  const matches = all.filter((row) => {
+    if (!searching) return true;
+    const items = row.items.map((item) => item.name).join(" ");
+    const hay = normalized(`${row.person.name} ${row.person.full} ${row.person.code} ${items}`);
+    return tokens.every((token) => hay.includes(token));
+  });
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = all.length ? `${all.length} checked in. Newest first.` : "No entries are done yet.";
+  box.append(note);
+  const showRows = (rows) => {
+    rows.forEach((row) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary name-row";
+      const items = row.items.map((item) => item.name).join(", ");
+      button.textContent = `${row.person.name} · ${row.person.code}${items ? ` · ${items}` : ""}`;
+      button.addEventListener("click", () => paintOpen(row.person));
+      box.append(button);
+    });
+  };
+  if (!searching && all.length > 50) {
+    const counts = new Map();
+    all.forEach((row) => {
+      const letter = nameLetter(row.person);
+      counts.set(letter, (counts.get(letter) || 0) + 1);
+    });
+    if (entryLetter && !counts.has(entryLetter)) entryLetter = "";
+    const hint = document.createElement("p");
+    hint.className = "note";
+    hint.textContent = entryLetter ? "Tap the letter to see every letter." : "More than 50 entries. Tap a letter.";
+    box.append(hint);
+    const board = document.createElement("div");
+    board.className = entryLetter ? "letter-board is-picked" : "letter-board sale-letters";
+    const letters = [...counts.keys()].sort((left, right) => left.localeCompare(right));
+    (entryLetter ? letters.filter((letter) => letter === entryLetter) : letters).forEach((letter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = entryLetter === letter ? "letter-card is-on" : "letter-card";
+      const mark = document.createElement("span");
+      mark.className = "letter-card-letter";
+      mark.textContent = letter;
+      const count = document.createElement("span");
+      count.className = "letter-card-count";
+      count.textContent = String(counts.get(letter));
+      button.append(mark, count);
+      button.addEventListener("click", () => {
+        entryLetter = entryLetter === letter ? "" : letter;
+        renderEntries();
+      });
+      board.append(button);
+    });
+    box.append(board);
+    if (!entryLetter) return;
+    showRows(matches.filter((row) => nameLetter(row.person) === entryLetter));
+    return;
+  }
+  if (!matches.length) {
+    if (searching) {
+      const empty = document.createElement("p");
+      empty.className = "note";
+      empty.textContent = "No matching entries.";
+      box.append(empty);
+    }
+    return;
+  }
+  showRows(matches);
+}
+
 function renderSoldQrs() {
   const box = document.querySelector("#sold-qrs");
   const search = document.querySelector("#sold-query");
@@ -3383,6 +3474,10 @@ document.querySelector("#site-orders-search").addEventListener("keydown", (event
 });
 document.querySelector("#main-page").addEventListener("click", closeTicket);
 document.querySelector("#search-order").addEventListener("click", searchOrder);
+document.querySelector("#entry-query").addEventListener("input", () => {
+  entryLetter = "";
+  renderEntries();
+});
 document.querySelector("#sold-query").addEventListener("input", () => {
   saleLetter = "";
   renderSoldQrs();

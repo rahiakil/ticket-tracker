@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker Backup</title>
-  <link rel="stylesheet" href="../styles.css?v=65">
+  <link rel="stylesheet" href="../styles.css?v=66">
 </head>
 <body>
 <div class="app-shell">
@@ -85,9 +85,18 @@
 
     <div class="page-tabs">
       <button type="button" data-page="desk" class="btn-teal">Desk</button>
+      <button type="button" data-page="entries" class="btn-quiet">Entries</button>
       <button type="button" data-page="stats" class="btn-quiet">Stats</button>
       <button type="button" data-page="admin" class="btn-quiet">Admin functions</button>
     </div>
+
+    <section class="panel" data-page-panel="entries" hidden>
+      <h1>Entries done</h1>
+      <label for="entry-query">Search entries
+        <input id="entry-query" type="search" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name or order number">
+      </label>
+      <div id="entry-done"></div>
+    </section>
 
     <section class="panel" data-page-panel="desk">
       <h1>Find a ticket</h1>
@@ -575,6 +584,6 @@
   <script src="../ledger.js?v=40"></script>
   <script src="../record.js?v=12"></script>
   <script src="../vendor/html5-qrcode.min.js"></script>
-  <script src="../app.js?v=96"></script>
+  <script src="../app.js?v=97"></script>
 </body>
 </html>
