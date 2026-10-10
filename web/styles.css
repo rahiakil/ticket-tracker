@@ -219,6 +219,7 @@ button.day-tab {
   color: #fff;
   border-color: var(--teal-dark);
 }
+button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b7280; }
 .day-checks { display: grid; gap: 8px; margin: 0; padding: 12px; border: 2px solid var(--line); border-radius: 16px; background: var(--card); text-align: left; grid-column: 1 / -1; }
 .day-checks h3 { margin: 0; font-size: 1.05rem; }
 .day-check { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 700; }
@@ -242,7 +243,7 @@ button.day-tab {
 .page-tabs { grid-template-columns: 1fr 1fr; }
 .page-tabs button { font-size: 1rem; padding: 10px 8px; }
 .tool-tabs, .admin-tabs { grid-template-columns: 1fr 1fr; }
-.search-line { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; margin-bottom: 8px; }
+#search-matches { display: grid; gap: 8px; margin: 8px 0; }
 .search-line label { grid-column: 1 / -1; margin: 0; text-align: left; }
 .mic-btn.is-on { background: var(--orange); border-color: var(--orange-dark); color: #fff; }
 .letter-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; margin: 10px 0; }

@@ -1364,6 +1364,23 @@ function runLane(person, lane) {
   renderOrders();
 }
 
+function showSearchMatches(people) {
+  const box = document.querySelector("#search-matches");
+  if (!box) return;
+  box.replaceChildren();
+  (people || []).forEach((person) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary name-row";
+    button.textContent = `${person.name} · ${person.code}${person.email ? ` · ${person.email}` : ""}`;
+    button.addEventListener("click", () => {
+      box.replaceChildren();
+      paintOpen(person);
+    });
+    box.append(button);
+  });
+}
+
 function searchOrder() {
   if (!can("search")) return;
   const raw = document.querySelector("#order-query").value.trim();
@@ -1372,12 +1389,14 @@ function searchOrder() {
   deskLetter = "";
   renderOrders();
   if (!raw) {
+    showSearchMatches([]);
     search.textContent = "Type a name, then tap Search.";
     search.className = "result pending";
     return;
   }
-  const matches = catalogMatches(raw);
+  const matches = catalogMatches(raw).sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
   if (!matches.length) {
+    showSearchMatches([]);
     openedCode = "";
     document.querySelector("#qr-box").replaceChildren();
     search.textContent = "No order or name matched.";
@@ -1385,11 +1404,13 @@ function searchOrder() {
     return;
   }
   if (matches.length === 1) {
+    showSearchMatches([]);
     paintOpen(matches[0]);
     return;
   }
-  search.textContent = `${matches.length} names. Pick one below.`;
+  search.textContent = `${matches.length} names. Pick one.`;
   search.className = "result pending";
+  showSearchMatches(matches);
 }
 
 async function submitAttempt() {
