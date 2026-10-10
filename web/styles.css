@@ -497,7 +497,8 @@ h2 { font-size: 1.4rem; }
 .sheet-table tr.sheet-partial { box-shadow: inset 0 0 0 1px #166534; }
 .sheet-table tr.sheet-locked { background: #fde68a; }
 .sheet-table tr.sheet-locked td { font-weight: 650; }
-.food-stat, .lock-stat { margin: 6px 0; font-size: 1.05rem; font-weight: 650; text-align: left; }
+.food-stat, .lock-stat, .sale-check { margin: 6px 0; font-size: 1.05rem; font-weight: 650; text-align: left; }
+.sale-issue { color: var(--bad); font-weight: 750; }
 .lock-stat { color: #92400e; }
 .today-mark { display: block; margin-top: 2px; font-size: 13px; font-weight: 750; color: #14532d; }
 .sheet-name { font-size: 1.7rem; }

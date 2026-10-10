@@ -2506,6 +2506,85 @@ function orderCard(person, options = {}) {
   return card;
 }
 
+function saleActor(code) {
+  const lines = (currentBook.log || []).filter((item) => String(item.text || "").startsWith(`${code} `));
+  const last = lines[lines.length - 1];
+  const match = last && String(last.text).match(/ by (.+)$/);
+  return match ? match[1] : "";
+}
+
+function fridaySaleRows() {
+  return Object.values(currentBook.walkups || {}).sort((left, right) => Number(right.code) - Number(left.code));
+}
+
+function saleIssues(sales) {
+  const issues = [];
+  const nonveg = soldQty("Friday Non-Vegetarian");
+  const veg = soldQty("Friday Veg");
+  const total = nonveg + veg;
+  if (nonveg > FRIDAY_STOCK["Friday Non-Vegetarian"]) issues.push(`Non-veg is over the cap by ${nonveg - 90}.`);
+  if (veg > FRIDAY_STOCK["Friday Veg"]) issues.push(`Veg is over the cap by ${veg - 10}.`);
+  if (total > FRIDAY_FOOD_CAP) issues.push(`Friday food is over 100 by ${total - 100}.`);
+  const byName = new Map();
+  sales.forEach((person) => {
+    const name = String(person.name || "").trim();
+    const key = name.toLowerCase();
+    if (!name) issues.push(`${person.full || person.code} has no name.`);
+    else {
+      const list = byName.get(key) || [];
+      list.push(person.full || person.code);
+      byName.set(key, list);
+    }
+    const items = person.items || [];
+    if (!items.length) issues.push(`${person.full || person.code} has no tickets.`);
+    items.forEach((item) => {
+      if (!item || !(Number(item.qty) > 0)) issues.push(`${person.full || person.code} has a ticket with no count.`);
+    });
+  });
+  byName.forEach((codes, name) => {
+    if (codes.length > 1) issues.push(`${name} is on ${codes.length} sales: ${codes.join(", ")}.`);
+  });
+  const listed = sales.reduce((sum, person) => sum + (person.items || []).reduce((inner, item) => {
+    if (!item || !FRIDAY_STOCK[item.name]) return inner;
+    return inner + (Number(item.qty) || 0);
+  }, 0), 0);
+  if (listed !== total) issues.push(`The name list adds up to ${listed}, but the Friday count is ${total}.`);
+  return issues;
+}
+
+function saleAuditNode() {
+  const section = document.createElement("section");
+  const sales = fridaySaleRows();
+  const nonveg = soldQty("Friday Non-Vegetarian");
+  const veg = soldQty("Friday Veg");
+  const total = nonveg + veg;
+  const counts = document.createElement("p");
+  counts.className = "sale-check";
+  counts.textContent = `Non-veg ${nonveg} of 90. Veg ${veg} of 10. Friday total ${total} of 100. ${FRIDAY_FOOD_CAP - total} left.`;
+  section.append(counts);
+  const issues = saleIssues(sales);
+  const flag = document.createElement("p");
+  flag.className = issues.length ? "sale-issue" : "sale-check";
+  flag.textContent = issues.length ? `Discrepancy: ${issues.join(" ")}` : "No discrepancy. The names add up to the counts.";
+  section.append(flag);
+  if (!sales.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No new sales yet.";
+    section.append(empty);
+    return section;
+  }
+  sales.forEach((person) => {
+    const row = document.createElement("p");
+    row.className = "sale-check";
+    const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 0}`).join(", ") || "no tickets";
+    const actor = saleActor(person.code);
+    row.textContent = `${person.name || "No name"} · ${person.full || person.code} · ${items}${actor ? ` · sold by ${actor}` : ""}`;
+    section.append(row);
+  });
+  return section;
+}
+
 function renderSoldQrs() {
   const box = document.querySelector("#sold-qrs");
   if (!box) return;
@@ -2519,6 +2598,9 @@ function renderSoldQrs() {
   note.className = "note";
   note.textContent = sales.length ? "Tap a sale to show its QR again." : "New sales appear here so you can open the QR again.";
   box.append(heading, note);
+  const audit = document.createElement("div");
+  audit.append(saleAuditNode());
+  box.append(audit);
   sales.forEach((person) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -2980,6 +3062,11 @@ function renderStats() {
         chart.append(row);
       });
     }
+  }
+  const salesBox = document.querySelector("#stats-sales");
+  if (salesBox) {
+    salesBox.replaceChildren();
+    salesBox.append(saleAuditNode());
   }
   const foodBox = document.querySelector("#stats-food");
   if (foodBox) {
