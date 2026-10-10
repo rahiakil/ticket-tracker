@@ -1589,6 +1589,7 @@ function renderOrders() {
   renderLog();
   renderRecent();
   renderSoldQrs();
+  renderSaleAudit();
   renderLiveSheet();
   renderDisputes();
   renderStats();
@@ -2513,8 +2514,14 @@ function saleActor(code) {
   return match ? match[1] : "";
 }
 
+function saleCreatedAt(code) {
+  const line = (currentBook.log || []).find((item) => String(item.text || "").startsWith(`${code} new sale`));
+  const when = Date.parse(line && line.at);
+  return Number.isFinite(when) ? when : Number(code) || 0;
+}
+
 function fridaySaleRows() {
-  return Object.values(currentBook.walkups || {}).sort((left, right) => Number(right.code) - Number(left.code));
+  return Object.values(currentBook.walkups || {}).sort((left, right) => saleCreatedAt(right.code) - saleCreatedAt(left.code) || Number(right.code) - Number(left.code));
 }
 
 function saleIssues(sales) {
@@ -2590,18 +2597,14 @@ function renderSoldQrs() {
   if (!box) return;
   box.replaceChildren();
   if (!can("sell")) return;
-  const sales = Object.values(currentBook.walkups || {}).sort((left, right) => Number(right.code) - Number(left.code));
   const heading = document.createElement("h2");
   heading.className = "sale-lane";
   heading.textContent = "Sold QR codes";
   const note = document.createElement("p");
   note.className = "note";
-  note.textContent = sales.length ? "Tap a sale to show its QR again." : "New sales appear here so you can open the QR again.";
+  note.textContent = fridaySaleRows().length ? "Newest first. Tap a sale to show its QR again." : "New sales appear here so you can open the QR again.";
   box.append(heading, note);
-  const audit = document.createElement("div");
-  audit.append(saleAuditNode());
-  box.append(audit);
-  sales.forEach((person) => {
+  fridaySaleRows().forEach((person) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn-orange";
@@ -3063,11 +3066,6 @@ function renderStats() {
       });
     }
   }
-  const salesBox = document.querySelector("#stats-sales");
-  if (salesBox) {
-    salesBox.replaceChildren();
-    salesBox.append(saleAuditNode());
-  }
   const foodBox = document.querySelector("#stats-food");
   if (foodBox) {
     foodBox.replaceChildren();
@@ -3101,6 +3099,22 @@ function renderStats() {
         lockBox.append(row);
       });
     }
+  }
+}
+
+function renderSaleAudit() {
+  const panel = document.querySelector("#sale-audit-panel");
+  const box = document.querySelector("#sale-audit");
+  const allowed = can("sell") || can("admin");
+  if (panel) panel.hidden = !allowed;
+  if (box) {
+    box.replaceChildren();
+    if (allowed) box.append(saleAuditNode());
+  }
+  const stats = document.querySelector("#stats-sales");
+  if (stats) {
+    stats.replaceChildren();
+    stats.append(saleAuditNode());
   }
 }
 
