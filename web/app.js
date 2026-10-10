@@ -61,7 +61,6 @@ let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
 let flushing = false;
-const BATCH_WAIT_MS = 0;
 
 function show(view) {
   gate.hidden = view !== gate;
@@ -523,13 +522,27 @@ function queueWrite(mutate) {
 }
 
 let flushPromise = Promise.resolve(true);
-async function flushWrites() {
+let flushChain = Promise.resolve();
+
+function flushWrites() {
   clearTimeout(flushTimer);
-  if (flushing) return flushPromise;
+  const run = flushChain.then(() => drainWrites());
+  flushChain = run.then(() => undefined, () => undefined);
+  return run;
+}
+
+async function drainWrites() {
   if (!pendingWrites.length) return true;
   flushing = true;
   flushPromise = finishFlush();
-  return flushPromise;
+  try {
+    const ok = await flushPromise;
+    if (!ok) return false;
+  } finally {
+    flushing = false;
+  }
+  if (pendingWrites.length) return drainWrites();
+  return true;
 }
 
 async function finishFlush() {
@@ -563,10 +576,13 @@ async function finishFlush() {
       if (applied.book) currentBook = applied.book;
     }
     renderOrders();
-    if (pendingWrites.length) flushTimer = setTimeout(flushWrites, BATCH_WAIT_MS);
     return true;
-  } finally {
-    flushing = false;
+  } catch {
+    pendingWrites.unshift(...batch);
+    note("Could not save—retry");
+    showMessage("Could not save—retry", "save_failed");
+    flushTimer = setTimeout(flushWrites, 1500);
+    return false;
   }
 }
 
@@ -811,10 +827,12 @@ function volunteerRevertLeft(code) {
   return Math.max(0, VOLUNTEER_REVERT_MS - (Date.now() - started));
 }
 
-function canMarkTicket(lane, day) {
+function canMarkTicket(lane, day, person) {
   if (can("add")) return true;
+  if (!can("scan")) return false;
   const today = todayEventDay() || "saturday";
-  return can("scan") && lane === "entry" && day === today;
+  if (lane === "entry" && day === today) return true;
+  return lane === "food" && Boolean(person && currentBook.walkups && currentBook.walkups[person.code]);
 }
 
 function eventDatesForMark(book) {
@@ -827,7 +845,7 @@ function eventDatesForMark(book) {
 function markOne(person, index, unit) {
   const item = orderView(person).items.find((row) => row.index === index && row.unit === unit);
   const day = item ? TicketLedger.itemDay(item.id) : "";
-  if (!canMarkTicket(item && item.lane, day)) return;
+  if (!canMarkTicket(item && item.lane, day, person)) return;
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
@@ -992,7 +1010,8 @@ function ticketPill(person, item, index, lane, locked, now) {
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
   const today = todayEventDay() || "saturday";
-  const foodBlocked = readSession()?.role === "desk" && activeCounter() === "entry" && lane === "food";
+  const walkupFood = lane === "food" && Boolean(currentBook.walkups && currentBook.walkups[person.code]);
+  const foodBlocked = readSession()?.role === "desk" && activeCounter() === "entry" && lane === "food" && !walkupFood;
   const closed = foodBlocked || (!demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook)));
   const future = closed;
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
@@ -1015,7 +1034,7 @@ function ticketPill(person, item, index, lane, locked, now) {
     doneBox.append(check, document.createTextNode(" Done"));
     button.append(doneBox);
   }
-  if (foodBlocked || locked || !canMarkTicket(lane, day)) button.disabled = true;
+  if (foodBlocked || locked || !canMarkTicket(lane, day, person)) button.disabled = true;
   else {
     let holdTimer = 0;
     let held = false;
@@ -1068,7 +1087,8 @@ function itemButtons(person, options = {}) {
     block.className = openRows.length ? "day-block has-open" : "day-block";
     const heading = document.createElement(lane === "entry" && bucket === (todayEventDay() || "saturday") ? "button" : "p");
     heading.className = heading.tagName === "BUTTON" ? "day-heading day-tab" : "day-heading";
-    heading.textContent = lane === "food" && readSession()?.role === "desk" && activeCounter() === "entry" ? `${label} · unavailable` : label;
+    const deskFoodClosed = lane === "food" && readSession()?.role === "desk" && activeCounter() === "entry" && !(currentBook.walkups && currentBook.walkups[person.code]);
+    heading.textContent = deskFoodClosed ? `${label} · unavailable` : label;
     if (heading.tagName === "BUTTON") {
       heading.type = "button";
       heading.disabled = !openRows.length || Boolean(locked) || !canMarkTicket("entry", bucket);
@@ -2174,12 +2194,14 @@ function openSale() {
     email.disabled = false;
   }
   if (noEmail) noEmail.checked = false;
-  document.querySelector("#sale-note").textContent = "Opening Saturday meals…";
+  paintSaleTiles();
+  paintCart();
+  document.querySelector("#sale-note").textContent = "Saturday veg is open. Sunday is closed.";
   show(saleScreen);
   refreshOrders({ force: true }).then(() => {
+    if (!saleScreen || saleScreen.hidden) return;
     paintSaleTiles();
     paintCart();
-    document.querySelector("#sale-note").textContent = "Saturday veg is open. Sunday is closed.";
   });
 }
 
@@ -2332,13 +2354,18 @@ async function submitSale() {
   const at = new Date().toISOString();
   const saleMessage = except ? `Order ${code} changed.` : `Order ${code} created.`;
   const previous = existing ? structuredClone(existing) : null;
-  queueWrite((book) => {
-    const next = except
-      ? TicketLedger.updateWalkup(book, person, at, holderNow().actor)
-      : TicketLedger.addWalkup(book, person, at, holderNow().actor);
-    return { write: next.changed, book: next.book, message: saleMessage };
-  });
-  const saved = await flushWrites();
+  let saved = false;
+  try {
+    queueWrite((book) => {
+      const next = except
+        ? TicketLedger.updateWalkup(book, person, at, holderNow().actor)
+        : TicketLedger.addWalkup(book, person, at, holderNow().actor);
+      return { write: next.changed, book: next.book, message: saleMessage };
+    });
+    saved = await flushWrites();
+  } catch {
+    saved = false;
+  }
   if (!saved) {
     if (except && previous && currentBook.walkups) currentBook.walkups[code] = previous;
     else if (currentBook.walkups) delete currentBook.walkups[code];
