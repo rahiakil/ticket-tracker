@@ -1843,86 +1843,59 @@ function changeSaleQty(name, delta) {
   paintCart();
 }
 
+function saleMenu() {
+  const order = ["friday", "saturday", "sunday"];
+  const today = todayEventDay();
+  const tomorrow = order[order.indexOf(today) + 1] || "";
+  const word = (day) => day.charAt(0).toUpperCase() + day.slice(1);
+  const items = [];
+  if (today) items.push({ name: `${word(today)} Veg`, lane: "food", tone: "veg", when: "Today" });
+  if (tomorrow) {
+    items.push({ name: `${word(tomorrow)} Veg`, lane: "food", tone: "veg", when: "Tomorrow" });
+    items.push({ name: `${word(tomorrow)} Non-Vegetarian`, lane: "food", tone: "nonveg", when: "Tomorrow" });
+  }
+  return items;
+}
+
 function paintSaleTiles() {
   const host = document.querySelector("#sale-tiles");
   if (!host) return;
   host.replaceChildren();
-  const dates = eventDates(currentBook);
-  const pinned = new Set(PINNED_SALE_ITEMS.map((item) => item.name));
-  const items = menuItems().filter((item) => pinned.has(item.name) || TicketLedger.dayIsOpen(TicketLedger.itemDay(item.name), dates));
+  const items = saleMenu();
   if (!items.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No tickets are available for sale.";
+    empty.textContent = "No meals are on sale right now.";
     host.append(empty);
     return;
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = `${fridayCountText()} Friday food is at the top. The QR covers every item on this sale.`;
+  hint.textContent = "Today is veg only. Tomorrow has veg and non-veg.";
   host.append(hint);
-  const fridayFood = document.createElement("h2");
-  fridayFood.className = "sale-lane";
-  fridayFood.textContent = "Friday food";
-  const fridayGrid = document.createElement("div");
-  fridayGrid.className = "sale-tiles";
-  PINNED_SALE_ITEMS.forEach((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `sale-tile coupon-${item.tone}`;
-    button.dataset.name = item.name;
-    const left = Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name, editingSaleCode));
-    if (left < 1) button.disabled = true;
-    const title = document.createElement("span");
-    title.className = "sale-tile-name";
-    title.textContent = item.name;
-    const stock = document.createElement("span");
-    stock.className = "sale-stock";
-    stock.textContent = left < 1 ? "Sold out" : `${left} left`;
-    const badge = document.createElement("span");
-    badge.className = "sale-qty";
-    badge.hidden = true;
-    button.append(title, stock, badge);
-    button.addEventListener("click", () => addSaleItem(item));
-    fridayGrid.append(button);
-  });
-  host.append(fridayFood, fridayGrid);
-  const days = ["friday", "saturday", "sunday", "other"];
-  const dayLabel = { friday: "Friday", saturday: "Saturday", sunday: "Sunday", other: "3 day visit" };
-  for (const lane of ["entry", "food"]) {
-    const laneItems = items.filter((item) => item.lane === lane);
-    if (!laneItems.length) continue;
-    const laneHeading = document.createElement("h2");
-    laneHeading.className = "sale-lane";
-    laneHeading.textContent = lane === "entry" ? "Entry" : "Food";
-    host.append(laneHeading);
-    for (const day of days) {
-      const group = laneItems.filter((item) => (TicketLedger.itemDay(item.name) || "other") === day && !pinned.has(item.name));
-      group.sort((left, right) => Number(pinned.has(right.name)) - Number(pinned.has(left.name)) || left.name.localeCompare(right.name));
-      if (!group.length) continue;
-      const heading = document.createElement("h3");
-      heading.className = "sale-day";
-      heading.textContent = dayLabel[day];
-      const grid = document.createElement("div");
-      grid.className = "sale-tiles";
-      for (const item of group) {
-        const button = document.createElement("button");
-        button.type = "button";
-        const kind = TicketLedger.couponKind(item.name, item.lane);
-        button.className = `sale-tile coupon-${kind}`;
-        if (kind.startsWith("entry-any")) button.style.background = `hsl(${TicketLedger.entryHue(item.name)} 42% 36%)`;
-        button.dataset.name = item.name;
-        const title = document.createElement("span");
-        title.className = "sale-tile-name";
-        title.textContent = item.name;
-        const badge = document.createElement("span");
-        badge.className = "sale-qty";
-        badge.hidden = true;
-        button.append(title, badge);
-        button.addEventListener("click", () => addSaleItem(item));
-        grid.append(button);
-      }
-      host.append(heading, grid);
-    }
+  for (const when of ["Today", "Tomorrow"]) {
+    const group = items.filter((item) => item.when === when);
+    if (!group.length) continue;
+    const heading = document.createElement("h2");
+    heading.className = "sale-lane";
+    heading.textContent = when;
+    const grid = document.createElement("div");
+    grid.className = "sale-tiles";
+    group.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `sale-tile coupon-${item.tone}`;
+      button.dataset.name = item.name;
+      const title = document.createElement("span");
+      title.className = "sale-tile-name";
+      title.textContent = item.tone === "nonveg" ? "Non-veg" : "Veg";
+      const badge = document.createElement("span");
+      badge.className = "sale-qty";
+      badge.hidden = true;
+      button.append(title, badge);
+      button.addEventListener("click", () => addSaleItem(item));
+      grid.append(button);
+    });
+    host.append(heading, grid);
   }
 }
 
@@ -1942,12 +1915,12 @@ function openSale() {
     email.disabled = false;
   }
   if (noEmail) noEmail.checked = false;
-  document.querySelector("#sale-note").textContent = "Checking how many Friday meals are left…";
+  document.querySelector("#sale-note").textContent = "Opening today's meals…";
   show(saleScreen);
   refreshOrders({ force: true }).then(() => {
     paintSaleTiles();
     paintCart();
-    document.querySelector("#sale-note").textContent = fridayCountText();
+    document.querySelector("#sale-note").textContent = "Today is veg only. Tomorrow has veg and non-veg.";
   });
 }
 
@@ -2025,7 +1998,7 @@ function paintCart() {
   box.append(title, who);
   if (!cart.length) {
     const empty = document.createElement("p");
-    empty.textContent = "Tap a tile to add a ticket. Tap it again to add another.";
+    empty.textContent = "Tap a meal to add it. Tap it again to add another.";
     box.append(empty);
     return;
   }
@@ -2125,8 +2098,8 @@ async function submitSale() {
   if (cancel) cancel.hidden = true;
   const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
   note.textContent = except
-    ? `Order ${code} was updated. The same QR still works. ${fridayCountText()}`
-    : `Order ${code} is in the shared list. ${copies} ticket${copies === 1 ? "" : "s"} use this QR. ${fridayCountText()}`;
+    ? `Order ${code} was updated. The same QR still works.`
+    : `Order ${code} is in the shared list. ${copies} meal${copies === 1 ? "" : "s"} use this QR.`;
   paintOpen(person, { allTickets: true, showGuest: true });
 }
 
@@ -2599,8 +2572,9 @@ function mealKind(person) {
   for (const item of person.items || []) {
     const qty = Number(item && item.qty) || 0;
     if (qty <= 0) continue;
-    if (item.name === "Friday Non-Vegetarian") nonveg += qty;
-    else if (item.name === "Friday Veg") veg += qty;
+    const label = String(item.name || "");
+    if (/non-?vegetarian/i.test(label)) nonveg += qty;
+    else if (/\bveg\b/i.test(label)) veg += qty;
   }
   if (veg && nonveg) return "mixed";
   if (veg) return "veg";
