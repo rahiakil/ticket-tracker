@@ -997,7 +997,8 @@ function paintOpen(person, options) {
   paintDemo();
   if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
-  if (options && options.showGuest) guestStayCode = person.code;
+  const keepGuest = Boolean(options && options.showGuest) || String(person.full || "").startsWith("WALK") || Boolean(currentBook.walkups && currentBook.walkups[person.code]);
+  if (keepGuest) guestStayCode = person.code;
   else if (person.code !== guestStayCode) guestStayCode = "";
   const showGuest = guestStayCode === person.code;
   const who = holderNow();
@@ -1574,6 +1575,7 @@ function renderOrders() {
   }
   renderLog();
   renderRecent();
+  renderSoldQrs();
   renderLiveSheet();
   renderDisputes();
   renderStats();
@@ -2409,6 +2411,30 @@ function orderCard(person, options = {}) {
   });
   card.append(toggle, box);
   return card;
+}
+
+function renderSoldQrs() {
+  const box = document.querySelector("#sold-qrs");
+  if (!box) return;
+  box.replaceChildren();
+  if (!can("sell")) return;
+  const sales = Object.values(currentBook.walkups || {}).sort((left, right) => Number(right.code) - Number(left.code));
+  const heading = document.createElement("h2");
+  heading.className = "sale-lane";
+  heading.textContent = "Sold QR codes";
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = sales.length ? "Tap a sale to show its QR again." : "New sales appear here so you can open the QR again.";
+  box.append(heading, note);
+  sales.forEach((person) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-orange";
+    const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ");
+    button.textContent = `${person.name} · ${person.full || person.code}${items ? ` · ${items}` : ""}`;
+    button.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
+    box.append(button);
+  });
 }
 
 function renderRecent() {
