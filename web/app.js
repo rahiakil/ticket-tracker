@@ -992,7 +992,7 @@ function ticketPill(person, item, index, lane, locked, now) {
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
   const today = todayEventDay() || "saturday";
-  const foodBlocked = activeCounter() === "entry" && lane === "food";
+  const foodBlocked = readSession()?.role === "desk" && activeCounter() === "entry" && lane === "food";
   const closed = foodBlocked || (!demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook)));
   const future = closed;
   const state = item.taken ? (demoMode ? "semi" : "picked") : future ? "not-yet" : "ready";
