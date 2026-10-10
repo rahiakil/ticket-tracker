@@ -626,7 +626,10 @@ function statusDetail(order) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     const placed = ensureSheetOrder(next, person, person.full, at, actor);
     if (placed.order.magazine && placed.order.magazine.taken) {
-      return { book: pruneBook(next), changed: false, already: true };
+      return { book: pruneBook(next), changed: false, already: true, left: magazineLeft(next) };
+    }
+    if (magazineLeft(next) < 1) {
+      return { book: pruneBook(next), changed: false, soldOut: true, left: 0 };
     }
     placed.order.magazine = { taken: true, takenAt: at, takenBy: actor || "" };
     placed.order.updatedAt = at;
@@ -635,7 +638,12 @@ function statusDetail(order) {
     addLine(next, at, text);
     if (!Array.isArray(next.log)) next.log = [];
     next.log.push({ at, text });
-    return { book: pruneBook(next), changed: true, already: false };
+    return { book: pruneBook(next), changed: true, already: false, left: magazineLeft(next) };
+  }
+
+  function magazineLeft(book) {
+    const given = Object.values((book && book.orders) || {}).filter((order) => order && order.magazine && order.magazine.taken).length;
+    return Math.max(0, 140 - given);
   }
 
   function allDayEntry(item) {
@@ -989,6 +997,7 @@ function statusDetail(order) {
     sheetPhrase,
     markItem,
     markMagazine,
+    magazineLeft,
     markEntryDay,
     revertLast,
     foreignLock,

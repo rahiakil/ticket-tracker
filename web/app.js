@@ -1195,6 +1195,23 @@ function paintOpen(person, options) {
   host.append(card);
 }
 
+const MAGAZINE_STOCK = 140;
+
+function magazinesLeft() {
+  if (TicketLedger.magazineLeft) return TicketLedger.magazineLeft(currentBook);
+  const given = Object.values(currentBook.orders || {}).filter((order) => order && order.magazine && order.magazine.taken).length;
+  return Math.max(0, MAGAZINE_STOCK - given);
+}
+
+function paintMagazineCount() {
+  const left = magazinesLeft();
+  const text = `Magazines ${left} of ${MAGAZINE_STOCK} left.`;
+  document.querySelectorAll("#magazine-count").forEach((node) => {
+    node.textContent = text;
+  });
+  return text;
+}
+
 function magazineOpen() {
   const day = todayEventDay();
   return day === "saturday" || day === "sunday";
@@ -1209,9 +1226,11 @@ function giveMagazine(person) {
     const next = TicketLedger.markMagazine(book, person, at, actor, deviceId());
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
+      : next.soldOut
+      ? `No magazines left. 0 of ${MAGAZINE_STOCK}.`
       : next.already
-      ? `Magazine already given. ${person.name}. ${person.email}.`
-      : `Magazine given. ${person.name}. ${person.email}.`;
+      ? `Magazine already given. ${magazinesLeft()} of ${MAGAZINE_STOCK} left.`
+      : `Magazine given. ${magazinesLeft()} of ${MAGAZINE_STOCK} left.`;
     return { write: next.changed, book: next.book, message };
   });
   showMessage(applied.message, String(applied.message).includes("already") || String(applied.message).startsWith("This line") ? "already_seen" : "pending");
@@ -1224,20 +1243,21 @@ function magazineCard(person, locked) {
   const given = Boolean(saved && saved.magazine && saved.magazine.taken);
   const card = document.createElement("article");
   card.className = "day-checks";
+  const left = magazinesLeft();
   const title = document.createElement("h3");
-  title.textContent = "Magazine";
+  title.textContent = `Magazine · ${left} of ${MAGAZINE_STOCK} left`;
   const line = document.createElement("label");
   line.className = "day-check";
   const input = document.createElement("input");
   input.type = "checkbox";
   input.checked = given;
   const open = magazineOpen();
-  input.disabled = given || Boolean(locked) || !open || (!can("scan") && !can("add"));
+  input.disabled = given || Boolean(locked) || !open || left < 1 || (!can("scan") && !can("add"));
   input.addEventListener("change", () => {
     if (input.checked) giveMagazine(person);
     else input.checked = given;
   });
-  const note = given ? " Already given" : open ? " One time, open Saturday and Sunday" : " Closed today";
+  const note = given ? " Already given" : left < 1 ? " None left" : open ? " One time, open Saturday and Sunday" : " Closed today";
   line.append(input, document.createTextNode(note));
   card.append(title, line);
   return card;
@@ -1806,6 +1826,7 @@ function renderOrders() {
   renderLiveSheet();
   renderDisputes();
   renderStats();
+  paintMagazineCount();
 }
 
 function renderDisputes() {
