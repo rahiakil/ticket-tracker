@@ -55,6 +55,7 @@ let camera = null;
 let cameraOn = false;
 let lastAttempt = null;
 let openedCode = "";
+let guestStayCode = "";
 let ticketReturn = null;
 let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
@@ -76,6 +77,7 @@ function closeTicket() {
   const who = holderNow();
   if (code) queueWrite((book) => TicketLedger.releaseLock(book, code, who.holder, who.at));
   openedCode = "";
+  guestStayCode = "";
   const body = document.querySelector("#ticket-body");
   if (body) body.replaceChildren();
   show(ticketReturn || workspace);
@@ -83,6 +85,7 @@ function closeTicket() {
 
 function showGate() {
   stopCamera();
+  guestStayCode = "";
   show(gate);
 }
 
@@ -994,6 +997,9 @@ function paintOpen(person, options) {
   paintDemo();
   if (ticketScreen && ticketScreen.hidden) ticketReturn = adminScreen.hidden ? workspace : adminScreen;
   openedCode = person.code;
+  if (options && options.showGuest) guestStayCode = person.code;
+  else if (person.code !== guestStayCode) guestStayCode = "";
+  const showGuest = guestStayCode === person.code;
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const mine = currentBook.locks && currentBook.locks[person.code];
@@ -1048,7 +1054,7 @@ function paintOpen(person, options) {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
   card.append(title, mail, eventLine, phrase, itemBoard(person, boardOptions), activity);
-  if (options && options.showGuest) host.append(guestQrPanel(person));
+  if (showGuest) host.append(guestQrPanel(person));
   host.append(card);
 }
 
@@ -1135,7 +1141,12 @@ function guestQrPanel(person) {
   print.className = "btn-teal";
   print.textContent = "Print";
   print.addEventListener("click", () => printTicket());
-  panel.append(lead, qr, code, items, print);
+  const share = document.createElement("button");
+  share.type = "button";
+  share.className = "btn-orange";
+  share.textContent = "Share QR";
+  share.addEventListener("click", () => { shareTicket(); });
+  panel.append(lead, qr, code, items, print, share);
   return panel;
 }
 
