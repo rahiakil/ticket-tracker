@@ -282,6 +282,7 @@ h2 { font-size: 1.4rem; }
 }
 .sale-tile-name { display: block; }
 .sale-stock { display: block; margin-top: 6px; font-size: 1rem; font-weight: 750; }
+.sold-row { display: grid; grid-template-columns: 1fr 110px 110px; gap: 8px; margin: 0 0 8px; }
 .sale-qty {
   position: absolute;
   right: 8px;

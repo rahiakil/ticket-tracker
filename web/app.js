@@ -1148,6 +1148,19 @@ function guestQrPanel(person) {
   share.textContent = "Share QR";
   share.addEventListener("click", () => { shareTicket(); });
   panel.append(lead, qr, code, items, print, share);
+  if (currentBook.walkups && currentBook.walkups[person.code]) {
+    const change = document.createElement("button");
+    change.type = "button";
+    change.className = "secondary";
+    change.textContent = "Change order";
+    change.addEventListener("click", () => startEditSale(person));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Delete order";
+    remove.addEventListener("click", () => { deleteSale(person); });
+    panel.append(change, remove);
+  }
   return panel;
 }
 
@@ -1621,9 +1634,10 @@ const FRIDAY_STOCK = {
 };
 const FRIDAY_FOOD_CAP = 100;
 
-function soldQty(name) {
+function soldQty(name, exceptCode) {
   let total = 0;
   Object.values(currentBook.walkups || {}).forEach((person) => {
+    if (exceptCode && person.code === exceptCode) return;
     (person.items || []).forEach((item) => {
       if (item && item.name === name) total += Number(item.qty) || 0;
     });
@@ -1631,8 +1645,8 @@ function soldQty(name) {
   return total;
 }
 
-function fridaySold() {
-  return Object.keys(FRIDAY_STOCK).reduce((sum, name) => sum + soldQty(name), 0);
+function fridaySold(exceptCode) {
+  return Object.keys(FRIDAY_STOCK).reduce((sum, name) => sum + soldQty(name, exceptCode), 0);
 }
 
 function fridayLeft(name) {
@@ -1640,19 +1654,20 @@ function fridayLeft(name) {
   if (cap == null) return Infinity;
   const inCart = cart.filter((row) => row.name === name).reduce((sum, row) => sum + row.qty, 0);
   const otherCart = cart.filter((row) => FRIDAY_STOCK[row.name] && row.name !== name).reduce((sum, row) => sum + row.qty, 0);
-  const itemLeft = cap - soldQty(name) - inCart;
-  const totalLeft = FRIDAY_FOOD_CAP - fridaySold() - inCart - otherCart;
+  const itemLeft = cap - soldQty(name, editingSaleCode) - inCart;
+  const totalLeft = FRIDAY_FOOD_CAP - fridaySold(editingSaleCode) - inCart - otherCart;
   return Math.max(0, Math.min(itemLeft, totalLeft));
 }
 
 function fridayCountText() {
-  const vegLeft = Math.max(0, FRIDAY_STOCK["Friday Veg"] - soldQty("Friday Veg"));
-  const nonvegLeft = Math.max(0, FRIDAY_STOCK["Friday Non-Vegetarian"] - soldQty("Friday Non-Vegetarian"));
-  const totalLeft = Math.max(0, FRIDAY_FOOD_CAP - fridaySold());
+  const vegLeft = Math.max(0, FRIDAY_STOCK["Friday Veg"] - soldQty("Friday Veg", editingSaleCode));
+  const nonvegLeft = Math.max(0, FRIDAY_STOCK["Friday Non-Vegetarian"] - soldQty("Friday Non-Vegetarian", editingSaleCode));
+  const totalLeft = Math.max(0, FRIDAY_FOOD_CAP - fridaySold(editingSaleCode));
   return `Friday food ${totalLeft} of ${FRIDAY_FOOD_CAP} left. Non-veg ${nonvegLeft} of 90. Veg ${vegLeft} of 10.`;
 }
 
 let cart = [];
+let editingSaleCode = "";
 
 function hiddenSaleItem(name) {
   const text = String(name || "").toLowerCase().replace(/\s+/g, " ");
@@ -1853,7 +1868,7 @@ function paintSaleTiles() {
     button.type = "button";
     button.className = `sale-tile coupon-${item.tone}`;
     button.dataset.name = item.name;
-    const left = Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name));
+    const left = Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name, editingSaleCode));
     if (left < 1) button.disabled = true;
     const title = document.createElement("span");
     title.className = "sale-tile-name";
@@ -1911,6 +1926,11 @@ function paintSaleTiles() {
 
 function openSale() {
   if (!can("sell")) return;
+  editingSaleCode = "";
+  const submit = document.querySelector("#sale-submit");
+  if (submit) submit.textContent = "Create QR";
+  const cancel = document.querySelector("#sale-cancel");
+  if (cancel) cancel.hidden = true;
   cart = [];
   document.querySelector("#sale-name").value = "";
   const email = document.querySelector("#sale-email");
@@ -1927,6 +1947,59 @@ function openSale() {
     paintCart();
     document.querySelector("#sale-note").textContent = fridayCountText();
   });
+}
+
+function startEditSale(person) {
+  if (!can("sell") || !person) return;
+  editingSaleCode = person.code;
+  cart = (person.items || []).map((item) => ({
+    name: item.name,
+    qty: Number(item.qty) || 1,
+    lane: item.lane === "entry" ? "entry" : "food",
+    tone: item.tone || "",
+  }));
+  const saleName = document.querySelector("#sale-name");
+  if (saleName) saleName.value = person.name || "";
+  const email = document.querySelector("#sale-email");
+  const noEmail = document.querySelector("#sale-no-email");
+  if (email) {
+    email.value = person.email || "";
+    email.disabled = !person.email;
+  }
+  if (noEmail) noEmail.checked = !person.email;
+  const submit = document.querySelector("#sale-submit");
+  if (submit) submit.textContent = "Save changes";
+  const cancel = document.querySelector("#sale-cancel");
+  if (cancel) cancel.hidden = false;
+  const note = document.querySelector("#sale-note");
+  if (note) note.textContent = `Changing ${person.full || person.code}. The QR number stays the same. Changing the tickets clears pickup marks on this order.`;
+  show(saleScreen);
+  refreshOrders({ force: true }).then(() => {
+    const latest = currentBook.walkups && currentBook.walkups[person.code];
+    if (!latest) {
+      editingSaleCode = "";
+      if (note) note.textContent = "That sale is no longer on the shared list.";
+      return;
+    }
+    paintSaleTiles();
+    paintCart();
+  });
+}
+
+async function deleteSale(person) {
+  if (!can("sell") || !person) return;
+  if (!window.confirm(`Delete ${person.full || person.code} for ${person.name}? This QR will stop working.`)) return;
+  await refreshOrders({ force: true });
+  const at = new Date().toISOString();
+  queueWrite((book) => {
+    const next = TicketLedger.deleteWalkup(book, person.code, at, holderNow().actor);
+    return { write: next.changed, book: next.book, message: `Order ${person.code} deleted.` };
+  });
+  const saved = await flushWrites();
+  if (!saved) return;
+  if (editingSaleCode === person.code) editingSaleCode = "";
+  if (openedCode === person.code) closeTicket();
+  renderOrders();
 }
 
 function paintCart() {
@@ -1993,45 +2066,65 @@ async function submitSale() {
   }
   note.textContent = "Saving this sale to the shared list…";
   await refreshOrders({ force: true });
-  const over = cart.find((item) => FRIDAY_STOCK[item.name] != null && item.qty > Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name)));
-  if (over || cart.reduce((sum, item) => sum + (FRIDAY_STOCK[item.name] ? item.qty : 0), 0) > Math.max(0, FRIDAY_FOOD_CAP - fridaySold())) {
+  const except = editingSaleCode;
+  const over = cart.find((item) => FRIDAY_STOCK[item.name] != null && item.qty > Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name, except)));
+  if (over || cart.reduce((sum, item) => sum + (FRIDAY_STOCK[item.name] ? item.qty : 0), 0) > Math.max(0, FRIDAY_FOOD_CAP - fridaySold(except))) {
     note.textContent = `Not enough Friday meals left. ${fridayCountText()}`;
     paintSaleTiles();
     paintCart();
     return;
   }
-  const code = nextWalkCode();
+  const code = except || nextWalkCode();
+  const existing = except && currentBook.walkups && currentBook.walkups[code];
+  if (except && !existing) {
+    note.textContent = "That sale is no longer on the shared list.";
+    editingSaleCode = "";
+    return;
+  }
   const person = {
     code,
     full: `WALK${code}`,
     name,
     email,
     event: "On site",
-    date: new Date().toLocaleDateString(),
+    date: existing && existing.date || new Date().toLocaleDateString(),
     amount: "",
     items: cart.map((item) => ({ name: item.name, qty: item.qty, lane: item.lane === "entry" ? "entry" : "food", tone: item.tone || item.lane })),
   };
   const at = new Date().toISOString();
-  const saleMessage = `Order ${code} created.`;
+  const saleMessage = except ? `Order ${code} changed.` : `Order ${code} created.`;
+  const previous = existing ? structuredClone(existing) : null;
   queueWrite((book) => {
-    const next = TicketLedger.addWalkup(book, person, at, holderNow().actor);
+    const next = except
+      ? TicketLedger.updateWalkup(book, person, at, holderNow().actor)
+      : TicketLedger.addWalkup(book, person, at, holderNow().actor);
     return { write: next.changed, book: next.book, message: saleMessage };
   });
   const saved = await flushWrites();
   if (!saved) {
-    if (currentBook.walkups) delete currentBook.walkups[code];
+    if (except && previous && currentBook.walkups) currentBook.walkups[code] = previous;
+    else if (currentBook.walkups) delete currentBook.walkups[code];
     pendingWrites = pendingWrites.filter((mutate) => {
       const applied = mutate(structuredClone(currentBook));
       return applied.message !== saleMessage;
     });
-    note.textContent = "The shared list did not save this sale. The QR is not ready. Tap Create QR again.";
+    note.textContent = except
+      ? "The change did not save. This sale is unchanged."
+      : "The shared list did not save this sale. The QR is not ready. Tap Create QR again.";
     paintSaleTiles();
     paintCart();
     return;
   }
   cart = [];
+  editingSaleCode = "";
+  const submit = document.querySelector("#sale-submit");
+  if (submit) submit.textContent = "Create QR";
+  const cancel = document.querySelector("#sale-cancel");
+  if (cancel) cancel.hidden = true;
   const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
-  note.textContent = `Order ${code} is in the shared list. ${copies} ticket${copies === 1 ? "" : "s"} use this QR. ${fridayCountText()}`;
+  note.textContent = except
+    ? `Order ${code} was updated. The same QR still works. ${fridayCountText()}`
+    : `Order ${code} is in the shared list. ${copies} ticket${copies === 1 ? "" : "s"} use this QR. ${fridayCountText()}`;
   paintOpen(person, { allTickets: true, showGuest: true });
 }
 
@@ -2433,7 +2526,20 @@ function renderSoldQrs() {
     const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ");
     button.textContent = `${person.name} · ${person.full || person.code}${items ? ` · ${items}` : ""}`;
     button.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
-    box.append(button);
+    const change = document.createElement("button");
+    change.type = "button";
+    change.className = "secondary";
+    change.textContent = "Change";
+    change.addEventListener("click", () => startEditSale(person));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", () => { deleteSale(person); });
+    const row = document.createElement("div");
+    row.className = "sold-row";
+    row.append(button, change, remove);
+    box.append(row);
   });
 }
 
@@ -3438,6 +3544,18 @@ document.querySelector("#new-sale").addEventListener("click", openSale);
 document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
 document.querySelector("#sale-name").addEventListener("input", paintCart);
 document.querySelector("#sale-submit").addEventListener("click", submitSale);
+const saleCancel = document.querySelector("#sale-cancel");
+if (saleCancel) {
+  saleCancel.addEventListener("click", () => {
+    editingSaleCode = "";
+    cart = [];
+    saleCancel.hidden = true;
+    const submit = document.querySelector("#sale-submit");
+    if (submit) submit.textContent = "Create QR";
+    show(workspace);
+    renderOrders();
+  });
+}
 const saleNoEmail = document.querySelector("#sale-no-email");
 if (saleNoEmail) {
   saleNoEmail.addEventListener("change", () => {

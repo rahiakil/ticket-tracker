@@ -446,6 +446,32 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true };
   }
 
+  function updateWalkup(book, person, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const code = String(person && person.code || "");
+    if (!next.walkups || !next.walkups[code]) return { book: pruneBook(next), changed: false };
+    const previous = next.walkups[code];
+    const itemsChanged = JSON.stringify(previous.items || []) !== JSON.stringify(person.items || []);
+    next.walkups[code] = person;
+    if (itemsChanged && next.orders) delete next.orders[code];
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${code} sale changed for ${person.name} by ${actor}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function deleteWalkup(book, code, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const key = String(code || "");
+    if (!next.walkups || !next.walkups[key]) return { book: pruneBook(next), changed: false };
+    const name = next.walkups[key].name || "";
+    delete next.walkups[key];
+    if (next.orders) delete next.orders[key];
+    if (next.locks) delete next.locks[key];
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `${key} sale deleted for ${name} by ${actor}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
   function cleanupAll(book, at, actor) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
@@ -845,6 +871,8 @@ function statusDetail(order) {
     addDispute,
     clearDispute,
     addWalkup,
+    updateWalkup,
+    deleteWalkup,
     exportCsv,
     sheetPhrase,
     markItem,
