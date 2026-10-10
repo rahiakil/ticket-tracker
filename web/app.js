@@ -1068,7 +1068,7 @@ function itemButtons(person, options = {}) {
     block.className = openRows.length ? "day-block has-open" : "day-block";
     const heading = document.createElement(lane === "entry" && bucket === (todayEventDay() || "saturday") ? "button" : "p");
     heading.className = heading.tagName === "BUTTON" ? "day-heading day-tab" : "day-heading";
-    heading.textContent = lane === "food" && activeCounter() === "entry" ? `${label} · unavailable` : label;
+    heading.textContent = lane === "food" && readSession()?.role === "desk" && activeCounter() === "entry" ? `${label} · unavailable` : label;
     if (heading.tagName === "BUTTON") {
       heading.type = "button";
       heading.disabled = !openRows.length || Boolean(locked) || !canMarkTicket("entry", bucket);
