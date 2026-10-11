@@ -2131,6 +2131,7 @@ function persistSkus(list, message) {
       sunday: days.sunday,
       open: days.open,
       skus: clean,
+      saleStock: (book.eventDays && book.eventDays.saleStock) || saleStockMap(book),
     };
     book.skus = clean;
     return { write: true, book, message: message || "Tickets saved." };
@@ -2151,6 +2152,7 @@ function setDaysOpen(openMap, message) {
       sunday: days.sunday,
       open: { ...days.open, ...openMap },
       skus,
+      saleStock: (book.eventDays && book.eventDays.saleStock) || saleStockMap(book),
     };
     return { write: true, book, message };
   });
@@ -2191,6 +2193,110 @@ function renderSkus() {
       host.append(line);
     });
   });
+  renderSaleStock();
+}
+
+const SUNDAY_SALE_SKUS = [
+  { name: "Sunday Veg", lane: "food", tone: "veg", label: "Veg" },
+  { name: "Sunday Non-Vegetarian", lane: "food", tone: "nonveg", label: "Non-veg" },
+  { name: "Sunday Fish", lane: "food", tone: "fish", label: "Fish" },
+];
+
+function saleStockMap(book) {
+  const saved = book && book.eventDays && book.eventDays.saleStock;
+  const map = {};
+  SUNDAY_SALE_SKUS.forEach((sku) => {
+    const row = saved && saved[sku.name];
+    map[sku.name] = {
+      qty: Math.max(0, Number(row && row.qty) || 0),
+      buffer: Math.max(0, Number(row && row.buffer) || 0),
+    };
+  });
+  return map;
+}
+
+function saleCap(name, book) {
+  const row = saleStockMap(book || currentBook)[name];
+  if (!row) return Infinity;
+  return row.qty + row.buffer;
+}
+
+function saleLeft(name) {
+  const inCart = cart.filter((row) => row.name === name).reduce((sum, row) => sum + row.qty, 0);
+  return Math.max(0, saleCap(name) - soldQty(name, editingSaleCode) - inCart);
+}
+
+function saveSaleStockFrom(host) {
+  if (!can("admin")) return;
+  const next = saleStockMap(currentBook);
+  host.querySelectorAll("input[data-name]").forEach((input) => {
+    const name = input.dataset.name;
+    if (!next[name]) return;
+    const value = Math.max(0, Math.floor(Number(input.value) || 0));
+    if (input.dataset.stock === "buffer") next[name].buffer = value;
+    else next[name].qty = value;
+  });
+  queueWrite((book) => {
+    const days = eventDates(book);
+    const skus = (book.eventDays && Array.isArray(book.eventDays.skus) && book.eventDays.skus) || storedSkuRows() || mergedSkus();
+    book.eventDays = {
+      friday: days.friday,
+      saturday: days.saturday,
+      sunday: days.sunday,
+      open: days.open,
+      skus,
+      saleStock: next,
+    };
+    return { write: true, book, message: "Sunday quantities saved." };
+  });
+  skuNote("Sunday quantities saved.");
+  renderSaleStock();
+  paintSaleTiles();
+}
+
+function renderSaleStock() {
+  const stock = saleStockMap(currentBook);
+  document.querySelectorAll(".sale-stock").forEach((host) => {
+    if (host.contains(document.activeElement)) return;
+    host.replaceChildren();
+    SUNDAY_SALE_SKUS.forEach((sku) => {
+      const row = stock[sku.name];
+      const sold = soldQty(sku.name);
+      const cap = row.qty + row.buffer;
+      const block = document.createElement("div");
+      block.className = "sale-stock-row";
+      const title = document.createElement("p");
+      title.textContent = `${sku.label}. Sold ${sold}. Left ${Math.max(0, cap - sold)}.`;
+      const qtyLabel = document.createElement("label");
+      qtyLabel.append(document.createTextNode("Quantity "));
+      const qty = document.createElement("input");
+      qty.type = "number";
+      qty.min = "0";
+      qty.inputMode = "numeric";
+      qty.value = String(row.qty);
+      qty.dataset.stock = "qty";
+      qty.dataset.name = sku.name;
+      qtyLabel.append(qty);
+      const bufferLabel = document.createElement("label");
+      bufferLabel.append(document.createTextNode("Buffer "));
+      const buffer = document.createElement("input");
+      buffer.type = "number";
+      buffer.min = "0";
+      buffer.inputMode = "numeric";
+      buffer.value = String(row.buffer);
+      buffer.dataset.stock = "buffer";
+      buffer.dataset.name = sku.name;
+      bufferLabel.append(buffer);
+      block.append(title, qtyLabel, bufferLabel);
+      host.append(block);
+    });
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "btn-teal";
+    save.textContent = "Save quantities";
+    save.addEventListener("click", () => saveSaleStockFrom(host));
+    host.append(save);
+  });
 }
 
 function menuItems() {
@@ -2222,6 +2328,11 @@ function addSaleItem(item) {
     if (note) note.textContent = `${item.name} is sold out. ${fridayCountText()}`;
     return;
   }
+  if (SUNDAY_SALE_SKUS.some((sku) => sku.name === item.name) && saleLeft(item.name) < 1) {
+    const note = document.querySelector("#sale-note");
+    if (note) note.textContent = `${item.label || item.name} is sold out. Raise the quantity or buffer in Admin.`;
+    return;
+  }
   const found = cart.find((row) => row.name === item.name);
   if (found) found.qty += 1;
   else cart.push({ name: item.name, qty: 1, lane: item.lane, tone: item.tone || "" });
@@ -2238,11 +2349,18 @@ function changeSaleQty(name, delta) {
   paintCart();
 }
 
+function saleTileLabel(item) {
+  if (item.tone === "nonveg") return "Non-veg";
+  if (item.tone === "fish") return "Fish";
+  return "Veg";
+}
+
 function saleMenu() {
-  return [
-    { name: "Sunday Veg", lane: "food", tone: "veg", when: "Sunday", open: true },
-    { name: "Sunday Non-Vegetarian", lane: "food", tone: "nonveg", when: "Sunday", open: true },
-  ];
+  return SUNDAY_SALE_SKUS.map((sku) => {
+    const cap = saleCap(sku.name);
+    const left = Math.max(0, cap - soldQty(sku.name, editingSaleCode));
+    return { ...sku, when: "Sunday", cap, left, open: left > 0 };
+  });
 }
 
 function paintSaleTiles() {
@@ -2258,7 +2376,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Sunday meals are open. Friday and Saturday are closed.";
+  hint.textContent = "Sunday veg, non-veg, and fish. A meal closes when its quantity plus buffer is sold.";
   host.append(hint);
   for (const when of ["Saturday", "Sunday"]) {
     const group = items.filter((item) => item.when === when);
@@ -2276,11 +2394,14 @@ function paintSaleTiles() {
       button.disabled = !item.open;
       const title = document.createElement("span");
       title.className = "sale-tile-name";
-      title.textContent = item.open ? (item.tone === "nonveg" ? "Non-veg" : "Veg") : `${item.tone === "nonveg" ? "Non-veg" : "Veg"} · closed`;
+      title.textContent = item.open ? saleTileLabel(item) : `${saleTileLabel(item)} · sold out`;
+      const stock = document.createElement("span");
+      stock.className = "sale-stock-left";
+      stock.textContent = item.cap > 0 ? `${item.left} of ${item.cap} left` : "Set the quantity in Admin";
       const badge = document.createElement("span");
       badge.className = "sale-qty";
       badge.hidden = true;
-      button.append(title, badge);
+      button.append(title, stock, badge);
       button.addEventListener("click", () => addSaleItem(item));
       grid.append(button);
     });
@@ -2306,7 +2427,7 @@ function openSale() {
   if (noEmail) noEmail.checked = false;
   paintSaleTiles();
   paintCart();
-  document.querySelector("#sale-note").textContent = "Sunday meals are open. Friday and Saturday are closed.";
+  document.querySelector("#sale-note").textContent = "Sunday veg, non-veg, and fish.";
   show(saleScreen);
   refreshOrders({ force: true }).then(() => {
     if (!saleScreen || saleScreen.hidden) return;
@@ -2440,6 +2561,14 @@ async function submitSale() {
   const over = cart.find((item) => FRIDAY_STOCK[item.name] != null && item.qty > Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name, except)));
   if (over || cart.reduce((sum, item) => sum + (FRIDAY_STOCK[item.name] ? item.qty : 0), 0) > Math.max(0, FRIDAY_FOOD_CAP - fridaySold(except))) {
     note.textContent = `Not enough Friday meals left. ${fridayCountText()}`;
+    paintSaleTiles();
+    paintCart();
+    return;
+  }
+  const short = cart.find((item) => SUNDAY_SALE_SKUS.some((sku) => sku.name === item.name) && item.qty > Math.max(0, saleCap(item.name) - soldQty(item.name, except)));
+  if (short) {
+    const row = saleStockMap(currentBook)[short.name];
+    note.textContent = `Not enough ${short.name} left. Quantity ${row ? row.qty : 0}, buffer ${row ? row.buffer : 0}, sold ${soldQty(short.name, except)}.`;
     paintSaleTiles();
     paintCart();
     return;

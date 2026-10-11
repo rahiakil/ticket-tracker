@@ -298,6 +298,9 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
   color: #fff;
 }
 .sale-tile-name { display: block; }
+.sale-stock-left { display: block; margin-top: 6px; font-size: 1rem; font-weight: 750; }
+.sale-stock-row { display: grid; gap: 6px; margin: 0 0 14px; padding: 10px; border: 1px solid #e7d7c3; border-radius: 12px; text-align: left; }
+.sale-stock-row input { width: 100%; }
 .sale-stock { display: block; margin-top: 6px; font-size: 1rem; font-weight: 750; }
 .sold-row { display: grid; grid-template-columns: 1fr 110px 110px; gap: 8px; margin: 0 0 8px; }
 #sold-query { width: 100%; margin: 8px 0; }
