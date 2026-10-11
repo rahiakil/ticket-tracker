@@ -4629,6 +4629,8 @@ document.querySelector("#export-stats").addEventListener("click", exportStats);
 document.querySelector("#new-sale").addEventListener("click", openSale);
 document.querySelector("#manage-skus").addEventListener("click", () => {
   if (!can("admin")) return;
+  const pay = document.querySelector("#pay-screen");
+  if (pay) pay.hidden = true;
   show(skuScreen);
   renderSkuAdmin();
 });

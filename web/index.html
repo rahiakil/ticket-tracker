@@ -101,6 +101,7 @@
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
+      <button id="manage-skus" class="btn-teal" type="button" hidden>SKUs · admin only</button>
       <div id="reader" hidden></div>
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
       <p id="result" class="result" role="status" aria-live="polite"></p>
@@ -113,7 +114,6 @@
           <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
         </div>
         <button id="new-sale" class="btn-orange" type="button">New sale</button>
-        <button id="manage-skus" class="btn-teal" type="button" hidden>SKUs · admin only</button>
         <label for="sold-query">Search new sales
           <input id="sold-query" type="search" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name or QR number">
         </label>
@@ -283,7 +283,6 @@
         <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
         <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
         <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
-        <button type="button" class="show-pay btn-teal">Take payment</button>
       </div>
       <div class="sku-list"></div>
       <form class="sku-form">
@@ -337,7 +336,7 @@
     </header>
     <section class="panel">
       <h1>SKUs · admin only</h1>
-      <p class="note">Enter a SKU name and how many are left. It shows on New sale for Sunday only.</p>
+      <p class="note">Add an item and how many are left. It appears on New sale for Sunday. This screen does not take payment or create a QR.</p>
       <div id="sku-admin-list"></div>
       <h2>New SKU</h2>
       <label>SKU name
@@ -346,7 +345,7 @@
       <label>Remaining
         <input id="sku-admin-remaining" type="number" min="0" inputmode="numeric" value="0">
       </label>
-      <button id="sku-admin-create" class="btn-orange" type="button">Create SKU</button>
+      <button id="sku-admin-create" class="btn-teal" type="button">Add SKU</button>
       <p id="sku-admin-note" class="result" role="status"></p>
     </section>
   </main>
@@ -407,7 +406,6 @@
         <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
         <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
         <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
-        <button type="button" class="show-pay btn-teal">Take payment</button>
       </div>
       <h2>Sunday quantities</h2>
       <p class="note">Set veg, non-veg, and fish for Sunday. Buffer is extra sales on top of the quantity. Save to share it with every phone.</p>
