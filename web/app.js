@@ -1469,6 +1469,18 @@ function pillWithPrint(person, item, index, lane, locked, now) {
   return wrap;
 }
 
+function mealWords(person) {
+  const counts = new Map();
+  (person.items || []).forEach((item) => {
+    const raw = String((item && (item.name || item.id)) || "");
+    const text = raw.toLowerCase();
+    const label = text.includes("fish") ? "Fish" : /non-?veg/.test(text) ? "Non-veg" : (/\bveg\b/.test(text) || text === "veg") ? "Veg" : raw;
+    if (!label) return;
+    counts.set(label, (counts.get(label) || 0) + (Number(item.qty) || item.parts || 1));
+  });
+  return [...counts].map(([label, qty]) => (qty > 1 ? `${label} × ${qty}` : label)).join(" · ");
+}
+
 function slipArticle(person, item) {
   const slip = document.createElement("article");
   slip.className = "print-slip";
@@ -1480,7 +1492,8 @@ function slipArticle(person, item) {
   ticketId.textContent = person.full || person.code;
   const label = document.createElement("p");
   label.className = "print-slip-item";
-  label.textContent = item && item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : (item && item.id) || "Ticket";
+  const word = mealWords({ items: [{ name: item && (item.id || item.name), qty: 1 }] }) || "Ticket";
+  label.textContent = item && item.parts > 1 ? `${word} (${item.unit + 1} of ${item.parts})` : word;
   const qr = document.createElement("div");
   paintQr(person.code, qr);
   slip.append(name, ticketId, label, qr);
@@ -1517,6 +1530,9 @@ function guestQrPanel(person) {
   const lead = document.createElement("p");
   lead.className = "guest-qr-lead";
   lead.textContent = "Show this QR to the guest so they can photograph it.";
+  const meals = document.createElement("p");
+  meals.className = "guest-qr-meals";
+  meals.textContent = mealWords(person) || "Ticket";
   const qr = document.createElement("div");
   paintQr(person.code, qr);
   const code = document.createElement("p");
@@ -1537,7 +1553,7 @@ function guestQrPanel(person) {
   share.className = "btn-orange";
   share.textContent = "Share QR";
   share.addEventListener("click", () => { shareTicket(); });
-  panel.append(lead, qr, code, items, print, share);
+  panel.append(lead, meals, qr, code, items, print, share);
   if (currentBook.walkups && currentBook.walkups[person.code]) {
     const change = document.createElement("button");
     change.type = "button";
@@ -2310,7 +2326,7 @@ function saleCap(name, book) {
   const row = saleStockMap(book || currentBook)[name];
   const saved = row ? row.qty + row.buffer : 0;
   const core = SUNDAY_SALE_SKUS.some((sku) => sku.name === name);
-  if (core) return Math.max(saved, soldQty(name) + 70);
+  if (core) return Math.max(saved, 70);
   if (!row) return Infinity;
   return saved;
 }
@@ -2759,44 +2775,34 @@ async function submitSale() {
   };
   const at = new Date().toISOString();
   const saleMessage = except ? `Order ${code} changed.` : `Order ${code} created.`;
-  const previous = existing ? structuredClone(existing) : null;
-  let saved = false;
-  try {
-    queueWrite((book) => {
-      const next = except
-        ? TicketLedger.updateWalkup(book, person, at, holderNow().actor)
-        : TicketLedger.addWalkup(book, person, at, holderNow().actor);
-      return { write: next.changed, book: next.book, message: saleMessage };
-    });
-    saved = await flushWrites();
-  } catch {
-    saved = false;
-  }
-  if (!saved) {
-    if (except && previous && currentBook.walkups) currentBook.walkups[code] = previous;
-    else if (currentBook.walkups) delete currentBook.walkups[code];
-    pendingWrites = pendingWrites.filter((mutate) => {
-      const applied = mutate(structuredClone(currentBook));
-      return applied.message !== saleMessage;
-    });
-    note.textContent = except
-      ? "The change did not save. This sale is unchanged."
-      : "The shared list did not save this sale. The QR is not ready. Tap Create QR again.";
-    paintSaleTiles();
-    paintCart();
-    return;
-  }
+  queueWrite((book) => {
+    const next = except
+      ? TicketLedger.updateWalkup(book, person, at, holderNow().actor)
+      : TicketLedger.addWalkup(book, person, at, holderNow().actor);
+    return { write: next.changed, book: next.book, message: saleMessage };
+  });
   cart = [];
   editingSaleCode = "";
   const submit = document.querySelector("#sale-submit");
   if (submit) submit.textContent = "Create QR";
   const cancel = document.querySelector("#sale-cancel");
   if (cancel) cancel.hidden = true;
-  const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
-  note.textContent = except
-    ? `Order ${code} was updated. The same QR still works.`
-    : `Order ${code} is in the shared list. ${copies} meal${copies === 1 ? "" : "s"} use this QR.`;
   paintOpen(person, { allTickets: true, showGuest: true });
+  let saved = false;
+  try {
+    saved = await flushWrites();
+  } catch {
+    saved = false;
+  }
+  const copies = person.items.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
+  const meals = mealWords(person);
+  if (!saved) {
+    showMessage(`QR is ready for ${person.name}${meals ? `: ${meals}` : ""}. The shared list is still catching up.`, "pending");
+    return;
+  }
+  showMessage(except
+    ? `Order ${code} was updated. The same QR still works.`
+    : `Order ${code} is in the shared list. ${meals || `${copies} meals`}.`, "pending");
 }
 
 function receiptText(person) {
@@ -2867,13 +2873,16 @@ async function qrImageFile() {
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#fffaf4";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(image, 70, 40, 500, 500);
+  ctx.drawImage(image, 70, 110, 500, 500);
   ctx.fillStyle = "#1c140c";
   ctx.textAlign = "center";
+  ctx.font = "800 42px sans-serif";
+  const meals = mealWords(person) || "Ticket";
+  ctx.fillText(meals, 320, 70);
   ctx.font = "700 36px sans-serif";
-  ctx.fillText(person.name, 320, 600);
+  ctx.fillText(person.name, 320, 660);
   ctx.font = "28px sans-serif";
-  ctx.fillText(person.code, 320, 650);
+  ctx.fillText(person.code, 320, 710);
   URL.revokeObjectURL(url);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   return new File([blob], `uttaron-${person.code}.png`, { type: "image/png" });
@@ -2893,7 +2902,7 @@ async function saveQrImage() {
 async function shareQrImage(kind) {
   const person = catalogPerson(openedCode);
   if (!person) return;
-  const text = `Uttoron order ${person.code} for ${person.name}`;
+  const text = `Uttoron order ${person.code} for ${person.name}${mealWords(person) ? ` · ${mealWords(person)}` : ""}`;
   const file = await qrImageFile();
   if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {

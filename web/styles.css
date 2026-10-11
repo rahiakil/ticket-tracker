@@ -734,6 +734,7 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
   text-align: center;
 }
 .guest-qr-lead { font-size: 1.25rem; font-weight: 750; margin: 0 0 8px; }
+.guest-qr-meals { font-size: 2rem; font-weight: 800; margin: 0 0 8px; letter-spacing: 0.02em; }
 .guest-qr-code { font-size: 1.7rem; font-weight: 800; letter-spacing: 0.04em; margin: 8px 0; }
 .guest-qr .qr-view svg { width: min(100%, 320px); height: auto; background: #fff; }
 .pill-wrap { display: grid; gap: 4px; }
