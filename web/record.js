@@ -36,13 +36,7 @@
         if (error && error.message === "token") return { ok: false, message: "Could not save—retry. Add the GitHub save key on this phone." };
         continue;
       }
-      let confirmed;
-      try {
-        confirmed = await load(url);
-      } catch {
-        continue;
-      }
-      if (confirmed && confirmed.lastWriteId === writeId) return { ok: true, message: changed.message, book: confirmed };
+      return { ok: true, message: changed.message, book: changed.book };
     }
     return { ok: false, message: "Could not save—retry. The record did not confirm the save." };
   }

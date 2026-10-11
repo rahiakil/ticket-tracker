@@ -2720,8 +2720,7 @@ async function submitSale() {
     note.textContent = "Only Sunday meals are open.";
     return;
   }
-  note.textContent = "Saving this sale to the shared list…";
-  await refreshOrders({ force: true });
+  note.textContent = "Saving this sale…";
   const except = editingSaleCode;
   const over = cart.find((item) => FRIDAY_STOCK[item.name] != null && item.qty > Math.max(0, FRIDAY_STOCK[item.name] - soldQty(item.name, except)));
   if (over || cart.reduce((sum, item) => sum + (FRIDAY_STOCK[item.name] ? item.qty : 0), 0) > Math.max(0, FRIDAY_FOOD_CAP - fridaySold(except))) {
