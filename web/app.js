@@ -1002,7 +1002,7 @@ function revertOne(person) {
 }
 
 function dayBucket(name) {
-  return TicketLedger.itemDay(name) || "other";
+  return TicketLedger.itemDay(name) || (isSundaySaleName(name) ? "sunday" : "other");
 }
 
 function allDayEntry(item) {
@@ -1861,7 +1861,7 @@ function wasScanned(person) {
 function sundayOrder(person) {
   return orderView(person).items.some((item) => {
     const day = TicketLedger.itemDay(item.id);
-    if (day === "sunday") return true;
+    if (day === "sunday" || isSundaySaleName(item.id)) return true;
     return item.lane === "entry" && !day;
   });
 }
@@ -2065,11 +2065,12 @@ const FRIDAY_STOCK = {
 const FRIDAY_FOOD_CAP = 100;
 
 function soldQty(name, exceptCode) {
+  const names = new Set(saleNameKeys(name));
   let total = 0;
   Object.values(currentBook.walkups || {}).forEach((person) => {
     if (exceptCode && person.code === exceptCode) return;
     (person.items || []).forEach((item) => {
-      if (item && item.name === name) total += Number(item.qty) || 0;
+      if (item && names.has(item.name)) total += Number(item.qty) || 0;
     });
   });
   return total;
@@ -2239,9 +2240,9 @@ function renderSkus() {
 }
 
 const SUNDAY_SALE_SKUS = [
-  { name: "Sunday Veg", lane: "food", tone: "veg", label: "Veg" },
-  { name: "Sunday Non-Vegetarian", lane: "food", tone: "nonveg", label: "Non-veg" },
-  { name: "Sunday Fish", lane: "food", tone: "fish", label: "Fish" },
+  { name: "Veg", lane: "food", tone: "veg", label: "Veg", aliases: ["Sunday Veg", "Veg"] },
+  { name: "Non-veg", lane: "food", tone: "nonveg", label: "Non-veg", aliases: ["Sunday Non-Vegetarian", "Sunday Non-veg", "Non-veg", "Non veg"] },
+  { name: "Fish", lane: "food", tone: "fish", label: "Fish", aliases: ["Sunday Fish", "Fish"] },
 ];
 
 function saleTone(name) {
@@ -2251,27 +2252,52 @@ function saleTone(name) {
   return "veg";
 }
 
-function normalizeSaleSku(raw) {
+function canonicalSaleSku(raw) {
   const typed = String((raw && raw.name) || "").replace(/\s+/g, " ").trim().slice(0, 60);
-  if (!typed) return null;
-  if (/^(friday|saturday)\b/i.test(typed)) return null;
-  const name = /^(sunday)\b/i.test(typed) ? typed : `Sunday ${typed}`;
-  const tone = raw.tone || saleTone(name);
-  const label = String(raw.label || typed.replace(/^sunday\s+/i, "")).replace(/\s+/g, " ").trim().slice(0, 40) || name;
-  return { name, lane: "food", tone, label };
+  if (!typed || /^(friday|saturday)\b/i.test(typed)) return null;
+  const key = typed.toLowerCase();
+  const known = SUNDAY_SALE_SKUS.find((sku) => sku.name.toLowerCase() === key || sku.aliases.some((alias) => alias.toLowerCase() === key));
+  if (known) return { name: known.name, lane: "food", tone: known.tone, label: known.label };
+  return { name: typed, lane: "food", tone: (raw && raw.tone) || saleTone(typed), label: String((raw && raw.label) || typed).slice(0, 40) };
+}
+
+function normalizeSaleSku(raw) {
+  return canonicalSaleSku(raw);
+}
+
+function saleNameKeys(name) {
+  const sku = canonicalSaleSku({ name });
+  if (!sku) return [name];
+  const known = SUNDAY_SALE_SKUS.find((item) => item.name === sku.name);
+  return known ? known.aliases.concat(known.name) : [sku.name];
 }
 
 function activeSaleSkus(book) {
   const saved = book && book.eventDays && book.eventDays.saleSkus;
-  const source = Array.isArray(saved) && saved.length ? saved : SUNDAY_SALE_SKUS;
-  return source.map(normalizeSaleSku).filter(Boolean);
+  const list = SUNDAY_SALE_SKUS.map((sku) => ({ name: sku.name, lane: sku.lane, tone: sku.tone, label: sku.label }));
+  const seen = new Set(list.map((sku) => sku.name.toLowerCase()));
+  (Array.isArray(saved) ? saved : []).forEach((raw) => {
+    const sku = canonicalSaleSku(raw);
+    if (!sku || seen.has(sku.name.toLowerCase())) return;
+    seen.add(sku.name.toLowerCase());
+    list.push(sku);
+  });
+  return list;
+}
+
+function isSundaySaleName(name) {
+  const key = String(name || "").trim().toLowerCase();
+  if (!key) return false;
+  if (SUNDAY_SALE_SKUS.some((sku) => sku.name.toLowerCase() === key || sku.aliases.some((alias) => alias.toLowerCase() === key))) return true;
+  return activeSaleSkus().some((sku) => sku.name.toLowerCase() === key);
 }
 
 function saleStockMap(book) {
   const saved = book && book.eventDays && book.eventDays.saleStock;
   const map = {};
   activeSaleSkus(book).forEach((sku) => {
-    const row = saved && (saved[sku.name] || saved[sku.label]);
+    const keys = saleNameKeys(sku.name);
+    const row = saved && keys.map((key) => saved[key]).find(Boolean);
     map[sku.name] = {
       qty: Math.max(0, Number(row && row.qty) || 0),
       buffer: Math.max(0, Number(row && row.buffer) || 0),
@@ -2326,42 +2352,30 @@ function renderSaleStock() {
     if (host.contains(document.activeElement)) return;
     host.replaceChildren();
     SUNDAY_SALE_SKUS.forEach((sku) => {
-      const row = stock[sku.name];
+      const row = stock[sku.name] || { qty: 0, buffer: 0 };
       const sold = soldQty(sku.name);
-      const cap = row.qty + row.buffer;
+      const left = Math.max(0, row.qty + row.buffer - sold);
       const block = document.createElement("div");
       block.className = "sale-stock-row";
       const title = document.createElement("p");
-      title.textContent = `${sku.label}. Sold ${sold}. Left ${Math.max(0, cap - sold)}.`;
-      const qtyLabel = document.createElement("label");
-      qtyLabel.append(document.createTextNode("Quantity "));
-      const qty = document.createElement("input");
-      qty.type = "number";
-      qty.min = "0";
-      qty.inputMode = "numeric";
-      qty.value = String(row.qty);
-      qty.dataset.stock = "qty";
-      qty.dataset.name = sku.name;
-      qtyLabel.append(qty);
-      const bufferLabel = document.createElement("label");
-      bufferLabel.append(document.createTextNode("Buffer "));
-      const buffer = document.createElement("input");
-      buffer.type = "number";
-      buffer.min = "0";
-      buffer.inputMode = "numeric";
-      buffer.value = String(row.buffer);
-      buffer.dataset.stock = "buffer";
-      buffer.dataset.name = sku.name;
-      bufferLabel.append(buffer);
-      block.append(title, qtyLabel, bufferLabel);
+      title.textContent = `${sku.label}. Sold ${sold}. ${left} left for New sale.`;
+      const label = document.createElement("label");
+      label.append(document.createTextNode("Remaining "));
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.inputMode = "numeric";
+      input.value = String(left);
+      input.dataset.name = sku.name;
+      label.append(input);
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "btn-teal";
+      save.textContent = "Save remaining";
+      save.addEventListener("click", () => saveSkuRemaining(sku.name, input.value));
+      block.append(title, label, save);
       host.append(block);
     });
-    const save = document.createElement("button");
-    save.type = "button";
-    save.className = "btn-teal";
-    save.textContent = "Save quantities";
-    save.addEventListener("click", () => saveSaleStockFrom(host));
-    host.append(save);
   });
   renderSkuAdmin();
 }
@@ -2386,11 +2400,12 @@ function writeSaleCatalog(list, stock, message) {
 
 function saveSkuRemaining(name, raw) {
   if (!can("admin")) return;
+  const sku = canonicalSaleSku({ name });
+  if (!sku) return;
   const remaining = Math.max(0, Math.floor(Number(raw) || 0));
   const stock = saleStockMap(currentBook);
-  if (!stock[name]) return;
-  stock[name] = { qty: soldQty(name) + remaining, buffer: 0 };
-  const applied = writeSaleCatalog(activeSaleSkus(currentBook), stock, `${name}: ${remaining} remaining.`);
+  stock[sku.name] = { qty: soldQty(sku.name) + remaining, buffer: 0 };
+  const applied = writeSaleCatalog(activeSaleSkus(currentBook), stock, `${sku.label}: ${remaining} left on New sale.`);
   const note = document.querySelector("#sku-admin-note");
   if (note) note.textContent = applied.message;
   renderSkuAdmin();
@@ -2408,25 +2423,22 @@ function createSaleSku() {
     if (note) note.textContent = "New SKUs are for Sunday only.";
     return;
   }
-  const sku = normalizeSaleSku({ name: typed });
+  const sku = canonicalSaleSku({ name: typed });
   if (!sku) {
     if (note) note.textContent = "Enter a SKU name.";
     return;
   }
-  const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
-  if (list.some((item) => item.name.toLowerCase() === sku.name.toLowerCase())) {
-    if (note) note.textContent = `${sku.name} already exists. Change its remaining amount below.`;
-    return;
-  }
   const remaining = Math.max(0, Math.floor(Number(remainInput && remainInput.value) || 0));
-  list.push(sku);
+  const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
+  if (!list.some((item) => item.name.toLowerCase() === sku.name.toLowerCase())) list.push(sku);
   const stock = saleStockMap(currentBook);
-  stock[sku.name] = { qty: remaining, buffer: 0 };
-  const applied = writeSaleCatalog(list, stock, `${sku.label} is on New sale for Sunday. ${remaining} remaining.`);
+  stock[sku.name] = { qty: soldQty(sku.name) + remaining, buffer: 0 };
+  const applied = writeSaleCatalog(list, stock, `${sku.label} is on New sale. ${remaining} left.`);
   if (note) note.textContent = applied.message;
   if (nameInput) nameInput.value = "";
   if (remainInput) remainInput.value = "0";
   renderSkuAdmin();
+  renderSaleStock();
   paintSaleTiles();
 }
 
@@ -2441,7 +2453,7 @@ function renderSkuAdmin() {
     const block = document.createElement("div");
     block.className = "sale-stock-row";
     const title = document.createElement("p");
-    title.textContent = `${sku.label}. Sunday. Sold ${sold}. Remaining ${left}.`;
+    title.textContent = `${sku.label}. Sold ${sold}. ${left} left on New sale.`;
     const label = document.createElement("label");
     label.append(document.createTextNode("Remaining "));
     const input = document.createElement("input");
@@ -2559,7 +2571,7 @@ function paintSaleTiles() {
       title.textContent = item.open ? saleTileLabel(item) : `${saleTileLabel(item)} · sold out`;
       const stock = document.createElement("span");
       stock.className = "sale-stock-left";
-      stock.textContent = item.cap > 0 ? `${item.left} of ${item.cap} left` : "Set the remaining amount";
+      stock.textContent = item.left > 0 ? `${item.left} left` : "None left";
       const badge = document.createElement("span");
       badge.className = "sale-qty";
       badge.hidden = true;
