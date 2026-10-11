@@ -414,7 +414,15 @@ async function startCamera() {
   try {
     await camera.start(
       { facingMode: "environment" },
-      { fps: 8, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
+      {
+        fps: 10,
+        disableFlip: false,
+        videoConstraints: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      },
       (decoded) => { onDecoded(decoded, generation); },
       () => {},
     );
@@ -486,7 +494,7 @@ document.querySelector("#file-scan").addEventListener("change", async (event) =>
   await stopCamera();
   const scanner = new Scanner("file-reader", { verbose: false });
   try {
-    const text = await scanner.scanFile(file, false);
+    const text = await scanFileAnyWay(scanner, file);
     try { await scanner.clear(); } catch { /* no preview to clear */ }
     lastAttempt = { raw: text };
     await submitAttempt();
@@ -496,6 +504,41 @@ document.querySelector("#file-scan").addEventListener("change", async (event) =>
     scanLock = false;
   }
 });
+
+function mirrorImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth || image.width;
+      canvas.height = image.naturalHeight || image.height;
+      const context = canvas.getContext("2d");
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => {
+        if (!blob) reject(new Error("flip"));
+        else resolve(new File([blob], "flipped-qr.png", { type: "image/png" }));
+      }, "image/png");
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("flip"));
+    };
+    image.src = url;
+  });
+}
+
+async function scanFileAnyWay(scanner, file) {
+  try {
+    return await scanner.scanFile(file, false);
+  } catch {
+    const flipped = await mirrorImageFile(file);
+    return scanner.scanFile(flipped, false);
+  }
+}
 
 function recordOptions() {
   return {

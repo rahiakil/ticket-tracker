@@ -792,7 +792,8 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 #reader canvas {
   width: 100% !important;
   max-height: 46dvh !important;
-  object-fit: cover;
+  object-fit: contain;
+  background: #111;
   border-radius: 12px;
 }
 #reader__dashboard_section,
