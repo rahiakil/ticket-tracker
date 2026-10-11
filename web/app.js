@@ -2252,10 +2252,12 @@ function saleTone(name) {
 }
 
 function normalizeSaleSku(raw) {
-  const name = String((raw && raw.name) || "").replace(/\s+/g, " ").trim().slice(0, 80);
-  if (!name) return null;
+  const typed = String((raw && raw.name) || "").replace(/\s+/g, " ").trim().slice(0, 60);
+  if (!typed) return null;
+  if (/^(friday|saturday)\b/i.test(typed)) return null;
+  const name = /^(sunday)\b/i.test(typed) ? typed : `Sunday ${typed}`;
   const tone = raw.tone || saleTone(name);
-  const label = String(raw.label || name).replace(/\s+/g, " ").trim().slice(0, 40) || name;
+  const label = String(raw.label || typed.replace(/^sunday\s+/i, "")).replace(/\s+/g, " ").trim().slice(0, 40) || name;
   return { name, lane: "food", tone, label };
 }
 
@@ -2269,7 +2271,7 @@ function saleStockMap(book) {
   const saved = book && book.eventDays && book.eventDays.saleStock;
   const map = {};
   activeSaleSkus(book).forEach((sku) => {
-    const row = saved && saved[sku.name];
+    const row = saved && (saved[sku.name] || saved[sku.label]);
     map[sku.name] = {
       qty: Math.max(0, Number(row && row.qty) || 0),
       buffer: Math.max(0, Number(row && row.buffer) || 0),
@@ -2401,7 +2403,12 @@ function createSaleSku() {
   const note = document.querySelector("#sku-admin-note");
   const nameInput = document.querySelector("#sku-admin-name");
   const remainInput = document.querySelector("#sku-admin-remaining");
-  const sku = normalizeSaleSku({ name: nameInput ? nameInput.value : "" });
+  const typed = nameInput ? nameInput.value : "";
+  if (/^(friday|saturday)\b/i.test(String(typed).trim())) {
+    if (note) note.textContent = "New SKUs are for Sunday only.";
+    return;
+  }
+  const sku = normalizeSaleSku({ name: typed });
   if (!sku) {
     if (note) note.textContent = "Enter a SKU name.";
     return;
@@ -2415,7 +2422,7 @@ function createSaleSku() {
   list.push(sku);
   const stock = saleStockMap(currentBook);
   stock[sku.name] = { qty: remaining, buffer: 0 };
-  const applied = writeSaleCatalog(list, stock, `${sku.name} added. ${remaining} remaining.`);
+  const applied = writeSaleCatalog(list, stock, `${sku.label} is on New sale for Sunday. ${remaining} remaining.`);
   if (note) note.textContent = applied.message;
   if (nameInput) nameInput.value = "";
   if (remainInput) remainInput.value = "0";
@@ -2434,7 +2441,7 @@ function renderSkuAdmin() {
     const block = document.createElement("div");
     block.className = "sale-stock-row";
     const title = document.createElement("p");
-    title.textContent = `${sku.name}. Sold ${sold}. Remaining ${left}.`;
+    title.textContent = `${sku.label}. Sunday. Sold ${sold}. Remaining ${left}.`;
     const label = document.createElement("label");
     label.append(document.createTextNode("Remaining "));
     const input = document.createElement("input");
@@ -2573,16 +2580,9 @@ function openSale() {
   if (cancel) cancel.hidden = true;
   cart = [];
   document.querySelector("#sale-name").value = "";
-  const email = document.querySelector("#sale-email");
-  const noEmail = document.querySelector("#sale-no-email");
-  if (email) {
-    email.value = "";
-    email.disabled = false;
-  }
-  if (noEmail) noEmail.checked = false;
   paintSaleTiles();
   paintCart();
-  document.querySelector("#sale-note").textContent = "Sunday veg, non-veg, and fish.";
+  document.querySelector("#sale-note").textContent = "Sunday meals only.";
   show(saleScreen);
   refreshOrders({ force: true }).then(() => {
     if (!saleScreen || saleScreen.hidden) return;
@@ -2699,8 +2699,6 @@ function nextWalkCode() {
 async function submitSale() {
   if (!can("sell")) return;
   const name = document.querySelector("#sale-name").value.trim();
-  const noEmail = document.querySelector("#sale-no-email");
-  const email = noEmail && noEmail.checked ? "" : document.querySelector("#sale-email").value.trim();
   const note = document.querySelector("#sale-note");
   if (!name || !cart.length) {
     note.textContent = "Add a name and at least one meal.";
@@ -2739,7 +2737,7 @@ async function submitSale() {
     code,
     full: `WALK${code}`,
     name,
-    email,
+    email: (existing && existing.email) || "",
     event: "On site",
     date: existing && existing.date || new Date().toLocaleDateString(),
     amount: "",

@@ -322,10 +322,6 @@
       <label>Name
         <input id="sale-name" autocomplete="name">
       </label>
-      <label>Email, optional
-        <input id="sale-email" autocomplete="email">
-      </label>
-      <label class="check-line"><input id="sale-no-email" type="checkbox"> No email</label>
       <div id="sale-tiles"></div>
       <article id="sale-checkout" class="checkout-card"></article>
       <button id="sale-submit" class="btn-orange" type="button">Create QR</button>
@@ -341,11 +337,11 @@
     </header>
     <section class="panel">
       <h1>SKUs · admin only</h1>
-      <p class="note">Create a meal and set how many are left. New sale only sells these meals.</p>
+      <p class="note">Enter a SKU name and how many are left. It shows on New sale for Sunday only.</p>
       <div id="sku-admin-list"></div>
       <h2>New SKU</h2>
-      <label>Name
-        <input id="sku-admin-name" autocomplete="off" placeholder="Sunday Fish">
+      <label>SKU name
+        <input id="sku-admin-name" autocomplete="off" placeholder="Fish">
       </label>
       <label>Remaining
         <input id="sku-admin-remaining" type="number" min="0" inputmode="numeric" value="0">
@@ -602,6 +598,6 @@
   <script src="ledger.js?v=46"></script>
   <script src="record.js?v=12"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=118"></script>
+  <script src="app.js?v=119"></script>
 </body>
 </html>
