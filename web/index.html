@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=70">
+  <link rel="stylesheet" href="styles.css?v=71">
 </head>
 <body>
 <div class="app-shell">
@@ -44,6 +44,17 @@
       <p class="eyebrow">Ticket Tracker</p>
     </div>
   </header>
+  <section id="wifi-ask" class="wifi-ask">
+    <p>Are you connected to the venue Wi-Fi <strong>CITYOFSEATTLEGUEST</strong>?</p>
+    <div class="wifi-actions">
+      <button id="wifi-yes" class="btn-teal" type="button">Yes</button>
+      <button id="wifi-no" class="btn-orange" type="button">No</button>
+    </div>
+  </section>
+  <section id="wifi-warn" class="wifi-warn" hidden>
+    <p>Connect to the venue Wi-Fi <strong>CITYOFSEATTLEGUEST</strong> before you scan.</p>
+    <button id="wifi-connected" class="btn-teal" type="button">I'm connected</button>
+  </section>
   <main id="gate" class="gate">
     <div>
       <p class="gate-message">For you, without login, we will not allow you.</p>
@@ -179,6 +190,8 @@
       <h2>Food and tickets</h2>
       <p class="note">Taken vs still open for each kind.</p>
       <div id="stats-food"></div>
+      <h2>Sunday food reconciliation</h2>
+      <p id="food-reconcile" class="sale-check">Loading food counts…</p>
       <h2>Locks now</h2>
       <p class="note">A phone holds a row for up to 3 minutes while it is open.</p>
       <div id="stats-locks"></div>
@@ -221,7 +234,8 @@
       <button id="export-csv" class="secondary" type="button">Download CSV</button>
       <button id="download-xlsx" class="btn-orange" type="button">Download Excel</button>
       <button id="download-new-sales" class="btn-teal" type="button">New sales by day</button>
-      <p class="note">The file lands in your Downloads folder. Excel opens both.</p>
+      <p id="download-reconcile" class="sale-check">Loading food counts…</p>
+      <p class="note">The file lands in your Downloads folder. Excel opens both. New sales includes taken meals and a reconciliation sheet.</p>
     </section>
 
     <section class="panel" data-page-panel="admin" data-tool-panel="export" hidden>
@@ -467,7 +481,8 @@
       <button id="admin-export-csv" class="secondary" type="button">Download CSV</button>
       <button id="admin-download-xlsx" class="btn-orange" type="button">Download Excel</button>
       <button id="admin-download-new-sales" class="btn-teal" type="button">New sales by day</button>
-      <p class="note">The file lands in your Downloads folder. Excel opens both.</p>
+      <p id="admin-food-reconcile" class="sale-check">Loading food counts…</p>
+      <p class="note">The file lands in your Downloads folder. Excel opens both. New sales includes taken meals and a reconciliation sheet.</p>
     </section>
     <section class="panel" data-site-panel="export" hidden>
       <h2>Export</h2>
@@ -584,10 +599,10 @@
   <script src="vendor/qrcode-generator.js"></script>
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
-  <script src="catalog.js?v=9"></script>
+  <script src="catalog.js?v=10"></script>
   <script src="ledger.js?v=45"></script>
   <script src="record.js?v=12"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
-  <script src="app.js?v=110"></script>
+  <script src="app.js?v=111"></script>
 </body>
 </html>

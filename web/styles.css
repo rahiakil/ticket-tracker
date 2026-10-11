@@ -821,3 +821,16 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 }
 
 :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.wifi-ask, .wifi-warn, .desk-food-note {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 2px solid #c2410c;
+  text-align: left;
+}
+.wifi-warn { background: #fef2f2; border-color: #b91c1c; }
+.wifi-ask p, .wifi-warn p, .desk-food-note p { margin: 0 0 8px; font-weight: 700; }
+.wifi-actions { display: flex; gap: 8px; }
+.desk-food-note { margin: 0 0 12px; }
