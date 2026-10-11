@@ -2308,8 +2308,11 @@ function saleStockMap(book) {
 
 function saleCap(name, book) {
   const row = saleStockMap(book || currentBook)[name];
+  const saved = row ? row.qty + row.buffer : 0;
+  const core = SUNDAY_SALE_SKUS.some((sku) => sku.name === name);
+  if (core) return Math.max(saved, soldQty(name) + 70);
   if (!row) return Infinity;
-  return row.qty + row.buffer;
+  return saved;
 }
 
 function saleLeft(name) {
