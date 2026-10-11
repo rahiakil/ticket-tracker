@@ -1045,6 +1045,10 @@ function nextAlready(message) {
   return String(message).startsWith("Already") || String(message).startsWith("Unavailable") || String(message).startsWith("This line");
 }
 
+function visibleDays() {
+  return can("admin") ? ["sunday", "saturday", "friday"] : ["sunday"];
+}
+
 function dayCheckCard(person, item, locked) {
   const card = document.createElement("article");
   card.className = "day-checks";
@@ -1052,7 +1056,7 @@ function dayCheckCard(person, item, locked) {
   title.textContent = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
   card.append(title);
   const days = shownEntryDays(item);
-  for (const day of ["friday", "saturday", "sunday"]) {
+  for (const day of visibleDays()) {
     const line = document.createElement("label");
     line.className = "day-check";
     const input = document.createElement("input");
@@ -1067,10 +1071,11 @@ function dayCheckCard(person, item, locked) {
   revert.type = "button";
   revert.className = "secondary";
   revert.textContent = "Revert";
-  const any = ["friday", "saturday", "sunday"].some((day) => days[day] && days[day].taken);
+  const shown = visibleDays();
+  const any = shown.some((day) => days[day] && days[day].taken);
   revert.disabled = !any || Boolean(locked) || (!can("scan") && !can("add"));
   revert.addEventListener("click", () => {
-    const latest = ["friday", "saturday", "sunday"]
+    const latest = shown
       .filter((day) => days[day] && days[day].taken)
       .sort((left, right) => Date.parse(days[right].takenAt || 0) - Date.parse(days[left].takenAt || 0))[0];
     if (latest) markEntrySlot(person, item, latest, false);
@@ -1175,25 +1180,35 @@ function itemButtons(person, options = {}) {
   const desk = activeCounter();
   const showAll = deskUser || Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
   const grouped = [
-    ["Friday entry", "friday", "entry"],
-    ["Friday food", "friday", "food"],
-    ["Saturday entry", "saturday", "entry"],
-    ["Saturday food", "saturday", "food"],
     ["Sunday entry", "sunday", "entry"],
     ["Sunday food", "sunday", "food"],
+    ["Saturday entry", "saturday", "entry"],
+    ["Saturday food", "saturday", "food"],
+    ["Friday entry", "friday", "entry"],
+    ["Friday food", "friday", "food"],
     ["3 day entry", "other", "entry"],
     ["3 day visit", "other", "food"],
   ];
   const today = todayEventDay() || "sunday";
-  const groups = grouped.filter((group) => showAll || group[2] === desk || (group[2] === "entry" && group[1] === today) || (activeCounter() === "entry" && group[2] === "food"));
+  const groups = grouped.filter((group) => {
+    if (!can("admin") && (group[1] === "friday" || group[1] === "saturday")) return false;
+    return showAll || group[2] === desk || (group[2] === "entry" && group[1] === today) || (activeCounter() === "entry" && group[2] === "food");
+  });
   const board = document.createElement("div");
   board.className = "ticket-board";
   if (deskUser && view.items.some((item) => item.lane === "food")) board.append(deskFoodNotice());
   for (const [label, bucket, lane] of groups) {
     const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
-    const openRows = rows.filter(({ item }) => !entryComplete(item));
-    const doneRows = rows.filter(({ item }) => entryComplete(item));
+    const rowDone = (item) => {
+      if (!can("admin") && allDayEntry(item)) {
+        const days = shownEntryDays(item);
+        return Boolean(days && days.sunday && days.sunday.taken);
+      }
+      return entryComplete(item);
+    };
+    const openRows = rows.filter(({ item }) => !rowDone(item));
+    const doneRows = rows.filter(({ item }) => rowDone(item));
     const block = document.createElement("section");
     block.className = openRows.length ? "day-block has-open" : "day-block";
     const todayBucket = todayEventDay() || "sunday";
@@ -1232,6 +1247,12 @@ function itemButtons(person, options = {}) {
       block.append(tray);
     }
     board.append(block);
+  }
+  if (!board.querySelector(".day-block")) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = can("admin") ? "No tickets on this order." : "No Sunday tickets on this order.";
+    board.append(empty);
   }
   return board;
 }
@@ -1837,10 +1858,19 @@ function wasScanned(person) {
   return Boolean(saved && saved.scannedAt);
 }
 
+function sundayOrder(person) {
+  return orderView(person).items.some((item) => {
+    const day = TicketLedger.itemDay(item.id);
+    if (day === "sunday") return true;
+    return item.lane === "entry" && !day;
+  });
+}
+
 function listedPeople(filter, tab, letter) {
   const tokens = normalized(filter).split(" ").filter(Boolean);
   const searching = tokens.length > 0;
   const people = Object.values(activeOrders()).filter((person) => {
+    if (!can("admin") && !sundayOrder(person)) return false;
     if (!searching && tab === "scanned" && !wasScanned(person)) return false;
     if (!searching && tab !== "scanned" && wasScanned(person)) return false;
     if (letter && nameLetter(person) !== letter) return false;
@@ -1914,7 +1944,7 @@ function fillVariantCounts(elementId) {
 }
 
 function paintFlowTabs() {
-  const everyone = Object.values(activeOrders());
+  const everyone = Object.values(activeOrders()).filter((person) => can("admin") || sundayOrder(person));
   const waiting = everyone.filter((person) => !wasScanned(person)).length;
   const scanned = everyone.filter((person) => wasScanned(person)).length;
   document.querySelectorAll("[data-flow]").forEach((button) => {
@@ -3450,12 +3480,15 @@ function renderSoldQrs() {
   });
   const note = document.createElement("p");
   note.className = "note";
-  note.textContent = "Sunday sales are listed first. Saturday is in its own section. Newest first. Red is non-veg, green is veg, orange is both.";
+  note.textContent = can("admin")
+    ? "Sunday sales are listed first. Saturday is in its own section. Newest first. Red is non-veg, green is veg, orange is both."
+    : "Sunday sales. Newest first. Red is non-veg, green is veg, orange is both.";
   box.append(note);
   const sunday = matches.filter((person) => saleSection(person) === "Sunday");
+  paintSoldSection(box, "Sunday sales", sunday, searching);
+  if (!can("admin")) return;
   const saturday = matches.filter((person) => saleSection(person) === "Saturday");
   const earlier = matches.filter((person) => saleSection(person) === "Earlier");
-  paintSoldSection(box, "Sunday sales", sunday, searching);
   paintSoldSection(box, "Saturday sales", saturday, searching);
   if (earlier.length) paintSoldSection(box, "Friday sales", earlier, searching);
 }
