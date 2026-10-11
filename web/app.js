@@ -1720,7 +1720,7 @@ function laneBreakdown(people) {
 let flowTab = "waiting";
 let deskLetter = "";
 let siteLetter = "";
-let saleLetter = "";
+const soldLetters = { Sunday: "", Saturday: "", Earlier: "" };
 let entryLetter = "";
 let deskSearch = "";
 let siteSearch = "";
@@ -3245,6 +3245,65 @@ function renderEntries() {
   showRows(matches);
 }
 
+function saleSection(person) {
+  const names = (person.items || []).map((item) => String(item.name || "").toLowerCase());
+  if (names.some((name) => name.includes("sunday"))) return "Sunday";
+  if (names.some((name) => name.includes("saturday"))) return "Saturday";
+  return "Earlier";
+}
+
+function paintSoldSection(box, title, people, searching) {
+  const heading = document.createElement("h2");
+  heading.className = "sale-lane";
+  heading.textContent = title;
+  box.append(heading);
+  if (!people.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = searching ? "No matching sales." : "None yet.";
+    box.append(empty);
+    return;
+  }
+  const letterKey = title.startsWith("Sunday") ? "Sunday" : title.startsWith("Saturday") ? "Saturday" : "Earlier";
+  if (!searching && people.length > 50) {
+    const counts = new Map();
+    people.forEach((person) => {
+      const letter = nameLetter(person);
+      counts.set(letter, (counts.get(letter) || 0) + 1);
+    });
+    if (soldLetters[letterKey] && !counts.has(soldLetters[letterKey])) soldLetters[letterKey] = "";
+    const hint = document.createElement("p");
+    hint.className = "note";
+    hint.textContent = soldLetters[letterKey] ? "Tap the letter to see every letter." : "More than 50 sales. Tap a letter.";
+    box.append(hint);
+    const board = document.createElement("div");
+    board.className = soldLetters[letterKey] ? "letter-board is-picked" : "letter-board sale-letters";
+    const letters = [...counts.keys()].sort((left, right) => left.localeCompare(right));
+    (soldLetters[letterKey] ? letters.filter((letter) => letter === soldLetters[letterKey]) : letters).forEach((letter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = soldLetters[letterKey] === letter ? "letter-card is-on" : "letter-card";
+      const mark = document.createElement("span");
+      mark.className = "letter-card-letter";
+      mark.textContent = letter;
+      const count = document.createElement("span");
+      count.className = "letter-card-count";
+      count.textContent = String(counts.get(letter));
+      button.append(mark, count);
+      button.addEventListener("click", () => {
+        soldLetters[letterKey] = soldLetters[letterKey] === letter ? "" : letter;
+        renderSoldQrs();
+      });
+      board.append(button);
+    });
+    box.append(board);
+    if (!soldLetters[letterKey]) return;
+    people.filter((person) => nameLetter(person) === soldLetters[letterKey]).forEach((person) => appendSoldRow(box, person));
+    return;
+  }
+  people.forEach((person) => appendSoldRow(box, person));
+}
+
 function renderSoldQrs() {
   const box = document.querySelector("#sold-qrs");
   const search = document.querySelector("#sold-query");
@@ -3263,59 +3322,16 @@ function renderSoldQrs() {
     const hay = normalized(`${person.name} ${person.full} ${person.code} ${items}`);
     return tokens.every((token) => hay.includes(token));
   });
-  const heading = document.createElement("h2");
-  heading.className = "sale-lane";
-  heading.textContent = "Sold QR codes";
   const note = document.createElement("p");
   note.className = "note";
-  note.textContent = all.length
-    ? "Newest first. Red is non-veg, green is veg, orange is both."
-    : "New sales appear here so you can open the QR again.";
-  box.append(heading, note);
-  if (!searching && all.length > 50) {
-    const counts = new Map();
-    all.forEach((person) => {
-      const letter = nameLetter(person);
-      counts.set(letter, (counts.get(letter) || 0) + 1);
-    });
-    if (saleLetter && !counts.has(saleLetter)) saleLetter = "";
-    const hint = document.createElement("p");
-    hint.className = "note";
-    hint.textContent = saleLetter ? "Tap the letter to see every letter." : "More than 50 sales. Tap a letter.";
-    box.append(hint);
-    const board = document.createElement("div");
-    board.className = saleLetter ? "letter-board is-picked" : "letter-board sale-letters";
-    const letters = [...counts.keys()].sort((left, right) => left.localeCompare(right));
-    (saleLetter ? letters.filter((letter) => letter === saleLetter) : letters).forEach((letter) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = saleLetter === letter ? "letter-card is-on" : "letter-card";
-      const mark = document.createElement("span");
-      mark.className = "letter-card-letter";
-      mark.textContent = letter;
-      const count = document.createElement("span");
-      count.className = "letter-card-count";
-      count.textContent = String(counts.get(letter));
-      button.append(mark, count);
-      button.addEventListener("click", () => {
-        saleLetter = saleLetter === letter ? "" : letter;
-        renderSoldQrs();
-      });
-      board.append(button);
-    });
-    box.append(board);
-    if (!saleLetter) return;
-    matches.filter((person) => nameLetter(person) === saleLetter).forEach((person) => appendSoldRow(box, person));
-    return;
-  }
-  if (!matches.length) {
-    const empty = document.createElement("p");
-    empty.className = "note";
-    empty.textContent = searching ? "No matching sales." : "";
-    if (searching) box.append(empty);
-    return;
-  }
-  matches.forEach((person) => appendSoldRow(box, person));
+  note.textContent = "Sunday sales are listed first. Saturday is in its own section. Newest first. Red is non-veg, green is veg, orange is both.";
+  box.append(note);
+  const sunday = matches.filter((person) => saleSection(person) === "Sunday");
+  const saturday = matches.filter((person) => saleSection(person) === "Saturday");
+  const earlier = matches.filter((person) => saleSection(person) === "Earlier");
+  paintSoldSection(box, "Sunday sales", sunday, searching);
+  paintSoldSection(box, "Saturday sales", saturday, searching);
+  if (earlier.length) paintSoldSection(box, "Friday sales", earlier, searching);
 }
 
 function renderRecent() {
@@ -4136,7 +4152,9 @@ document.querySelector("#entry-query").addEventListener("input", () => {
   renderEntries();
 });
 document.querySelector("#sold-query").addEventListener("input", () => {
-  saleLetter = "";
+  soldLetters.Sunday = "";
+  soldLetters.Saturday = "";
+  soldLetters.Earlier = "";
   renderSoldQrs();
 });
 document.querySelector("#order-query").addEventListener("keydown", (event) => {
