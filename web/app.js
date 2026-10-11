@@ -61,6 +61,7 @@ let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
 let flushing = false;
+const FLUSH_WAIT_MS = 400;
 
 function show(view) {
   gate.hidden = view !== gate;
@@ -512,13 +513,15 @@ function showMessage(message, kind) {
 
 function queueWrite(mutate) {
   const applied = mutate(currentBook);
-  if (applied.book) {
-    currentBook = applied.book;
-    cacheLiveBook(currentBook);
-  }
+  if (applied.book) currentBook = applied.book;
   if (applied.write) pendingWrites.push(mutate);
-  if (pendingWrites.length) flushWrites();
+  if (pendingWrites.length) scheduleFlush();
   return applied;
+}
+
+function scheduleFlush() {
+  clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => { flushWrites(); }, FLUSH_WAIT_MS);
 }
 
 let flushPromise = Promise.resolve(true);
@@ -526,6 +529,7 @@ let flushChain = Promise.resolve();
 
 function flushWrites() {
   clearTimeout(flushTimer);
+  cacheLiveBook(currentBook);
   const run = flushChain.then(() => drainWrites());
   flushChain = run.then(() => undefined, () => undefined);
   return run;
@@ -541,7 +545,7 @@ async function drainWrites() {
   } finally {
     flushing = false;
   }
-  if (pendingWrites.length) return drainWrites();
+  if (pendingWrites.length) scheduleFlush();
   return true;
 }
 
@@ -862,7 +866,6 @@ function markOne(person, index, unit) {
     volunteerMarks.set(person.code, Date.now());
   }
   paintOpen(person);
-  renderOrders();
 }
 
 function markEntryDay(person, bucket) {
@@ -893,7 +896,36 @@ function markEntryDay(person, bucket) {
   showMessage(applied.message, String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
   if (isVolunteer() && !String(applied.message || "").startsWith("Unavailable")) volunteerMarks.set(person.code, Date.now());
   paintOpen(person);
-  renderOrders();
+}
+
+function markFoodDay(person, bucket) {
+  const targets = orderView(person).items.filter((item) => item.lane === "food" && !item.taken && dayBucket(item.id) === bucket);
+  if (!targets.length || !canMarkTicket("food", bucket, person)) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const applied = queueWrite((book) => {
+    let current = book;
+    let changed = false;
+    let phrase = "";
+    let blocked = false;
+    for (const item of targets) {
+      const next = TicketLedger.markItem(current, person, item.index, at, actor, deviceId(), { demo: demoMode, unit: item.unit, eventDays: eventDatesForMark(current) });
+      current = next.book;
+      changed = changed || next.changed;
+      phrase = next.phrase || phrase;
+      if (next.locked || next.blocked) {
+        blocked = true;
+        break;
+      }
+    }
+    const message = blocked && !changed
+      ? `Unavailable yet. ${person.name}. ${person.email}.`
+      : `${phrase || "Food taken"}. ${person.name}. ${person.email}.`;
+    return { write: changed, book: current, message };
+  });
+  showMessage(applied.message, String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
+  if (isVolunteer() && !String(applied.message || "").startsWith("Unavailable")) volunteerMarks.set(person.code, Date.now());
+  paintOpen(person);
 }
 
 function sendDispute(person, itemName) {
@@ -922,7 +954,6 @@ function revertOne(person) {
   });
   showMessage(applied.message, String(applied.message).startsWith("Nothing") ? "already_seen" : "pending");
   paintOpen(person);
-  renderOrders();
 }
 
 function dayBucket(name) {
@@ -963,7 +994,6 @@ function markEntrySlot(person, item, day, taken) {
   });
   showMessage(applied.message, nextAlready(applied.message) ? "already_seen" : "pending");
   paintOpen(person);
-  renderOrders();
 }
 
 function nextAlready(message) {
@@ -1085,14 +1115,18 @@ function itemButtons(person, options = {}) {
     const doneRows = rows.filter(({ item }) => entryComplete(item));
     const block = document.createElement("section");
     block.className = openRows.length ? "day-block has-open" : "day-block";
-    const heading = document.createElement(lane === "entry" && bucket === (todayEventDay() || "saturday") ? "button" : "p");
+    const todayBucket = todayEventDay() || "saturday";
+    const headingIsButton = (lane === "entry" || lane === "food") && bucket === todayBucket;
+    const heading = document.createElement(headingIsButton ? "button" : "p");
     heading.className = heading.tagName === "BUTTON" ? "day-heading day-tab" : "day-heading";
     const deskFoodClosed = lane === "food" && readSession()?.role === "desk" && activeCounter() === "entry" && !(currentBook.walkups && currentBook.walkups[person.code]);
-    heading.textContent = deskFoodClosed ? `${label} · unavailable` : label;
+    const canTake = !locked && canMarkTicket(lane, bucket, person);
+    const takeAll = headingIsButton && openRows.length > 1 && canTake ? " · take all" : "";
+    heading.textContent = deskFoodClosed ? `${label} · unavailable` : `${label}${takeAll}`;
     if (heading.tagName === "BUTTON") {
       heading.type = "button";
-      heading.disabled = !openRows.length || Boolean(locked) || !canMarkTicket("entry", bucket);
-      heading.addEventListener("click", () => markEntryDay(person, bucket));
+      heading.disabled = !openRows.length || !canTake;
+      heading.addEventListener("click", () => (lane === "food" ? markFoodDay(person, bucket) : markEntryDay(person, bucket)));
     }
     block.append(heading);
     if (openRows.length) {
