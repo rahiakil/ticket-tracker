@@ -5,37 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker Backup</title>
-  <link rel="stylesheet" href="../styles.css?v=73">
+  <link rel="stylesheet" href="../styles.css?v=74">
 </head>
 <body>
 <div class="app-shell">
-<aside class="legend" aria-label="Color key">
-  <ul class="legend-stack">
-    <li class="legend-tile coupon-entry-fri-adult">🚪 Fri adult</li>
-    <li class="legend-tile coupon-entry-fri-kids">🚪 Fri kids</li>
-    <li class="legend-tile coupon-entry-fri-student">🚪 Fri student</li>
-    <li class="legend-tile coupon-entry-fri-senior">🚪 Fri senior</li>
-    <li class="legend-tile coupon-entry-sat-adult">🚪 Sat adult</li>
-    <li class="legend-tile coupon-entry-sat-kids">🚪 Sat kids</li>
-    <li class="legend-tile coupon-entry-sat-student">🚪 Sat student</li>
-    <li class="legend-tile coupon-entry-sat-senior">🚪 Sat senior</li>
-    <li class="legend-tile coupon-entry-sun-adult">🚪 Sun adult</li>
-    <li class="legend-tile coupon-entry-sun-kids">🚪 Sun kids</li>
-    <li class="legend-tile coupon-entry-sun-student">🚪 Sun student</li>
-    <li class="legend-tile coupon-entry-sun-senior">🚪 Sun senior</li>
-    <li class="legend-tile coupon-veg">🥦 Vegetarian</li>
-    <li class="legend-tile coupon-paneer">🥦 Paneer</li>
-    <li class="legend-tile coupon-snack">Snacks</li>
-    <li class="legend-tile coupon-nonveg">Non-veg</li>
-    <li class="legend-tile coupon-mutton">🐑 Mutton</li>
-    <li class="legend-tile coupon-chicken">🍗 Chicken</li>
-    <li class="legend-tile coupon-fish">🐟 Fish</li>
-    <li class="legend-tile swatch-semi">Demo marked</li>
-    <li class="legend-tile swatch-picked">Taken</li>
-    <li class="legend-tile swatch-quiet">Other counter</li>
-    <li class="legend-tile swatch-later">Not yet</li>
-  </ul>
-</aside>
 <div class="app-main">
   <header class="brand-bar">
     <img src="../logo.png" alt="Uttoron">
@@ -127,7 +100,6 @@
       <p id="magazine-count" class="magazine-left">140 magazines left</p>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
-      <button id="show-colors" class="btn-quiet phone-only" type="button">Colors</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <div id="reader" hidden></div>
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
@@ -609,6 +581,6 @@
   <script src="../ledger.js?v=45"></script>
   <script src="../record.js?v=12"></script>
   <script src="../vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="../app.js?v=113"></script>
+  <script src="../app.js?v=114"></script>
 </body>
 </html>

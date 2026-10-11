@@ -418,7 +418,7 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 .note { color: #5c4632; font-size: 1.05rem; }
 .result { font-size: 1.08rem; }
 .app-shell { min-height: 100dvh; }
-.app-main { margin-left: 104px; min-width: 0; max-width: calc(100% - 104px); overflow-x: hidden; }
+.app-main { margin-left: 0; min-width: 0; max-width: 100%; overflow-x: hidden; }
 .legend.is-open ~ .app-main { margin-left: min(300px, 74vw); max-width: calc(100% - min(300px, 74vw)); }
 .legend {
   position: fixed;

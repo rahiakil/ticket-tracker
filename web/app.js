@@ -4478,20 +4478,6 @@ document.querySelector("#screenshot-qr").addEventListener("click", () => { saveQ
 document.querySelector("#whatsapp-share").addEventListener("click", () => { shareQrImage("whatsapp"); });
 document.querySelector("#email-share").addEventListener("click", () => { shareQrImage("email"); });
 
-document.querySelector("#show-colors").addEventListener("click", () => {
-  const key = document.querySelector(".legend");
-  if (key) key.classList.toggle("is-open");
-});
-const legend = document.querySelector(".legend");
-if (legend) {
-  let swipeStart = 0;
-  legend.addEventListener("pointerdown", (event) => { swipeStart = event.clientX; });
-  legend.addEventListener("pointerup", (event) => {
-    const moved = event.clientX - swipeStart;
-    if (moved > 36) legend.classList.add("is-open");
-    if (moved < -36) legend.classList.remove("is-open");
-  });
-}
 
 window.setInterval(() => {
   const button = document.querySelector("#revert-last");
