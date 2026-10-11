@@ -498,6 +498,11 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 .sheet-table th { position: sticky; top: 0; background: var(--orange); color: #fff; }
 .sheet-toolbar { margin: 8px 0; text-align: left; }
 .sheet-toolbar label { margin: 0; }
+.sheet-table button {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+}
 .sheet-sort {
   width: auto;
   min-height: 0;

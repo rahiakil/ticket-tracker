@@ -849,12 +849,21 @@ function statusDetail(order) {
         const picked = items.filter((item) => item.taken);
         const utilized = picked.length;
         const total = items.length;
+        if (!total && !String(person.name || "").trim()) return null;
         const seen = Boolean(saved && saved.scannedAt);
         let status = "Not seen";
-        if (seen && items.length && pending.length === 0) status = "Taken completely";
+        if (!total) status = "No tickets";
+        else if (seen && pending.length === 0) status = "Taken completely";
         else if (seen && picked.length === 0) status = "Scanned only";
         else if (seen || picked.length) status = "Taken partially";
-        const names = (list) => list.map((item) => `${item.name} x ${item.qty}`).join("; ");
+        const names = (list) => {
+          const counts = new Map();
+          list.forEach((item) => {
+            const key = String(item.name || "Ticket").trim() || "Ticket";
+            counts.set(key, (counts.get(key) || 0) + (Number(item.qty) || 1));
+          });
+          return [...counts.entries()].map(([label, qty]) => `${label} x ${qty}`).join("; ");
+        };
         return {
           utilized,
           total,
@@ -871,7 +880,8 @@ function statusDetail(order) {
           pickedItems: names(picked),
           scannedAt: saved && saved.scannedAt ? saved.scannedAt : "",
         };
-      });
+      })
+      .filter(Boolean);
   }
 
   function exportCsv(book, catalogOrders) {

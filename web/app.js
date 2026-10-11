@@ -2873,7 +2873,12 @@ function renderLiveSheet() {
     head.append(headRow);
     const body = document.createElement("tbody");
     function appendDataRows(list) {
+      const totalIndex = header.indexOf("Total");
       list.forEach((row) => {
+        const total = totalIndex >= 0 ? Number(row[totalIndex]) : 1;
+        const name = nameIndex >= 0 ? String(row[nameIndex] || "").trim() : "";
+        if (!(total > 0) && !name) return;
+        if (!(total > 0)) return;
         const line = document.createElement("tr");
         const person = codeIndex >= 0 ? catalogPerson(row[codeIndex]) : null;
         const pickup = sheetPickupRatio(person);
