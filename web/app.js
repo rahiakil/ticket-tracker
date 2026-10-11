@@ -41,6 +41,7 @@ const workspace = document.querySelector("#workspace");
 const adminScreen = document.querySelector("#admin-screen");
 const ticketScreen = document.querySelector("#ticket-screen");
 const saleScreen = document.querySelector("#sale-screen");
+const skuScreen = document.querySelector("#sku-screen");
 const resultEl = document.querySelector("#result");
 const retryButton = document.querySelector("#retry");
 const reader = document.querySelector("#reader");
@@ -70,6 +71,7 @@ function show(view) {
   adminScreen.hidden = view !== adminScreen;
   if (ticketScreen) ticketScreen.hidden = view !== ticketScreen;
   if (saleScreen) saleScreen.hidden = view !== saleScreen;
+  if (skuScreen) skuScreen.hidden = view !== skuScreen;
 }
 
 function closeTicket() {
@@ -279,6 +281,8 @@ function applyRoleUi() {
   const entryDesk = document.querySelector("#counter-entry");
   const showCounters = !volunteer && (add || deskRole);
   if (sale) sale.hidden = !sell;
+  const manageSkus = document.querySelector("#manage-skus");
+  if (manageSkus) manageSkus.hidden = !admin;
   document.querySelectorAll(".show-pay").forEach((node) => { node.hidden = !sell && !admin; });
   if (entryDesk) entryDesk.hidden = !showCounters;
   const foodDesk = document.querySelector("#counter-food");
@@ -2120,6 +2124,13 @@ function skuNote(message) {
   });
 }
 
+function saleExtras(book) {
+  const prior = (book && book.eventDays) || {};
+  const extra = { saleStock: prior.saleStock || {} };
+  if (Array.isArray(prior.saleSkus)) extra.saleSkus = prior.saleSkus;
+  return extra;
+}
+
 function persistSkus(list, message) {
   const clean = list.map(normalizeSku).filter(Boolean);
   try { localStorage.setItem(storeKey("skus"), JSON.stringify(clean)); } catch { /* Drive still receives it */ }
@@ -2130,6 +2141,7 @@ function persistSkus(list, message) {
       saturday: days.saturday,
       sunday: days.sunday,
       open: days.open,
+      ...saleExtras(book),
       skus: clean,
       saleStock: (book.eventDays && book.eventDays.saleStock) || saleStockMap(book),
     };
@@ -2152,7 +2164,7 @@ function setDaysOpen(openMap, message) {
       sunday: days.sunday,
       open: { ...days.open, ...openMap },
       skus,
-      saleStock: (book.eventDays && book.eventDays.saleStock) || saleStockMap(book),
+      ...saleExtras(book),
     };
     return { write: true, book, message };
   });
@@ -2202,10 +2214,31 @@ const SUNDAY_SALE_SKUS = [
   { name: "Sunday Fish", lane: "food", tone: "fish", label: "Fish" },
 ];
 
+function saleTone(name) {
+  const text = String(name || "").toLowerCase();
+  if (text.includes("fish")) return "fish";
+  if (/non-?veg/.test(text)) return "nonveg";
+  return "veg";
+}
+
+function normalizeSaleSku(raw) {
+  const name = String((raw && raw.name) || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!name) return null;
+  const tone = raw.tone || saleTone(name);
+  const label = String(raw.label || name).replace(/\s+/g, " ").trim().slice(0, 40) || name;
+  return { name, lane: "food", tone, label };
+}
+
+function activeSaleSkus(book) {
+  const saved = book && book.eventDays && book.eventDays.saleSkus;
+  const source = Array.isArray(saved) && saved.length ? saved : SUNDAY_SALE_SKUS;
+  return source.map(normalizeSaleSku).filter(Boolean);
+}
+
 function saleStockMap(book) {
   const saved = book && book.eventDays && book.eventDays.saleStock;
   const map = {};
-  SUNDAY_SALE_SKUS.forEach((sku) => {
+  activeSaleSkus(book).forEach((sku) => {
     const row = saved && saved[sku.name];
     map[sku.name] = {
       qty: Math.max(0, Number(row && row.qty) || 0),
@@ -2245,6 +2278,7 @@ function saveSaleStockFrom(host) {
       sunday: days.sunday,
       open: days.open,
       skus,
+      ...saleExtras(book),
       saleStock: next,
     };
     return { write: true, book, message: "Sunday quantities saved." };
@@ -2297,6 +2331,96 @@ function renderSaleStock() {
     save.addEventListener("click", () => saveSaleStockFrom(host));
     host.append(save);
   });
+  renderSkuAdmin();
+}
+
+function writeSaleCatalog(list, stock, message) {
+  return queueWrite((book) => {
+    const days = eventDates(book);
+    const skus = (book.eventDays && Array.isArray(book.eventDays.skus) && book.eventDays.skus) || storedSkuRows() || mergedSkus();
+    book.eventDays = {
+      friday: days.friday,
+      saturday: days.saturday,
+      sunday: days.sunday,
+      open: days.open,
+      skus,
+      ...saleExtras(book),
+      saleSkus: list,
+      saleStock: stock,
+    };
+    return { write: true, book, message };
+  });
+}
+
+function saveSkuRemaining(name, raw) {
+  if (!can("admin")) return;
+  const remaining = Math.max(0, Math.floor(Number(raw) || 0));
+  const stock = saleStockMap(currentBook);
+  if (!stock[name]) return;
+  stock[name] = { qty: soldQty(name) + remaining, buffer: 0 };
+  const applied = writeSaleCatalog(activeSaleSkus(currentBook), stock, `${name}: ${remaining} remaining.`);
+  const note = document.querySelector("#sku-admin-note");
+  if (note) note.textContent = applied.message;
+  renderSkuAdmin();
+  renderSaleStock();
+  paintSaleTiles();
+}
+
+function createSaleSku() {
+  if (!can("admin")) return;
+  const note = document.querySelector("#sku-admin-note");
+  const nameInput = document.querySelector("#sku-admin-name");
+  const remainInput = document.querySelector("#sku-admin-remaining");
+  const sku = normalizeSaleSku({ name: nameInput ? nameInput.value : "" });
+  if (!sku) {
+    if (note) note.textContent = "Enter a SKU name.";
+    return;
+  }
+  const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
+  if (list.some((item) => item.name.toLowerCase() === sku.name.toLowerCase())) {
+    if (note) note.textContent = `${sku.name} already exists. Change its remaining amount below.`;
+    return;
+  }
+  const remaining = Math.max(0, Math.floor(Number(remainInput && remainInput.value) || 0));
+  list.push(sku);
+  const stock = saleStockMap(currentBook);
+  stock[sku.name] = { qty: remaining, buffer: 0 };
+  const applied = writeSaleCatalog(list, stock, `${sku.name} added. ${remaining} remaining.`);
+  if (note) note.textContent = applied.message;
+  if (nameInput) nameInput.value = "";
+  if (remainInput) remainInput.value = "0";
+  renderSkuAdmin();
+  paintSaleTiles();
+}
+
+function renderSkuAdmin() {
+  const host = document.querySelector("#sku-admin-list");
+  if (!host || (skuScreen && skuScreen.hidden)) return;
+  if (host.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return;
+  host.replaceChildren();
+  activeSaleSkus().forEach((sku) => {
+    const sold = soldQty(sku.name);
+    const left = Math.max(0, saleCap(sku.name) - sold);
+    const block = document.createElement("div");
+    block.className = "sale-stock-row";
+    const title = document.createElement("p");
+    title.textContent = `${sku.name}. Sold ${sold}. Remaining ${left}.`;
+    const label = document.createElement("label");
+    label.append(document.createTextNode("Remaining "));
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.inputMode = "numeric";
+    input.value = String(left);
+    label.append(input);
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "btn-teal";
+    save.textContent = "Save remaining";
+    save.addEventListener("click", () => saveSkuRemaining(sku.name, input.value));
+    block.append(title, label, save);
+    host.append(block);
+  });
 }
 
 function menuItems() {
@@ -2328,9 +2452,9 @@ function addSaleItem(item) {
     if (note) note.textContent = `${item.name} is sold out. ${fridayCountText()}`;
     return;
   }
-  if (SUNDAY_SALE_SKUS.some((sku) => sku.name === item.name) && saleLeft(item.name) < 1) {
+  if (activeSaleSkus().some((sku) => sku.name === item.name) && saleLeft(item.name) < 1) {
     const note = document.querySelector("#sale-note");
-    if (note) note.textContent = `${item.label || item.name} is sold out. Raise the quantity or buffer in Admin.`;
+    if (note) note.textContent = `${item.label || item.name} is sold out. An admin can raise the remaining amount.`;
     return;
   }
   const found = cart.find((row) => row.name === item.name);
@@ -2350,13 +2474,14 @@ function changeSaleQty(name, delta) {
 }
 
 function saleTileLabel(item) {
+  if (item.label) return item.label;
   if (item.tone === "nonveg") return "Non-veg";
   if (item.tone === "fish") return "Fish";
-  return "Veg";
+  return item.name || "Veg";
 }
 
 function saleMenu() {
-  return SUNDAY_SALE_SKUS.map((sku) => {
+  return activeSaleSkus().map((sku) => {
     const cap = saleCap(sku.name);
     const left = Math.max(0, cap - soldQty(sku.name, editingSaleCode));
     return { ...sku, when: "Sunday", cap, left, open: left > 0 };
@@ -2376,7 +2501,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Sunday veg, non-veg, and fish. A meal closes when its quantity plus buffer is sold.";
+  hint.textContent = "Pick a meal. It closes when none are left.";
   host.append(hint);
   for (const when of ["Saturday", "Sunday"]) {
     const group = items.filter((item) => item.when === when);
@@ -2397,7 +2522,7 @@ function paintSaleTiles() {
       title.textContent = item.open ? saleTileLabel(item) : `${saleTileLabel(item)} · sold out`;
       const stock = document.createElement("span");
       stock.className = "sale-stock-left";
-      stock.textContent = item.cap > 0 ? `${item.left} of ${item.cap} left` : "Set the quantity in Admin";
+      stock.textContent = item.cap > 0 ? `${item.left} of ${item.cap} left` : "Set the remaining amount";
       const badge = document.createElement("span");
       badge.className = "sale-qty";
       badge.hidden = true;
@@ -2565,7 +2690,7 @@ async function submitSale() {
     paintCart();
     return;
   }
-  const short = cart.find((item) => SUNDAY_SALE_SKUS.some((sku) => sku.name === item.name) && item.qty > Math.max(0, saleCap(item.name) - soldQty(item.name, except)));
+  const short = cart.find((item) => activeSaleSkus().some((sku) => sku.name === item.name) && item.qty > Math.max(0, saleCap(item.name) - soldQty(item.name, except)));
   if (short) {
     const row = saleStockMap(currentBook)[short.name];
     note.textContent = `Not enough ${short.name} left. Quantity ${row ? row.qty : 0}, buffer ${row ? row.buffer : 0}, sold ${soldQty(short.name, except)}.`;
@@ -3247,7 +3372,8 @@ function renderEntries() {
 
 function saleSection(person) {
   const names = (person.items || []).map((item) => String(item.name || "").toLowerCase());
-  if (names.some((name) => name.includes("sunday"))) return "Sunday";
+  const onSale = new Set(activeSaleSkus().map((sku) => sku.name.toLowerCase()));
+  if (names.some((name) => name.includes("sunday") || onSale.has(name))) return "Sunday";
   if (names.some((name) => name.includes("saturday"))) return "Saturday";
   return "Earlier";
 }
@@ -4208,7 +4334,7 @@ document.querySelectorAll(".save-event-days").forEach((button) => {
   }
   const applied = queueWrite((book) => {
     const skus = (book.eventDays && book.eventDays.skus) || storedSkuRows() || mergedSkus();
-    book.eventDays = { friday, saturday, sunday, open, skus };
+    book.eventDays = { friday, saturday, sunday, open, skus, ...saleExtras(book) };
     const names = ["friday", "saturday", "sunday"].filter((day) => open[day]);
     return { write: true, book, message: `Open days saved: ${names.join(", ")}.` };
   });
@@ -4470,6 +4596,13 @@ document.querySelector("#home-whatsapp").addEventListener("click", () => { share
 document.querySelector("#home-email-qr").addEventListener("click", () => { shareQrImage("email"); });
 document.querySelector("#export-stats").addEventListener("click", exportStats);
 document.querySelector("#new-sale").addEventListener("click", openSale);
+document.querySelector("#manage-skus").addEventListener("click", () => {
+  if (!can("admin")) return;
+  show(skuScreen);
+  renderSkuAdmin();
+});
+document.querySelector("#sku-back").addEventListener("click", () => show(workspace));
+document.querySelector("#sku-admin-create").addEventListener("click", createSaleSku);
 document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
 document.querySelector("#sale-name").addEventListener("input", paintCart);
 document.querySelector("#sale-submit").addEventListener("click", submitSale);

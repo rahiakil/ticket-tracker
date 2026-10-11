@@ -113,6 +113,7 @@
           <button id="home-email-qr" class="btn-orange" type="button">Email QR</button>
         </div>
         <button id="new-sale" class="btn-orange" type="button">New sale</button>
+        <button id="manage-skus" class="btn-teal" type="button" hidden>SKUs · admin only</button>
         <label for="sold-query">Search new sales
           <input id="sold-query" type="search" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name or QR number">
         </label>
@@ -331,6 +332,26 @@
       <button id="sale-cancel" class="secondary" type="button" hidden>Cancel change</button>
       <button class="show-pay btn-teal" type="button">Take payment</button>
       <p id="sale-note" class="result" role="status"></p>
+    </section>
+  </main>
+
+  <main id="sku-screen" class="screen" hidden>
+    <header class="topbar">
+      <button id="sku-back" class="btn-quiet" type="button">Back</button>
+    </header>
+    <section class="panel">
+      <h1>SKUs · admin only</h1>
+      <p class="note">Create a meal and set how many are left. New sale only sells these meals.</p>
+      <div id="sku-admin-list"></div>
+      <h2>New SKU</h2>
+      <label>Name
+        <input id="sku-admin-name" autocomplete="off" placeholder="Sunday Fish">
+      </label>
+      <label>Remaining
+        <input id="sku-admin-remaining" type="number" min="0" inputmode="numeric" value="0">
+      </label>
+      <button id="sku-admin-create" class="btn-orange" type="button">Create SKU</button>
+      <p id="sku-admin-note" class="result" role="status"></p>
     </section>
   </main>
 
@@ -581,6 +602,6 @@
   <script src="ledger.js?v=46"></script>
   <script src="record.js?v=12"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=116"></script>
+  <script src="app.js?v=117"></script>
 </body>
 </html>
