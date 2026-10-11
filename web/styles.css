@@ -569,7 +569,7 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 }
 @media (max-width: 820px), (pointer: coarse) {
   .legend { width: 88px; }
-  .app-main { margin-left: 88px; max-width: calc(100% - 88px); }
+  .app-main { margin-left: 0; max-width: 100%; }
   .legend-tile { font-size: 11px; }
   .legend.is-open { width: min(280px, 78vw); }
   .legend.is-open ~ .app-main { margin-left: min(280px, 78vw); max-width: calc(100% - min(280px, 78vw)); }
