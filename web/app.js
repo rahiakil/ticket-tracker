@@ -812,8 +812,11 @@ function cacheLiveBook(book) {
 
 function restoreCachedBook() {
   try {
-    const saved = JSON.parse(localStorage.getItem(storeKey("book-cache")) || "null");
-    if (!saved || saved.schemaVersion !== 1 || !saved.orders) return;
+    const savedRaw = JSON.parse(localStorage.getItem(storeKey("book-cache")) || "null");
+    if (!savedRaw || savedRaw.schemaVersion !== 1 || !savedRaw.orders) return;
+    const saved = savedRaw.archive && savedRaw.archive.magazine
+      ? { ...savedRaw, archive: { ...savedRaw.archive, magazine: false } }
+      : savedRaw;
     const savedCount = Object.keys(saved.orders).length + Object.keys(saved.walkups || {}).length;
     const currentCount = Object.keys(currentBook.orders || {}).length + Object.keys(currentBook.walkups || {}).length;
     if (!savedCount && currentCount) return;
@@ -1362,6 +1365,7 @@ function magazinesLeft() {
 
 function paintMagazineCount() {
   const on = magazineEnabled();
+  paintMagazineMode();
   const left = magazinesLeft();
   const text = `${left} magazines left`;
   document.querySelectorAll("#magazine-count").forEach((node) => {
@@ -1369,12 +1373,16 @@ function paintMagazineCount() {
     node.textContent = on ? text : "";
   });
   const toggle = document.querySelector("#enable-magazine");
-  if (toggle) toggle.checked = on;
+  if (toggle && document.activeElement !== toggle) toggle.checked = on;
   return text;
 }
 
 function magazineEnabled() {
-  return Boolean(currentBook.archive && currentBook.archive.magazine);
+  return currentBook.archive && currentBook.archive.magazine === true;
+}
+
+function paintMagazineMode() {
+  document.documentElement.classList.toggle("magazine-on", magazineEnabled());
 }
 
 function setMagazineEnabled(on) {

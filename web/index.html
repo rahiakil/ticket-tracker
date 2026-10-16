@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=80">
+  <link rel="stylesheet" href="styles.css?v=81">
 </head>
 <body>
 <div class="app-shell">
@@ -86,7 +86,6 @@
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
-      <p id="magazine-count" class="magazine-left" hidden></p>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -368,11 +367,11 @@
       <button id="admin-print" class="btn-teal" type="button">Print sheet</button>
       <button id="admin-logout" class="text-button" type="button">Log out</button>
     </header>
-    <section class="panel">
-      <h2>Archived counters</h2>
+    <details class="more-fold">
+      <summary>Archived counters</summary>
       <label class="check-line"><input id="enable-magazine" type="checkbox"> Show the magazine counter</label>
-      <p class="note">The magazine counter is from an earlier event. It stays off until a site admin turns it on. Every phone follows this switch.</p>
-    </section>
+      <p class="note">Off for this concert. Turn it on only when that earlier counter should appear on every phone.</p>
+    </details>
     <div class="page-tabs admin-tabs">
       <button type="button" data-site-tab="orders" class="btn-teal">Orders</button>
       <button type="button" data-site-tab="sheet" class="btn-quiet">Sheet</button>
@@ -591,6 +590,6 @@
   <script src="ledger.js?v=48"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=132"></script>
+  <script src="app.js?v=133"></script>
 </body>
 </html>

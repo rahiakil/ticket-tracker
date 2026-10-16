@@ -230,7 +230,10 @@ button.day-tab {
 }
 button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b7280; }
 .day-checks { display: grid; gap: 8px; margin: 0; padding: 12px; border: 2px solid var(--line); border-radius: 16px; background: var(--card); text-align: left; grid-column: 1 / -1; }
-.magazine-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.magazine-head, #magazine-count { display: none !important; }
+html.magazine-on .magazine-head { display: flex !important; }
+html.magazine-on #magazine-count { display: block !important; }
+.magazine-head { align-items: center; justify-content: space-between; gap: 12px; }
 .magazine-head h3 { margin: 0; }
 .magazine-left { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--teal-dark); text-align: right; }
 .day-check { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 700; }
