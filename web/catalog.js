@@ -1,5 +1,6 @@
 window.TicketCatalog = {
   "eventId": "external-artist-gala-2026",
+  "epoch": "2026-10-15",
   "orders": {
     "11515": {
       "code": "11515",
@@ -3861,6 +3862,18 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Member Non-Veg food (2 Mutton Roll)",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Member Non-Veg Snacks (2 fish Chop, Salad, Nolen Gurer Rosogolla)",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4040,10 +4053,218 @@ window.TicketCatalog = {
       "amount": "$108",
       "items": [
         {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
           "name": "Regular Member Entry",
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12167": {
+      "code": "12167",
+      "full": "UTT20260900012167",
+      "name": "Anjon Sanyal",
+      "email": "asanyal0886@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$110",
+      "items": [
+        {
+          "name": "Chicken Chaap",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12174": {
+      "code": "12174",
+      "full": "UTT20260900012174",
+      "name": "Deepanjana Bhaduri",
+      "email": "deepanjana.bhaduri@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12176": {
+      "code": "12176",
+      "full": "UTT20260900012176",
+      "name": "Swagata Saha",
+      "email": "swagatasaha@aol.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$38",
+      "items": [
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12177": {
+      "code": "12177",
+      "full": "UTT20260900012177",
+      "name": "Amrita Ghosh",
+      "email": "amrita.osu@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$60",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12178": {
+      "code": "12178",
+      "full": "UTT20260900012178",
+      "name": "Arindam Basu",
+      "email": "arindam0130@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12180": {
+      "code": "12180",
+      "full": "UTT20260900012180",
+      "name": "Sumana Chatterjee",
+      "email": "sumanasays@mac.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12186": {
+      "code": "12186",
+      "full": "UTT20260900012186",
+      "name": "Ankita Dey",
+      "email": "ankdey@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12187": {
+      "code": "12187",
+      "full": "UTT20260900012187",
+      "name": "Debadrita Roy",
+      "email": "debadrita@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 28th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4061,6 +4282,46 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        }
+      ]
+    },
+    "12200": {
+      "code": "12200",
+      "full": "UTT20260900012200",
+      "name": "Ferdous Rubaiyat",
+      "email": "ferdous@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 29th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12204": {
+      "code": "12204",
+      "full": "UTT20260900012204",
+      "name": "Indradeep Banerjee",
+      "email": "indradeepb@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 29th, 2026",
+      "amount": "$30",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4084,6 +4345,41 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12215": {
+      "code": "12215",
+      "full": "UTT20260900012215",
+      "name": "Sumanta Batabyal",
+      "email": "sumaba@outlook.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 30th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4121,6 +4417,87 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12239": {
+      "code": "12239",
+      "full": "UTT20260900012239",
+      "name": "Devdeep Banerjee",
+      "email": "Devdeepbanerjee2@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 30th, 2026",
+      "amount": "$68",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12240": {
+      "code": "12240",
+      "full": "UTT20260900012240",
+      "name": "Arnav Chatterjee",
+      "email": "arnav.tech@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 30th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12243": {
+      "code": "12243",
+      "full": "UTT20260900012243",
+      "name": "Sukanta Pramanik",
+      "email": "sukanta94@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "September 30th, 2026",
+      "amount": "$86",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12248": {
       "code": "12248",
       "full": "UTT20261000012248",
@@ -4135,6 +4512,53 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12250": {
+      "code": "12250",
+      "full": "UTT20261000012250",
+      "name": "Ajanta Dutta Roy",
+      "email": "ajanta.dutta.roy@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 1st, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4166,10 +4590,51 @@ window.TicketCatalog = {
           "tone": "entry"
         },
         {
+          "name": "Saturday Lunch Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sat-veg"
+        },
+        {
+          "name": "Sunday Lunch Non-Vegetarian",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
+          "name": "Sunday Machher Kalia",
+          "qty": 1,
+          "lane": "food",
+          "tone": "sun-nonveg"
+        },
+        {
           "name": "Regular Member Entry",
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12265": {
+      "code": "12265",
+      "full": "UTT20261000012265",
+      "name": "Aminul HAQ",
+      "email": "aminul@outlook.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 1st, 2026",
+      "amount": "$44",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4187,6 +4652,181 @@ window.TicketCatalog = {
           "qty": 5,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12285": {
+      "code": "12285",
+      "full": "UTT20261000012285",
+      "name": "Subhasish Bose",
+      "email": "subhasishb@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 2nd, 2026",
+      "amount": "$84",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12300": {
+      "code": "12300",
+      "full": "UTT20261000012300",
+      "name": "Dibyendu Paul",
+      "email": "paul.raj.dibyendu@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 2nd, 2026",
+      "amount": "$88",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12307": {
+      "code": "12307",
+      "full": "UTT20261000012307",
+      "name": "Ranjan Chakrabarty",
+      "email": "ranjan_chakrab@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 3rd, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12315": {
+      "code": "12315",
+      "full": "UTT20261000012315",
+      "name": "Rounak Saha",
+      "email": "saharounak93@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 3rd, 2026",
+      "amount": "$118",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 4,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12352": {
+      "code": "12352",
+      "full": "UTT20261000012352",
+      "name": "Saptarshi Mukherjee",
+      "email": "sapta12@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 4th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4210,6 +4850,35 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12381": {
+      "code": "12381",
+      "full": "UTT20261000012381",
+      "name": "ARNAB DAS",
+      "email": "admca05@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 4th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4250,6 +4919,110 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12437": {
+      "code": "12437",
+      "full": "UTT20261000012437",
+      "name": "Avijit Das",
+      "email": "das.avijit@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 5th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12439": {
+      "code": "12439",
+      "full": "UTT20261000012439",
+      "name": "Rohan Bhattacharjee",
+      "email": "rohan.bhattacharjee@hotmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 5th, 2026",
+      "amount": "$76",
+      "items": [
+        {
+          "name": "Chicken Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12443": {
+      "code": "12443",
+      "full": "UTT20261000012443",
+      "name": "Mohammad Ahsan Ali",
+      "email": "mdahsan@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 5th, 2026",
+      "amount": "$38",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        }
+      ]
+    },
+    "12446": {
+      "code": "12446",
+      "full": "UTT20261000012446",
+      "name": "Aritra Ghosh",
+      "email": "aritraghsh09@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 5th, 2026",
+      "amount": "$30",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4267,6 +5040,35 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        }
+      ]
+    },
+    "12517": {
+      "code": "12517",
+      "full": "UTT20261000012517",
+      "name": "Sunanda Mukherjee",
+      "email": "sunanda.17586@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 7th, 2026",
+      "amount": "$102",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4307,6 +5109,35 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12569": {
+      "code": "12569",
+      "full": "UTT20261000012569",
+      "name": "Avishek Dasgupta",
+      "email": "avishek.dsgpt@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 8th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4327,6 +5158,52 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12578": {
+      "code": "12578",
+      "full": "UTT20261000012578",
+      "name": "Rupam Acharyya",
+      "email": "rupamacharyya@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 8th, 2026",
+      "amount": "$90",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12582": {
+      "code": "12582",
+      "full": "UTT20261000012582",
+      "name": "Bijeta Chakraborty",
+      "email": "bijeta@uw.edu",
+      "event": "External Artist Gala 2026",
+      "date": "October 8th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12597": {
       "code": "12597",
       "full": "UTT20261000012597",
@@ -4341,6 +5218,52 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        }
+      ]
+    },
+    "12605": {
+      "code": "12605",
+      "full": "UTT20261000012605",
+      "name": "Indradeep Banerjee",
+      "email": "indradeepb@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 9th, 2026",
+      "amount": "$30",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12623": {
+      "code": "12623",
+      "full": "UTT20261000012623",
+      "name": "Prarthana Majumder",
+      "email": "prarthana.majumder@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 9th, 2026",
+      "amount": "$52",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4360,10 +5283,22 @@ window.TicketCatalog = {
           "tone": "entry"
         },
         {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
           "name": "Regular Non Member Entry",
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4407,6 +5342,23 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12647": {
+      "code": "12647",
+      "full": "UTT20261000012647",
+      "name": "Barnali Basu",
+      "email": "Barnali.basu@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 10th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12656": {
       "code": "12656",
       "full": "UTT20261000012656",
@@ -4421,6 +5373,18 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4438,6 +5402,12 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4455,6 +5425,12 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
         }
       ]
     },
@@ -4475,6 +5451,29 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12687": {
+      "code": "12687",
+      "full": "UTT20261000012687",
+      "name": "Amitava Bhattacharya",
+      "email": "amit_ava@hotmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 11th, 2026",
+      "amount": "$52",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12689": {
       "code": "12689",
       "full": "UTT20261000012689",
@@ -4489,6 +5488,35 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12690": {
+      "code": "12690",
+      "full": "UTT20261000012690",
+      "name": "Amit Das",
+      "email": "amitdas3578@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 11th, 2026",
+      "amount": "$60",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4523,6 +5551,35 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12693": {
+      "code": "12693",
+      "full": "UTT20261000012693",
+      "name": "Supratim Roy Chaudhury",
+      "email": "supratimroy@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 11th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4543,6 +5600,35 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12695": {
+      "code": "12695",
+      "full": "UTT20261000012695",
+      "name": "Arijit Choudhury",
+      "email": "arijit.choudhury@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 11th, 2026",
+      "amount": "$82",
+      "items": [
+        {
+          "name": "Chinese Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12696": {
       "code": "12696",
       "full": "UTT20261000012696",
@@ -4557,6 +5643,41 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12697": {
+      "code": "12697",
+      "full": "UTT20261000012697",
+      "name": "Shamsi Iqbal",
+      "email": "shamsi.tamara@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 12th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Chicken Biriyani",
+          "qty": 4,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4614,6 +5735,18 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
         }
       ]
     },
@@ -4631,6 +5764,12 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4648,6 +5787,12 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4665,6 +5810,98 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        }
+      ]
+    },
+    "12706": {
+      "code": "12706",
+      "full": "UTT20261000012706",
+      "name": "Rebanta Roy",
+      "email": "rebanta1997@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12707": {
+      "code": "12707",
+      "full": "UTT20261000012707",
+      "name": "Ananda Sarkar",
+      "email": "anandsar@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12708": {
+      "code": "12708",
+      "full": "UTT20261000012708",
+      "name": "Shubhrodeep Banerjee",
+      "email": "shubhrodeep@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$100",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12709": {
+      "code": "12709",
+      "full": "UTT20261000012709",
+      "name": "Rajdip Dey",
+      "email": "ivy.kgp@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4691,6 +5928,23 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12711": {
+      "code": "12711",
+      "full": "UTT20261000012711",
+      "name": "Rajyasree Banerjee",
+      "email": "rbanerjee2483@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12712": {
       "code": "12712",
       "full": "UTT20261000012712",
@@ -4705,6 +5959,35 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12713": {
+      "code": "12713",
+      "full": "UTT20261000012713",
+      "name": "Indrani Bhattacharya",
+      "email": "indrani1998@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 13th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4745,6 +6028,12 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4762,6 +6051,12 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4779,6 +6074,133 @@ window.TicketCatalog = {
           "qty": 1,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12718": {
+      "code": "12718",
+      "full": "UTT20261000012718",
+      "name": "Nilanjana Ganguly",
+      "email": "nilanjanaroy@hotmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12719": {
+      "code": "12719",
+      "full": "UTT20261000012719",
+      "name": "Naznin Fauzia",
+      "email": "laboni14@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$62",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12720": {
+      "code": "12720",
+      "full": "UTT20261000012720",
+      "name": "Gaurab Basu",
+      "email": "gauravbasu98@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12721": {
+      "code": "12721",
+      "full": "UTT20261000012721",
+      "name": "Arunita Dutta",
+      "email": "arunitad@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Chinese Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12722": {
+      "code": "12722",
+      "full": "UTT20261000012722",
+      "name": "Ananda Bhattacharya",
+      "email": "ananda1990@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4813,6 +6235,122 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12725": {
+      "code": "12725",
+      "full": "UTT20261000012725",
+      "name": "Dipanwita Sarkar",
+      "email": "dipanwitas@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12726": {
+      "code": "12726",
+      "full": "UTT20261000012726",
+      "name": "Shubhabrata Mukherjee",
+      "email": "shubhabrata@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$70",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12727": {
+      "code": "12727",
+      "full": "UTT20261000012727",
+      "name": "Shubham Majumdar",
+      "email": "majumdar.shubham@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$68",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12728": {
+      "code": "12728",
+      "full": "UTT20261000012728",
+      "name": "Gourav Mitra",
+      "email": "gourav.nits@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4850,6 +6388,46 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12731": {
+      "code": "12731",
+      "full": "UTT20261000012731",
+      "name": "Bhaskardeb Maitra",
+      "email": "maitrab@hotmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$38",
+      "items": [
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        }
+      ]
+    },
+    "12732": {
+      "code": "12732",
+      "full": "UTT20261000012732",
+      "name": "Arnita Chakravorty",
+      "email": "arnita.c@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 14th, 2026",
+      "amount": "$22",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12733": {
       "code": "12733",
       "full": "UTT20261000012733",
@@ -4884,6 +6462,138 @@ window.TicketCatalog = {
         }
       ]
     },
+    "12735": {
+      "code": "12735",
+      "full": "UTT20261000012735",
+      "name": "Gourab Chakraborty",
+      "email": "gourabchakraborty86@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12736": {
+      "code": "12736",
+      "full": "UTT20261000012736",
+      "name": "Aryyama Kumar Jana",
+      "email": "janaaryyama@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$62",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12737": {
+      "code": "12737",
+      "full": "UTT20261000012737",
+      "name": "Biplob Ghose",
+      "email": "biplob_ghose@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$18",
+      "items": [
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        }
+      ]
+    },
+    "12738": {
+      "code": "12738",
+      "full": "UTT20261000012738",
+      "name": "Chanchal Banerjee",
+      "email": "chaniban@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12739": {
+      "code": "12739",
+      "full": "UTT20261000012739",
+      "name": "SUVANKAR DEY",
+      "email": "suvankar.dey80@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12740": {
+      "code": "12740",
+      "full": "UTT20261000012740",
+      "name": "Anirban Roy",
+      "email": "nabrina.yor@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$60",
+      "items": [
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
     "12741": {
       "code": "12741",
       "full": "UTT20261000012741",
@@ -4898,6 +6608,12 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     },
@@ -4915,6 +6631,18 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
         }
       ]
     }

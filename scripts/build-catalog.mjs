@@ -55,7 +55,12 @@ function laneOf(name) {
   return name.toLowerCase().includes("entry") ? "entry" : "food";
 }
 
-const source = process.argv[2] || "E:\\Downloads\\order_list_10_04_2026_.csv";
+const args = process.argv.slice(2);
+const source = args.find((arg) => !arg.startsWith("--")) || "E:\\Downloads\\order_list_10_04_2026_.csv";
+const replaceCatalog = args.includes("--replace");
+const skipRefunds = args.includes("--no-refunds");
+const eventArg = args.find((arg) => arg.startsWith("--event="));
+const eventId = eventArg ? eventArg.slice("--event=".length) : "";
 const delimiter = source.toLowerCase().endsWith(".csv") ? "," : "\t";
 const rows = parseTable(readFileSync(source, "utf8"), delimiter);
 const [header, ...body] = rows;
@@ -73,10 +78,12 @@ for (const row of body) {
   while (rest) {
     const match = rest.match(/^(.+?)\sx\s(\d+)\s*(?:,\s*|$)/i);
     if (!match) break;
-    const name = match[1].trim();
+    let name = match[1].trim();
     const qty = Number(match[2]);
+    const lane = laneOf(name);
+    if (eventId && lane === "entry") name = name.replace(/^(Friday|Saturday|Sunday)\s+/i, "");
     itemNames.set(name, (itemNames.get(name) || 0) + qty);
-    items.push({ name, qty, lane: laneOf(name), tone: toneOf(name) });
+    items.push({ name, qty, lane, tone: toneOf(name) });
     rest = rest.slice(match[0].length).trim();
   }
   orders[code] = {
@@ -91,22 +98,24 @@ for (const row of body) {
   };
 }
 
-const refunds = applyOrderRefunds(orders);
+const refunds = skipRefunds ? [] : applyOrderRefunds(orders);
 
 const catalogPath = new URL("../web/catalog.js", import.meta.url);
 let previousOrders = {};
 let previousRefunds = [];
-try {
-  const existing = readFileSync(catalogPath, "utf8");
-  const start = existing.indexOf("{");
-  const end = existing.indexOf("window.TicketCatalog.lookup");
-  const parsed = JSON.parse(existing.slice(start, end).trim().replace(/;\s*$/, ""));
-  if (parsed && parsed.orders) {
-    previousOrders = parsed.orders;
-    previousRefunds = Array.isArray(parsed.refunds) ? parsed.refunds : [];
+if (!replaceCatalog) {
+  try {
+    const existing = readFileSync(catalogPath, "utf8");
+    const start = existing.indexOf("{");
+    const end = existing.indexOf("window.TicketCatalog.lookup");
+    const parsed = JSON.parse(existing.slice(start, end).trim().replace(/;\s*$/, ""));
+    if (parsed && parsed.orders) {
+      previousOrders = parsed.orders;
+      previousRefunds = Array.isArray(parsed.refunds) ? parsed.refunds : [];
+    }
+  } catch {
+    previousOrders = {};
   }
-} catch {
-  previousOrders = {};
 }
 
 const merged = { ...previousOrders, ...orders };
@@ -120,14 +129,17 @@ for (const rule of REFUNDS.map(({ code, item, keep, note }) => ({ code, item, ke
 }
 
 const catalog = {
-  epoch: "2026-10-08",
+  ...(eventId ? { eventId } : {}),
+  epoch: eventId ? "2026-10-15" : "2026-10-08",
   orders: merged,
-  refunds: refundRules,
-  skus: [
+  refunds: skipRefunds ? [] : refundRules,
+};
+if (!eventId) {
+  catalog.skus = [
     { id: "friday-veg", name: "Friday Veg", day: "friday", lane: "food", enabled: true },
     { id: "friday-nonveg", name: "Friday Non-Vegetarian", day: "friday", lane: "food", enabled: true },
-  ],
-};
+  ];
+}
 const out = `window.TicketCatalog = ${JSON.stringify(catalog, null, 2)};
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();

@@ -25,10 +25,19 @@ html, body {
 
 body {
   font-family: "Segoe UI", system-ui, sans-serif;
-  background: var(--paper);
+  background-color: #140e09;
+  background-image: linear-gradient(rgba(20, 14, 9, 0.28), rgba(20, 14, 9, 0.42)), url("gala-poster.jpg");
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
   color: var(--ink);
   line-height: 1.35;
   overflow-x: hidden;
+}
+
+.app-main {
+  min-height: 100dvh;
+  background: rgba(255, 243, 230, 0.88);
 }
 
 button, input, select { font: inherit; font-size: 1.15rem; }
@@ -842,3 +851,14 @@ button.day-tab:disabled { background: #9ca3af; color: #1f2937; border-color: #6b
 }
 .desk-food-note p { margin: 0 0 8px; font-weight: 700; }
 .desk-food-note { margin: 0 0 12px; }
+.order-food {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fffaf4;
+  border: 2px solid #c2410c;
+  text-align: left;
+}
+.order-food h3 { margin: 0 0 8px; font-size: 1.15rem; }
+.order-food ul { margin: 0; padding-left: 1.2rem; }
+.order-food li { margin: 4px 0; font-weight: 700; }

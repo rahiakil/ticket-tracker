@@ -1132,42 +1132,6 @@ function ticketPill(person, item, index, lane, locked, now) {
   return button;
 }
 
-function switchToVolunteer() {
-  stopCamera();
-  openedCode = "";
-  guestStayCode = "";
-  const name = readAlias();
-  localStorage.removeItem(SESSION_KEY);
-  show(login);
-  const user = document.querySelector("#username");
-  const password = document.querySelector("#password");
-  const display = document.querySelector("#display-name");
-  if (user) user.value = "volunteer";
-  if (password) password.value = "";
-  if (display) display.value = name;
-  const error = document.querySelector("#login-error");
-  if (error) {
-    error.hidden = false;
-    error.className = "result pending";
-    error.textContent = "If you want to scan food, switch to volunteer login please.";
-  }
-  if (password) password.focus();
-}
-
-function deskFoodNotice() {
-  const note = document.createElement("div");
-  note.className = "desk-food-note";
-  const text = document.createElement("p");
-  text.textContent = "As a desk owner you cannot mark a food coupon. You can only see it. If you want to scan food, switch to volunteer login please.";
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn-orange";
-  button.textContent = "Switch to volunteer login";
-  button.addEventListener("click", switchToVolunteer);
-  note.append(text, button);
-  return note;
-}
-
 function itemButtons(person, options = {}) {
   const view = orderView(person);
   const now = new Date();
@@ -1188,12 +1152,31 @@ function itemButtons(person, options = {}) {
   ];
   const today = todayEventDay() || "saturday";
   const groups = grouped.filter((group) => {
+    if (group[2] !== "entry") return false;
     if (!can("admin") && group[1] !== "saturday") return false;
-    return showAll || group[2] === desk || (group[2] === "entry" && group[1] === today) || (activeCounter() === "entry" && group[2] === "food");
+    return showAll || group[2] === desk || (group[2] === "entry" && group[1] === today);
   });
   const board = document.createElement("div");
   board.className = "ticket-board";
-  if (deskUser && view.items.some((item) => item.lane === "food")) board.append(deskFoodNotice());
+  const foodLines = new Map();
+  for (const item of view.items) {
+    if (item.lane !== "food") continue;
+    foodLines.set(item.id, (foodLines.get(item.id) || 0) + 1);
+  }
+  if (foodLines.size) {
+    const food = document.createElement("section");
+    food.className = "order-food";
+    const heading = document.createElement("h3");
+    heading.textContent = "Food on this order";
+    const list = document.createElement("ul");
+    for (const [name, qty] of foodLines) {
+      const line = document.createElement("li");
+      line.textContent = qty > 1 ? `${name} × ${qty}` : name;
+      list.append(line);
+    }
+    food.append(heading, list);
+    board.append(food);
+  }
   for (const [label, bucket, lane] of groups) {
     const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
