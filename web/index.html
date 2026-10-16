@@ -86,7 +86,7 @@
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
-      <p id="magazine-count" class="magazine-left">140 magazines left</p>
+      <p id="magazine-count" class="magazine-left" hidden></p>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -368,6 +368,11 @@
       <button id="admin-print" class="btn-teal" type="button">Print sheet</button>
       <button id="admin-logout" class="text-button" type="button">Log out</button>
     </header>
+    <section class="panel">
+      <h2>Archived counters</h2>
+      <label class="check-line"><input id="enable-magazine" type="checkbox"> Show the magazine counter</label>
+      <p class="note">The magazine counter is from an earlier event. It stays off until a site admin turns it on. Every phone follows this switch.</p>
+    </section>
     <div class="page-tabs admin-tabs">
       <button type="button" data-site-tab="orders" class="btn-teal">Orders</button>
       <button type="button" data-site-tab="sheet" class="btn-quiet">Sheet</button>
@@ -583,9 +588,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=12"></script>
-  <script src="ledger.js?v=46"></script>
+  <script src="ledger.js?v=47"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=128"></script>
+  <script src="app.js?v=129"></script>
 </body>
 </html>

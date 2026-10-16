@@ -800,6 +800,7 @@ function cacheLiveBook(book) {
       disputes: book.disputes || [],
       eventDays: book.eventDays || null,
       accounts: book.accounts || null,
+      archive: book.archive || null,
       skus: book.skus || null,
       walkups: book.walkups || {},
     };
@@ -1360,15 +1361,33 @@ function magazinesLeft() {
 }
 
 function paintMagazineCount() {
+  const on = magazineEnabled();
   const left = magazinesLeft();
   const text = `${left} magazines left`;
   document.querySelectorAll("#magazine-count").forEach((node) => {
-    node.textContent = text;
+    node.hidden = !on;
+    node.textContent = on ? text : "";
   });
+  const toggle = document.querySelector("#enable-magazine");
+  if (toggle) toggle.checked = on;
   return text;
 }
 
+function magazineEnabled() {
+  return Boolean(currentBook.archive && currentBook.archive.magazine);
+}
+
+function setMagazineEnabled(on) {
+  const enabled = Boolean(on);
+  queueWrite((book) => {
+    book.archive = { ...(book.archive || {}), magazine: enabled };
+    return { write: true, book, message: enabled ? "Magazine counter is on." : "Magazine counter is archived." };
+  });
+  renderOrders();
+}
+
 function magazineOpen() {
+  if (!magazineEnabled()) return false;
   const day = todayEventDay();
   return day === "saturday" || day === "sunday";
 }
@@ -1391,6 +1410,7 @@ function ticketHasMember(person) {
 }
 
 function giveMagazine(person) {
+  if (!magazineEnabled()) return;
   if (!can("scan") && !can("add")) return;
   if (!magazineOpen()) return;
   if (!ticketHasMember(person)) return;
@@ -1415,7 +1435,7 @@ function giveMagazine(person) {
 }
 
 function magazineCard(person, locked) {
-  if (!ticketHasMember(person)) return null;
+  if (!magazineEnabled() || !ticketHasMember(person)) return null;
   const given = magazineAlready(person);
   const card = document.createElement("article");
   card.className = "day-checks";
@@ -4511,6 +4531,13 @@ document.querySelector("#cleanup-all").addEventListener("click", resetScans);
 document.querySelectorAll(".cleanup-scans").forEach((button) => {
   button.addEventListener("click", resetScans);
 });
+const magazineToggle = document.querySelector("#enable-magazine");
+if (magazineToggle) {
+  magazineToggle.addEventListener("change", () => {
+    setMagazineEnabled(magazineToggle.checked);
+  });
+}
+
 const createLoginForm = document.querySelector("#create-login");
 if (createLoginForm) {
   createLoginForm.addEventListener("submit", (event) => { createLogin(event); });

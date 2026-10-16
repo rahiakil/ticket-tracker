@@ -478,6 +478,7 @@ function statusDetail(order) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
     if (book && book.eventDays) next.eventDays = book.eventDays;
+    if (book && book.archive) next.archive = book.archive;
     if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
     const who = actor || "siteadmin";
     next.lines = [`${at} ${who} cleaned up everything`];
