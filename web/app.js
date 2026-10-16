@@ -4745,27 +4745,6 @@ if (payClose) payClose.addEventListener("click", () => {
   if (pay) pay.hidden = true;
 });
 
-function paintWifiAsk() {
-  const answer = sessionStorage.getItem(storeKey("venue-wifi"));
-  const ask = document.querySelector("#wifi-ask");
-  const warn = document.querySelector("#wifi-warn");
-  if (ask) ask.hidden = answer === "yes";
-  if (warn) warn.hidden = answer !== "no";
-}
-
-function setVenueWifi(answer) {
-  sessionStorage.setItem(storeKey("venue-wifi"), answer);
-  paintWifiAsk();
-}
-
-const wifiYes = document.querySelector("#wifi-yes");
-const wifiNo = document.querySelector("#wifi-no");
-const wifiConnected = document.querySelector("#wifi-connected");
-if (wifiYes) wifiYes.addEventListener("click", () => setVenueWifi("yes"));
-if (wifiNo) wifiNo.addEventListener("click", () => setVenueWifi("no"));
-if (wifiConnected) wifiConnected.addEventListener("click", () => setVenueWifi("yes"));
-paintWifiAsk();
-
 async function startApp() {
   await loadPackagedLive();
   restoreCachedBook();
