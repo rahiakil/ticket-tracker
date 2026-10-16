@@ -286,11 +286,10 @@ function applyRoleUi() {
   document.querySelectorAll(".show-pay").forEach((node) => { node.hidden = !sell && !admin; });
   if (entryDesk) entryDesk.hidden = !showCounters;
   const foodDesk = document.querySelector("#counter-food");
-  if (foodDesk) foodDesk.hidden = !showCounters;
+  if (foodDesk) foodDesk.hidden = true;
   const counterSwitch = document.querySelector(".counter-switch");
-  if (counterSwitch) counterSwitch.hidden = !showCounters;
-  if (volunteer) localStorage.setItem(storeKey("counter"), "food");
-  else if (!localStorage.getItem(storeKey("counter-picked"))) localStorage.setItem(storeKey("counter"), showCounters ? "entry" : "food");
+  if (counterSwitch) counterSwitch.hidden = true;
+  localStorage.setItem(storeKey("counter"), "entry");
   const searchLine = document.querySelector("#order-query")?.closest(".search-line");
   if (searchLine) searchLine.hidden = !search;
   const scanButton = document.querySelector("#scan-btn");
@@ -840,16 +839,14 @@ function holderNow() {
 }
 
 const demoMode = false;
-const DEFAULT_EVENT_DAYS = { friday: "2026-10-09", saturday: "2026-10-10", sunday: "2026-10-11" };
+const DEFAULT_EVENT_DAYS = { friday: "2026-10-17", saturday: "2026-10-17", sunday: "2026-10-17" };
 
-function eventDates(book) {
-  const saved = book && book.eventDays;
-  const pick = (day) => (/^\d{4}-\d{2}-\d{2}$/.test(saved && saved[day] || "") ? saved[day] : DEFAULT_EVENT_DAYS[day]);
+function eventDates() {
   return {
-    friday: pick("friday"),
-    saturday: pick("saturday"),
-    sunday: pick("sunday"),
-    open: { friday: false, saturday: false, sunday: true },
+    friday: DEFAULT_EVENT_DAYS.friday,
+    saturday: DEFAULT_EVENT_DAYS.saturday,
+    sunday: DEFAULT_EVENT_DAYS.sunday,
+    open: { friday: false, saturday: true, sunday: false },
   };
 }
 
@@ -880,13 +877,13 @@ function canMarkTicket(lane, day) {
   if (readSession()?.role === "desk" && lane === "food") return false;
   if (can("add")) return true;
   if (!can("scan")) return false;
-  const today = todayEventDay() || "sunday";
+  const today = todayEventDay() || "saturday";
   return lane === "entry" && day === today;
 }
 
 function eventDatesForMark(book) {
   const dates = eventDates(book);
-  const today = todayEventDay() || "sunday";
+  const today = todayEventDay() || "saturday";
   dates.open = { ...dates.open, [today]: true };
   return dates;
 }
@@ -1002,7 +999,7 @@ function revertOne(person) {
 }
 
 function dayBucket(name) {
-  return TicketLedger.itemDay(name) || (isSundaySaleName(name) ? "sunday" : "other");
+  return TicketLedger.itemDay(name) || "saturday";
 }
 
 function allDayEntry(item) {
@@ -1046,7 +1043,7 @@ function nextAlready(message) {
 }
 
 function visibleDays() {
-  return can("admin") ? ["sunday", "saturday", "friday"] : ["sunday"];
+  return ["saturday"];
 }
 
 function dayCheckCard(person, item, locked) {
@@ -1089,7 +1086,7 @@ function ticketPill(person, item, index, lane, locked, now) {
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
-  const today = todayEventDay() || "sunday";
+  const today = todayEventDay() || "saturday";
   const deskViewFood = readSession()?.role === "desk" && lane === "food";
   const closed = deskViewFood || (!demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook)));
   const future = closed;
@@ -1189,9 +1186,9 @@ function itemButtons(person, options = {}) {
     ["3 day entry", "other", "entry"],
     ["3 day visit", "other", "food"],
   ];
-  const today = todayEventDay() || "sunday";
+  const today = todayEventDay() || "saturday";
   const groups = grouped.filter((group) => {
-    if (!can("admin") && (group[1] === "friday" || group[1] === "saturday")) return false;
+    if (!can("admin") && group[1] !== "saturday") return false;
     return showAll || group[2] === desk || (group[2] === "entry" && group[1] === today) || (activeCounter() === "entry" && group[2] === "food");
   });
   const board = document.createElement("div");
@@ -1251,7 +1248,7 @@ function itemButtons(person, options = {}) {
   if (!board.querySelector(".day-block")) {
     const empty = document.createElement("p");
     empty.className = "note";
-    empty.textContent = can("admin") ? "No tickets on this order." : "No Sunday tickets on this order.";
+    empty.textContent = can("admin") ? "No tickets on this order." : "No entry tickets on this order.";
     board.append(empty);
   }
   return board;
@@ -1770,6 +1767,8 @@ let siteTab = "orders";
 
 function todayEventDay() {
   const dates = eventDates(currentBook);
+  const open = ["friday", "saturday", "sunday"].filter((day) => dates.open[day]);
+  if (open.length === 1) return open[0];
   const now = new Date();
   const stamp = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
   return ["friday", "saturday", "sunday"].find((day) => dates[day] === stamp) || "";
@@ -2549,11 +2548,9 @@ function saleTileLabel(item) {
 }
 
 function saleMenu() {
-  return activeSaleSkus().map((sku) => {
-    const cap = saleCap(sku.name);
-    const left = Math.max(0, cap - soldQty(sku.name, editingSaleCode));
-    return { ...sku, when: "Sunday", cap, left, open: left > 0 };
-  });
+  return menuItems()
+    .filter((item) => item.lane === "entry")
+    .map((item) => ({ ...item, when: "Saturday", label: item.name, cap: Infinity, left: Infinity, open: true }));
 }
 
 function paintSaleTiles() {
@@ -2569,7 +2566,7 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Pick a meal. It closes when none are left.";
+  hint.textContent = "Entry only. Each tap adds one ticket. The QR covers every entry on this sale.";
   host.append(hint);
   for (const when of ["Saturday", "Sunday"]) {
     const group = items.filter((item) => item.when === when);
@@ -4556,7 +4553,7 @@ async function clearAndStart() {
   localStorage.removeItem(storeKey("skus"));
   for (const day of ["friday", "saturday", "sunday"]) {
     document.querySelectorAll(`.day-date[data-day="${day}"]`).forEach((input) => { input.value = DEFAULT_EVENT_DAYS[day]; });
-    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => { input.checked = true; });
+    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => { input.checked = day === "saturday"; });
   }
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
@@ -4566,11 +4563,11 @@ async function clearAndStart() {
   queueWrite((book) => {
     book.eventDays = {
       ...DEFAULT_EVENT_DAYS,
-      open: { friday: true, saturday: true, sunday: true },
+      open: { friday: false, saturday: true, sunday: false },
       skus: starter,
     };
     book.skus = starter;
-    return { write: true, book, message: "Cleared. Friday, Saturday, and Sunday are open." };
+    return { write: true, book, message: "Cleared. Saturday, Oct 17 is open." };
   });
   await flushWrites();
   openedCode = "";

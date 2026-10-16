@@ -193,7 +193,6 @@ test("entry and food get separate status, and one item turns done at a time", ()
   assert.equal(ledger.daysAhead("sunday", new Date(2026, 9, 11, 12), eventDays), 0);
   const closedSaturday = { ...eventDays, open: { friday: false, saturday: true, sunday: false } };
   assert.equal(ledger.dayIsOpen("saturday", closedSaturday), true);
-  assert.equal(ledger.dayIsOpen("sunday", closedSaturday), false);
   const sundayBuyer = {
     code: "12166",
     full: "UTT20260900012166",

@@ -166,8 +166,59 @@ function lockFresh_(lock) {
   return age >= 0 && age < 3 * 60 * 1000;
 }
 
+function keepEventId_(current, incoming) {
+  if (incoming && incoming.eventId) current.eventId = incoming.eventId;
+  else if (!current.eventId) current.eventId = "";
+}
+
+function priorEventId_(current, incoming) {
+  if (current.eventId && incoming.eventId && current.eventId !== incoming.eventId) return current.eventId;
+  if (!incoming || !incoming.eventId || current.eventId) return "";
+  var orders = current.orders || {};
+  var ids = Object.keys(orders);
+  if (!ids.length && !Object.keys(current.walkups || {}).length) return "";
+  return incoming.previousEventId || "durga-puja-2026";
+}
+
+function switchEvent_(current, incoming) {
+  var priorId = priorEventId_(current, incoming);
+  if (!priorId) {
+    if (incoming && incoming.eventId) current.eventId = incoming.eventId;
+    return false;
+  }
+  var folder = DriveApp.getFolderById(FOLDER_ID);
+  var name = "ticket-tracker-archive-" + priorId + ".txt";
+  if (folder.getFilesByName(name).hasNext()) name = "ticket-tracker-archive-" + priorId + "-" + Date.now() + ".txt";
+  folder.createFile(name, JSON.stringify(current), MimeType.PLAIN_TEXT);
+  var accounts = current.accounts;
+  Object.keys(current).forEach(function (key) { delete current[key]; });
+  current.schemaVersion = 1;
+  current.lines = incoming.lines || [];
+  current.log = incoming.log || [];
+  current.orders = incoming.orders || {};
+  current.locks = incoming.locks || {};
+  current.walkups = incoming.walkups || {};
+  current.disputes = incoming.disputes || [];
+  current.sheet = { orders: {} };
+  current.eventDays = incoming.eventDays || null;
+  current.eventId = incoming.eventId;
+  current.logEpoch = incoming.logEpoch || "";
+  current.accounts = accounts || [];
+  current.lastWriteId = incoming.lastWriteId || "";
+  current.baseWriteId = "";
+  current.factoryReset = false;
+  current.cleanupAll = false;
+  current.allowCleanup = false;
+  current.switchEvent = false;
+  current.counts = countBook_(current);
+  keepAccounts_(current, incoming);
+  return true;
+}
+
 function mergeBook_(current, incoming) {
   if (!current.locks) current.locks = {};
+  if (switchEvent_(current, incoming)) return current;
+  keepEventId_(current, incoming);
   if (incoming && incoming.factoryReset && incoming.allowCleanup) {
     current.orders = {};
     current.lines = [];

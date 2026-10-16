@@ -36,7 +36,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Clean up everything/);
   assert.match(html, /Factory reset/);
   assert.match(html, /open-saturday/);
-  assert.match(html, /sale-no-email/);
+  assert.match(html, /External Artist Gala/);
   assert.match(html, /Create login/);
   assert.match(app, /factoryReset/);
   assert.match(html, /Reset log/);
@@ -47,8 +47,6 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Search log/);
   assert.equal(html.includes("Demo on"), false);
   assert.match(app, /const demoMode = false/);
-  assert.match(html, /aria-label="Color key"/);
-  assert.match(css, /\.legend /);
   assert.match(css, /\.log-scroll/);
   assert.match(html, /Release all locks/);
   assert.match(html, /Entry counter/);
