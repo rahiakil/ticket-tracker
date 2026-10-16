@@ -85,6 +85,12 @@ function closeTicket() {
   show(ticketReturn || workspace);
 }
 
+function scanAnother() {
+  if (!can("scan")) return;
+  closeTicket();
+  startCamera();
+}
+
 function showGate() {
   stopCamera();
   guestStayCode = "";
@@ -294,6 +300,7 @@ function applyRoleUi() {
   if (searchLine) searchLine.hidden = !search;
   const scanButton = document.querySelector("#scan-btn");
   if (scanButton) scanButton.hidden = !scan;
+  document.querySelectorAll(".scan-another").forEach((button) => { button.hidden = !scan; });
   document.querySelectorAll("#show-colors").forEach((node) => { node.hidden = !scan && !add; });
   const fileScan = document.querySelector("label[for='file-scan']");
   if (fileScan) fileScan.hidden = !scan;
@@ -475,6 +482,9 @@ function onDecoded(text, generation) {
 }
 
 document.querySelector("#scan-btn").addEventListener("click", () => { startCamera(); });
+document.querySelectorAll(".scan-another").forEach((button) => {
+  button.addEventListener("click", () => { scanAnother(); });
+});
 const allowCamera = document.querySelector("#allow-camera");
 if (allowCamera) {
   allowCamera.addEventListener("click", async () => {
@@ -1329,7 +1339,13 @@ function paintOpen(person, options) {
   const magazine = magazineCard(person, locked);
   const parts = [title, mail, eventLine, phrase];
   if (magazine) parts.push(magazine);
-  parts.push(itemBoard(person, boardOptions), activity);
+  const again = document.createElement("button");
+  again.type = "button";
+  again.className = "btn-teal scan-another";
+  again.textContent = "Scan another";
+  again.hidden = !can("scan");
+  again.addEventListener("click", () => { scanAnother(); });
+  parts.push(itemBoard(person, boardOptions), again, activity);
   card.append(...parts);
   if (showGuest) host.append(guestQrPanel(person));
   host.append(card);
