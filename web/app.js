@@ -1610,7 +1610,10 @@ function showSearchMatches(people) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary name-row";
-    button.textContent = `${person.name} · ${person.code}${person.email ? ` · ${person.email}` : ""}`;
+    const title = document.createElement("span");
+    title.className = "name-row-title";
+    title.textContent = `${person.name} · ${person.code}${person.email ? ` · ${person.email}` : ""}`;
+    button.append(title, ticketSnapshot(person));
     button.addEventListener("click", () => {
       box.replaceChildren();
       paintOpen(person);
@@ -1893,11 +1896,7 @@ function wasScanned(person) {
 }
 
 function sundayOrder(person) {
-  return orderView(person).items.some((item) => {
-    const day = TicketLedger.itemDay(item.id);
-    if (day === "sunday" || isSundaySaleName(item.id)) return true;
-    return item.lane === "entry" && !day;
-  });
+  return orderView(person).items.length > 0;
 }
 
 function listedPeople(filter, tab, letter) {

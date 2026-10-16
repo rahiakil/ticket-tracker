@@ -6645,6 +6645,173 @@ window.TicketCatalog = {
           "tone": "nonveg"
         }
       ]
+    },
+    "12743": {
+      "code": "12743",
+      "full": "UTT20261000012743",
+      "name": "Amber Ghosh",
+      "email": "amberghosh@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12744": {
+      "code": "12744",
+      "full": "UTT20261000012744",
+      "name": "Sohini Bandyopadhyay",
+      "email": "coolbonny@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$84",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12745": {
+      "code": "12745",
+      "full": "UTT20261000012745",
+      "name": "Ashis Banerjee",
+      "email": "ashis.banerjee@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$70",
+      "items": [
+        {
+          "name": "North Indian Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12746": {
+      "code": "12746",
+      "full": "UTT20261000012746",
+      "name": "Chandra Mukherjee",
+      "email": "chandramukherjee@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$66",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12747": {
+      "code": "12747",
+      "full": "UTT20261000012747",
+      "name": "Utsab Bose",
+      "email": "ubose.exists@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$80",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12748": {
+      "code": "12748",
+      "full": "UTT20261000012748",
+      "name": "Ishika sarkar",
+      "email": "sarkarishika@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$38",
+      "items": [
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12749": {
+      "code": "12749",
+      "full": "UTT20261000012749",
+      "name": "Sacrajit Ganguly",
+      "email": "sacrajit@yahoo.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
     }
   },
   "refunds": []
