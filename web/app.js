@@ -3089,7 +3089,7 @@ function renderLiveSheet() {
         row.forEach((value, index) => {
           const cell = document.createElement("td");
           const label = header[index];
-          if (label === "Name" || label === "Email" || label === "Pending items" || label === "Picked up items" || label === "Status") {
+          if (label === "Name" || label === "Email" || label === "Entry items" || label === "Food items" || label === "Pending items" || label === "Picked up items" || label === "Status") {
             cell.classList.add("sheet-wrap");
           }
           if (index === nameIndex) cell.classList.add("sheet-name-cell");
@@ -4031,11 +4031,11 @@ function exportStats() {
 }
 
 function sheetHeader() {
-  return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Locked", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+  return ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Entry items", "Food items", "Locked", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
 }
 
 function sheetLine(row) {
-  return [row.utilized, row.total, row.name, row.full, row.code, row.email, lockLabel(row.code), row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt];
+  return [row.utilized, row.total, row.name, row.full, row.code, row.email, row.entryItems, row.foodItems, lockLabel(row.code), row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt];
 }
 
 function statusGrid(book) {
@@ -4181,15 +4181,57 @@ function downloadNewSales() {
   sayExport("Excel export is not available in this browser.");
 }
 
+function emailFoodSheet() {
+  const header = ["Email", "Names", "Orders", "Entry items", "Food items"];
+  const groups = new Map();
+  const people = Object.values(activeOrders());
+  const addCount = (bucket, item) => {
+    const name = String(item && item.name || "Ticket").trim() || "Ticket";
+    bucket.set(name, (bucket.get(name) || 0) + (Number(item && item.qty) || 1));
+  };
+  const format = (bucket) => [...bucket.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([name, qty]) => `${name} x ${qty}`)
+    .join("; ");
+  for (const person of people) {
+    const email = String(person.email || "").trim().toLowerCase();
+    const key = email || `order:${person.code}`;
+    if (!groups.has(key)) {
+      groups.set(key, { email: person.email || "", names: new Set(), orders: [], entry: new Map(), food: new Map() });
+    }
+    const group = groups.get(key);
+    if (person.name) group.names.add(person.name);
+    group.orders.push(person.full || person.code);
+    for (const item of person.items || []) {
+      addCount(item.lane === "entry" ? group.entry : group.food, item);
+    }
+  }
+  const rows = [...groups.values()]
+    .sort((left, right) => {
+      const leftEmail = String(left.email || "").trim().toLowerCase();
+      const rightEmail = String(right.email || "").trim().toLowerCase();
+      if (!leftEmail !== !rightEmail) return leftEmail ? -1 : 1;
+      return leftEmail.localeCompare(rightEmail) || [...left.names].join(" ").localeCompare([...right.names].join(" "));
+    })
+    .map((group) => [
+      group.email,
+      [...group.names].join("; "),
+      group.orders.join("; "),
+      format(group.entry),
+      format(group.food),
+    ]);
+  return [header, ...rows];
+}
+
 function downloadExcel() {
   const rows = statusGrid();
   const stamp = new Date().toISOString().slice(0, 10);
   if (typeof XLSX !== "undefined" && XLSX.utils && typeof XLSX.writeFile === "function" && typeof XLSX.utils.book_new === "function") {
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
     const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, "Tickets");
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(rows), "Tickets");
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(emailFoodSheet()), "By email");
     XLSX.writeFile(book, `ticket-status-${stamp}.xlsx`);
-    sayExport("Excel file saved to Downloads.");
+    sayExport("Excel file saved to Downloads. Tickets lists every order. By email puts food and entry for the same email together.");
     return;
   }
   const table = rows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("");

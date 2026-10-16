@@ -833,7 +833,6 @@ function statusDetail(order) {
 
   function exportRows(book, catalogOrders) {
     return Object.values(catalogOrders || {})
-      .sort((left, right) => String(right.code).localeCompare(String(left.code)))
       .map((person) => {
         const saved = (book.orders || {})[person.code];
         const items = [];
@@ -865,6 +864,8 @@ function statusDetail(order) {
           });
           return [...counts.entries()].map(([label, qty]) => `${label} x ${qty}`).join("; ");
         };
+        const entry = items.filter((item) => item.lane === "entry");
+        const food = items.filter((item) => item.lane === "food");
         return {
           utilized,
           total,
@@ -879,24 +880,37 @@ function statusDetail(order) {
           pendingCount: pending.length,
           pendingItems: names(pending),
           pickedItems: names(picked),
+          entryItems: names(entry),
+          foodItems: names(food),
           scannedAt: saved && saved.scannedAt ? saved.scannedAt : "",
         };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .sort((left, right) => {
+        const emailOf = (row) => String(row.email || "").trim().toLowerCase();
+        const leftEmail = emailOf(left);
+        const rightEmail = emailOf(right);
+        if (!leftEmail !== !rightEmail) return leftEmail ? -1 : 1;
+        const byEmail = leftEmail.localeCompare(rightEmail);
+        if (byEmail) return byEmail;
+        const byName = String(left.name || "").localeCompare(String(right.name || ""), undefined, { sensitivity: "base" });
+        if (byName) return byName;
+        return String(left.code || "").localeCompare(String(right.code || ""));
+      });
   }
 
   function exportCsv(book, catalogOrders) {
     const rows = exportRows(book, catalogOrders);
     const seen = rows.filter((row) => row.seen === "Seen").length;
     const pendingItems = rows.reduce((sum, row) => sum + row.pendingCount, 0);
-    const header = ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
+    const header = ["Utilized", "Total", "Name", "Order number", "Code", "Email", "Entry items", "Food items", "Seen", "Status", "Entry pending", "Food pending", "Pending count", "Pending items", "Picked up items", "Scanned at"];
     const lines = [
       ["Seen", seen],
       ["Not seen", rows.length - seen],
       ["Pending items", pendingItems],
       [],
       header,
-      ...rows.map((row) => [row.utilized, row.total, row.name, row.full, row.code, row.email, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
+      ...rows.map((row) => [row.utilized, row.total, row.name, row.full, row.code, row.email, row.entryItems, row.foodItems, row.seen, row.status, row.entryPending, row.foodPending, row.pendingCount, row.pendingItems, row.pickedItems, row.scannedAt]),
     ];
     return lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
   }
