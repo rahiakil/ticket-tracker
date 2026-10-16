@@ -1915,6 +1915,47 @@ function listedPeople(filter, tab, letter) {
   return people.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
 }
 
+function ticketSnapshot(person) {
+  const wrap = document.createElement("span");
+  wrap.className = "ticket-snapshot";
+  const items = orderView(person).items;
+  const entry = items.filter((item) => item.lane === "entry");
+  const food = items.filter((item) => item.lane === "food");
+  const counts = (list) => {
+    const totals = new Map();
+    list.forEach((item) => {
+      const name = String(item.id || "Ticket");
+      totals.set(name, (totals.get(name) || 0) + 1);
+    });
+    return totals;
+  };
+  if (entry.length) {
+    const line = document.createElement("span");
+    line.className = "snapshot-entry";
+    line.textContent = [...counts(entry).entries()]
+      .map(([name, qty]) => (qty > 1 ? `${qty} ${name}` : name))
+      .join(" · ");
+    wrap.append(line);
+  }
+  if (food.length) {
+    const line = document.createElement("span");
+    line.className = "snapshot-food";
+    for (const [name, qty] of counts(food)) {
+      const chip = document.createElement("span");
+      chip.className = "food-chip";
+      const dot = document.createElement("i");
+      dot.className = `food-dot coupon-${TicketLedger.couponKind(name, "food")}`;
+      const label = document.createElement("span");
+      label.textContent = qty > 1 ? `${name} × ${qty}` : name;
+      chip.append(dot, label);
+      line.append(chip);
+    }
+    wrap.append(line);
+  }
+  if (!wrap.childElementCount) wrap.textContent = "No items on this ticket";
+  return wrap;
+}
+
 function renderNameList(box, people, searching) {
   const token = (box.renderToken || 0) + 1;
   box.renderToken = token;
@@ -1947,7 +1988,10 @@ function renderNameList(box, people, searching) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "secondary name-row";
-      button.textContent = `${person.name} · ${person.code}`;
+      const title = document.createElement("span");
+      title.className = "name-row-title";
+      title.textContent = `${person.name} · ${person.code}`;
+      button.append(title, ticketSnapshot(person));
       button.addEventListener("click", () => paintOpen(person));
       box.append(button);
       if (box.id === "recent-orders") {
