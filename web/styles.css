@@ -837,6 +837,16 @@ button.bhoomi-remove { min-height: 40px; width: auto; }
     print-color-adjust: exact;
   }
 }
+.wifi-ask {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 2px solid #1d4ed8;
+  border-radius: 12px;
+  background: #eff6ff;
+  text-align: left;
+}
+.wifi-ask p { margin: 0 0 8px; font-weight: 700; }
+.wifi-ask a { font-weight: 800; }
 .row-buttons { display: grid; gap: 10px; margin: 10px 0; }
 
 .result { min-height: 1.2em; margin: 12px 0 0; padding: 10px 12px; border-left: 6px solid transparent; }

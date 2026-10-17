@@ -551,21 +551,27 @@ async function startCamera() {
   cancelButton.hidden = false;
   const generation = ++scanGeneration;
   camera = new Scanner("reader", { verbose: false });
+  const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   try {
     await camera.start(
       { facingMode: "environment" },
-      {
-        fps: 10,
-        disableFlip: false,
-        videoConstraints: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+      apple
+        ? { fps: 10, disableFlip: false }
+        : {
+          fps: 10,
+          disableFlip: false,
+          videoConstraints: { facingMode: { ideal: "environment" } },
         },
-      },
       (decoded) => { onDecoded(decoded, generation); },
       () => {},
     );
+    const video = reader.querySelector("video");
+    if (video) {
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+      video.muted = true;
+      video.play().catch(() => {});
+    }
     cameraOn = true;
   } catch {
     cameraOn = false;
@@ -617,9 +623,7 @@ document.querySelectorAll(".scan-another").forEach((button) => {
 });
 const allowCamera = document.querySelector("#allow-camera");
 if (allowCamera) {
-  allowCamera.addEventListener("click", async () => {
-    if (await requestCamera()) startCamera();
-  });
+  allowCamera.addEventListener("click", () => { startCamera(); });
 }
 document.querySelector("#cancel-scan").addEventListener("click", () => {
   scanGeneration += 1;
@@ -5205,7 +5209,22 @@ if (payClose) payClose.addEventListener("click", () => {
   if (pay) pay.hidden = true;
 });
 
+function paintWifiAsk() {
+  const ask = document.querySelector("#wifi-ask");
+  if (!ask) return;
+  ask.hidden = sessionStorage.getItem(storeKey("venue-wifi")) === "yes";
+}
+
+const wifiConnected = document.querySelector("#wifi-connected");
+if (wifiConnected) {
+  wifiConnected.addEventListener("click", () => {
+    sessionStorage.setItem(storeKey("venue-wifi"), "yes");
+    paintWifiAsk();
+  });
+}
+
 async function startApp() {
+  paintWifiAsk();
   if (!history.state || !history.state.ticketTracker) {
     history.replaceState({ ticketTracker: true, screen: "gate", trap: true }, "");
     history.pushState({ ticketTracker: true, screen: "gate" }, "");
