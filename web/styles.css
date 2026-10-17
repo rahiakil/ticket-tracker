@@ -42,7 +42,7 @@ body {
 
 button, input, select { font: inherit; font-size: 1.15rem; }
 
-button, .file-btn, .native-camera {
+button, .file-btn {
   min-height: 52px;
   border-radius: 14px;
   border: 2px solid transparent;
@@ -88,7 +88,7 @@ a.text-button:active {
 }
 
 .primary, .btn-teal { background: var(--teal); color: white; border-color: var(--teal-dark); }
-.btn-orange, label.native-camera { background: var(--orange); color: white; border-color: var(--orange-dark); display: flex; align-items: center; justify-content: center; }
+.btn-orange { background: var(--orange); color: white; border-color: var(--orange-dark); }
 .sold-veg { background: #157a62; color: #fff; border-color: #0e5c4a; }
 .sold-nonveg { background: #c81e1e; color: #fff; border-color: #8f1212; }
 .btn-quiet { background: #fff7f0; color: var(--ink); border-color: var(--line); }

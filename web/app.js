@@ -434,8 +434,6 @@ function applyRoleUi() {
   document.querySelectorAll("#show-colors").forEach((node) => { node.hidden = !scan && !add; });
   const fileScan = document.querySelector("label[for='file-scan']");
   if (fileScan) fileScan.hidden = !scan;
-  const nativeCamera = document.querySelector("label[for='native-scan']");
-  if (nativeCamera) nativeCamera.hidden = !scan;
   document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = true; });
   const deskStats = document.querySelector("#desk-stats");
   if (deskStats) deskStats.hidden = !admin;
@@ -553,7 +551,7 @@ async function startCamera() {
   const Scanner = library();
   if (!Scanner) {
     cameraHelp.hidden = false;
-    cameraHelp.textContent = "Camera library did not load. Tap iPhone camera and take a photo of the QR code.";
+    cameraHelp.textContent = "Camera library did not load. Choose a photo of the QR code instead.";
     return;
   }
   if (cameraOn || scanLock) return;
@@ -676,7 +674,6 @@ function bindQrPhoto(input) {
 }
 
 bindQrPhoto(document.querySelector("#file-scan"));
-bindQrPhoto(document.querySelector("#native-scan"));
 
 function mirrorImageFile(file) {
   return new Promise((resolve, reject) => {
