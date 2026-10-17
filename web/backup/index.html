@@ -104,7 +104,7 @@
       <div id="bhoomi-books" class="bhoomi-books">
         <h2>Bhoomi books</h2>
         <p id="bhoomi-count" class="people-count">0</p>
-        <p class="note">Checked out at this desk. No QR code.</p>
+        <p class="note">The book is procured later. Create a QR the buyer can show when it arrives.</p>
         <form id="bhoomi-form">
           <label>Name
             <input id="bhoomi-name" name="name" autocomplete="name" autocapitalize="words" required>
@@ -113,6 +113,7 @@
             <input id="bhoomi-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="Optional">
           </label>
           <button class="btn-teal" type="submit">Add book</button>
+          <button id="bhoomi-qr" class="btn-orange" type="button">Create Bhoomi book QR</button>
         </form>
         <p id="bhoomi-note" class="result" role="status" hidden></p>
         <div id="bhoomi-list"></div>
@@ -616,6 +617,6 @@
   <script src="../ledger.js?v=50"></script>
   <script src="../record.js?v=13"></script>
   <script src="../vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="../app.js?v=140"></script>
+  <script src="../app.js?v=141"></script>
 </body>
 </html>

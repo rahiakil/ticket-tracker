@@ -1849,6 +1849,8 @@ function guestQrPanel(person) {
   const meals = document.createElement("p");
   meals.className = "guest-qr-meals";
   meals.textContent = mealWords(person) || "Ticket";
+  const later = (person.items || []).some((item) => /bhoomi/i.test(String((item && (item.name || item.id)) || "")));
+  if (later) meals.textContent = "Bhoomi book · to be procured later";
   const qr = document.createElement("div");
   paintQr(person.code, qr);
   const code = document.createElement("p");
@@ -2370,6 +2372,48 @@ function paintBhoomiBooks() {
     item.append(text, remove);
     list.append(item);
   }
+}
+
+function createBhoomiQr() {
+  if (isVolunteer()) return;
+  const name = String(document.querySelector("#bhoomi-name")?.value || "").replace(/\s+/g, " ").trim();
+  const email = String(document.querySelector("#bhoomi-email")?.value || "").trim();
+  const note = document.querySelector("#bhoomi-note");
+  if (!name) {
+    if (note) {
+      note.hidden = false;
+      note.className = "result invalid";
+      note.textContent = "Enter the buyer's name, then create the QR.";
+    }
+    return;
+  }
+  const code = nextWalkCode();
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const person = {
+    code,
+    full: `WALK${code}`,
+    name,
+    email,
+    event: "Bhoomi book",
+    date: new Date().toLocaleDateString(),
+    amount: "",
+    items: [{ name: "Bhoomi book", qty: 1, lane: "book", tone: "other" }],
+  };
+  queueWrite((book) => {
+    const sold = TicketLedger.addWalkup(book, person, at, actor);
+    const listed = TicketLedger.addBhoomiBook(sold.book, name, email, at, actor);
+    return { write: true, book: listed.book || sold.book, message: `Bhoomi book QR ${code} for ${name}. To be procured later.` };
+  });
+  const form = document.querySelector("#bhoomi-form");
+  if (form) form.reset();
+  paintBhoomiBooks();
+  paintOpen(person, { allTickets: true, showGuest: true });
+  flushWrites().then((saved) => {
+    showMessage(saved
+      ? `Bhoomi book QR ${code} for ${name}. To be procured later.`
+      : `QR is ready for ${name}. The shared list is still catching up.`, saved ? "pending" : "save_failed");
+  });
 }
 
 function addBhoomiCheckout(name, email) {
@@ -5137,6 +5181,8 @@ if (bhoomiForm) {
     addBhoomiCheckout(name, email);
   });
 }
+const bhoomiQr = document.querySelector("#bhoomi-qr");
+if (bhoomiQr) bhoomiQr.addEventListener("click", () => createBhoomiQr());
 document.querySelector("#manage-skus").addEventListener("click", () => {
   if (!can("admin")) return;
   const pay = document.querySelector("#pay-screen");
