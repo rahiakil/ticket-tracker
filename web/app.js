@@ -196,7 +196,8 @@ function enterApp() {
 }
 
 function isVolunteer() {
-  return readSession()?.role === "food";
+  const role = readSession()?.role;
+  return role === "food" || role === "volunteer";
 }
 
 const ABILITY_FIELDS = [
@@ -276,7 +277,7 @@ function readAbilities(scope) {
 
 function applyRoleUi() {
   const session = readSession();
-  const volunteer = session?.role === "food";
+  const volunteer = isVolunteer();
   const deskRole = session?.role === "desk";
   const scan = can("scan");
   const add = can("add");
@@ -1192,7 +1193,7 @@ function volunteerFoodCard(order, item, taken) {
   const kind = TicketLedger.couponKind(item.id, "food");
   button.className = `item-pill coupon-${kind} ${taken ? "picked" : "ready"}`;
   const label = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
-  button.textContent = taken ? `${label}\nTaken` : label;
+  button.textContent = taken ? `${label}\nTaken` : `${label}\nTap to give`;
   button.disabled = taken;
   if (!taken) button.addEventListener("click", () => markOne(order, item.index, item.unit));
   wrap.append(button);
@@ -1463,7 +1464,9 @@ function paintOpen(person, options) {
     }
   }
   const phrase = document.createElement("p");
-  phrase.textContent = locked
+  phrase.textContent = isVolunteer()
+    ? "Tap a food card. Entry is not marked here."
+    : locked
     ? `This line is locked by ${locked.actor}. ${orderView(person).phrase}`
     : orderView(person).phrase;
   const boardOptions = {
@@ -1475,7 +1478,7 @@ function paintOpen(person, options) {
   const again = document.createElement("button");
   again.type = "button";
   again.className = "btn-teal scan-another";
-  again.textContent = "Scan another";
+  again.textContent = "Next scan";
   again.hidden = !can("scan");
   again.addEventListener("click", () => { scanAnother(); });
   parts.push(itemBoard(person, boardOptions), again, activity);
