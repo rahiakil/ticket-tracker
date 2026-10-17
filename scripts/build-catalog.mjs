@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { applyOrderRefunds, REFUNDS } from "./refunds.mjs";
+import { applyOrderRefunds, CANCELLED, REFUNDS } from "./refunds.mjs";
 
 function parseTable(text, delimiter) {
   const rows = [];
@@ -119,6 +119,10 @@ if (!replaceCatalog) {
 }
 
 const merged = { ...previousOrders, ...orders };
+for (const code of CANCELLED) {
+  delete orders[code];
+  delete merged[code];
+}
 const seenRefund = new Set(previousRefunds.map((rule) => `${rule.code}|${rule.item}|${rule.keep}`));
 const refundRules = previousRefunds.slice();
 for (const rule of REFUNDS.map(({ code, item, keep, note }) => ({ code, item, keep, note }))) {

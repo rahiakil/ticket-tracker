@@ -1033,35 +1033,6 @@ window.TicketCatalog = {
         }
       ]
     },
-    "11567": {
-      "code": "11567",
-      "full": "UTT20260800011567",
-      "name": "Anubhab Sagar Kolay",
-      "email": "anubhab.sagar@gmail.com",
-      "event": "External Artist Gala 2026",
-      "date": "August 23rd, 2026",
-      "amount": "$160",
-      "items": [
-        {
-          "name": "Early Bird Member Entry",
-          "qty": 2,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Early Bird Kids Member Entry (Age below 12)",
-          "qty": 1,
-          "lane": "entry",
-          "tone": "entry"
-        },
-        {
-          "name": "Early Bird Visiting Parents Member Entry",
-          "qty": 2,
-          "lane": "entry",
-          "tone": "entry"
-        }
-      ]
-    },
     "11568": {
       "code": "11568",
       "full": "UTT20260800011568",

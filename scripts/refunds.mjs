@@ -1,3 +1,6 @@
+/** Orders removed from the door list. Last 5 digits of the order number. */
+export const CANCELLED = ["11567"];
+
 /** Remaining quantity allowed after refund. keep is the number that should still exist. */
 export const REFUNDS = [
   { code: "11911", item: "Sunday Machher Kalia", keep: 2, note: "Diby Mukherjee bought 13, refund 11" },
