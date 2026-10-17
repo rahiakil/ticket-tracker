@@ -6812,6 +6812,357 @@ window.TicketCatalog = {
           "tone": "nonveg"
         }
       ]
+    },
+    "12750": {
+      "code": "12750",
+      "full": "UTT20261000012750",
+      "name": "Pritam Sinha",
+      "email": "sinha.pritam@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12751": {
+      "code": "12751",
+      "full": "UTT20261000012751",
+      "name": "Monisha Majumdar",
+      "email": "monisha02@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$296",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Regular Visiting Parents Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 2,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Regular Kids Member Entry (Age below 12)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12752": {
+      "code": "12752",
+      "full": "UTT20261000012752",
+      "name": "Sanjoyan Mustafi",
+      "email": "sanjoyanusa@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$42",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12753": {
+      "code": "12753",
+      "full": "UTT20261000012753",
+      "name": "Suroshree Das",
+      "email": "suroshree123@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$120",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12754": {
+      "code": "12754",
+      "full": "UTT20261000012754",
+      "name": "Subha Banerjee",
+      "email": "subha1500@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Chinese Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12755": {
+      "code": "12755",
+      "full": "UTT20261000012755",
+      "name": "Abhijit Bhattacharyya",
+      "email": "abhijit81bhatta@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$160",
+      "items": [
+        {
+          "name": "Regular Kids Member Entry (Age below 12)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 5,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 3,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12756": {
+      "code": "12756",
+      "full": "UTT20261000012756",
+      "name": "Debolina Banerjee",
+      "email": "bdebolina.b@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$78",
+      "items": [
+        {
+          "name": "Chinese Non-Veg Combo",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "North Indian Veg Combo",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        },
+        {
+          "name": "Veg Pulao with Paneer Kofta",
+          "qty": 1,
+          "lane": "food",
+          "tone": "veg"
+        }
+      ]
+    },
+    "12757": {
+      "code": "12757",
+      "full": "UTT20261000012757",
+      "name": "Rebanta Roy",
+      "email": "rebanta1997@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 15th, 2026",
+      "amount": "$58",
+      "items": [
+        {
+          "name": "Mutton Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Biriyani",
+          "qty": 1,
+          "lane": "food",
+          "tone": "nonveg"
+        },
+        {
+          "name": "Chicken Chaap",
+          "qty": 2,
+          "lane": "food",
+          "tone": "nonveg"
+        }
+      ]
+    },
+    "12758": {
+      "code": "12758",
+      "full": "UTT20261000012758",
+      "name": "Piyali BiswasDe",
+      "email": "piyali.biswas@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12759": {
+      "code": "12759",
+      "full": "UTT20261000012759",
+      "name": "Soutri Mukherjee",
+      "email": "soutri94@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$100",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Regular Visiting Parents Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12760": {
+      "code": "12760",
+      "full": "UTT20261000012760",
+      "name": "Tanya Chowdhury",
+      "email": "tanyachowdhury85@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$100",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12761": {
+      "code": "12761",
+      "full": "UTT20261000012761",
+      "name": "Amit Dutta",
+      "email": "amitdutta1490@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$180",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12762": {
+      "code": "12762",
+      "full": "UTT20261000012762",
+      "name": "Subhabrata Mukherjee",
+      "email": "subhabrata.mukherjee.ju@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$100",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12763": {
+      "code": "12763",
+      "full": "UTT20261000012763",
+      "name": "Tawhidur Rahman",
+      "email": "tawhiduw@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$30",
+      "items": [
+        {
+          "name": "Regular Kids Non Member Entry (Age 12-18)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12764": {
+      "code": "12764",
+      "full": "UTT20261000012764",
+      "name": "Vivek Sagar",
+      "email": "viveks121@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 16th, 2026",
+      "amount": "$120",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
     }
   },
   "refunds": []

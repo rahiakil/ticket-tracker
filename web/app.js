@@ -700,9 +700,15 @@ function catalogMatches(raw) {
   }
   const tokens = normalized(raw).split(" ").filter(Boolean);
   if (!tokens.length) return [];
+  const seen = new Set();
   return Object.values(activeOrders()).filter((person) => {
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
-    return tokens.every((token) => hay.includes(token));
+    if (!tokens.every((token) => hay.includes(token))) return false;
+    if (isVolunteer() && !personHasFood(person)) return false;
+    const key = emailKey(person);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
@@ -954,7 +960,7 @@ function markEntryDay(person, bucket) {
   });
   showMessage(applied.message, String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
   if (isVolunteer() && !String(applied.message || "").startsWith("Unavailable")) volunteerMarks.set(person.code, Date.now());
-  paintOpen(person);
+  repaintOpen(person);
 }
 
 function markFoodDay(person, bucket) {
@@ -984,7 +990,7 @@ function markFoodDay(person, bucket) {
   });
   showMessage(applied.message, String(applied.message).startsWith("Unavailable") ? "already_seen" : "pending");
   if (isVolunteer() && !String(applied.message || "").startsWith("Unavailable")) volunteerMarks.set(person.code, Date.now());
-  paintOpen(person);
+  repaintOpen(person);
 }
 
 function sendDispute(person, itemName) {
@@ -1150,7 +1156,7 @@ function ticketPill(person, item, index, lane, locked, now) {
 }
 
 function repaintOpen(person) {
-  const staying = isVolunteer() && openedCode && catalogPerson(openedCode);
+  const staying = openedCode && catalogPerson(openedCode);
   paintOpen(staying || person);
 }
 
@@ -1258,13 +1264,16 @@ function volunteerFoodBoard(anchor) {
 }
 
 function itemButtons(person, options = {}) {
-  const view = orderView(person);
   const now = new Date();
   const who = holderNow();
   const locked = TicketLedger.foreignLock(currentBook, person.code, who.holder, who.at);
   const deskUser = readSession()?.role === "desk";
   const desk = activeCounter();
   const showAll = deskUser || Boolean(options.allTickets) || String(person.full || "").startsWith("WALK");
+  const combined = [];
+  for (const order of ordersForPerson(person)) {
+    for (const item of orderView(order).items) combined.push({ order, item });
+  }
   const grouped = [
     ["Sunday entry", "sunday", "entry"],
     ["Sunday food", "sunday", "food"],
@@ -1284,15 +1293,15 @@ function itemButtons(person, options = {}) {
   const board = document.createElement("div");
   board.className = "ticket-board";
   const foodLines = new Map();
-  for (const item of view.items) {
-    if (item.lane !== "food") continue;
-    foodLines.set(item.id, (foodLines.get(item.id) || 0) + 1);
+  for (const row of combined) {
+    if (row.item.lane !== "food") continue;
+    foodLines.set(row.item.id, (foodLines.get(row.item.id) || 0) + 1);
   }
   if (foodLines.size) {
     const food = document.createElement("section");
     food.className = "order-food";
     const heading = document.createElement("h3");
-    heading.textContent = "Food on this order";
+    heading.textContent = "Food for this email";
     const list = document.createElement("ul");
     for (const [name, qty] of foodLines) {
       const line = document.createElement("li");
@@ -1303,7 +1312,7 @@ function itemButtons(person, options = {}) {
     board.append(food);
   }
   for (const [label, bucket, lane] of groups) {
-    const rows = view.items.map((item, index) => ({ item, index })).filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
+    const rows = combined.filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
     const rowDone = (item) => {
       if (!can("admin") && allDayEntry(item)) {
@@ -1327,14 +1336,22 @@ function itemButtons(person, options = {}) {
     if (heading.tagName === "BUTTON") {
       heading.type = "button";
       heading.disabled = !openRows.length || !canTake;
-      heading.addEventListener("click", () => (lane === "food" ? markFoodDay(person, bucket) : markEntryDay(person, bucket)));
+      heading.addEventListener("click", () => {
+        const seen = new Set();
+        for (const row of openRows) {
+          if (seen.has(row.order.code)) continue;
+          seen.add(row.order.code);
+          if (lane === "food") markFoodDay(row.order, bucket);
+          else markEntryDay(row.order, bucket);
+        }
+      });
     }
     block.append(heading);
     if (openRows.length) {
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of openRows) {
-        list.append(allDayEntry(item) ? dayCheckCard(person, item, locked) : pillWithPrint(person, item, index, lane, locked, now));
+      for (const { order, item } of openRows) {
+        list.append(allDayEntry(item) ? dayCheckCard(order, item, locked) : pillWithPrint(order, item, item.index, lane, locked, now));
       }
       block.append(list);
     }
@@ -1345,8 +1362,8 @@ function itemButtons(person, options = {}) {
       title.textContent = `Done (${doneRows.length})`;
       const list = document.createElement("div");
       list.className = "item-pills";
-      for (const { item, index } of doneRows) {
-        list.append(allDayEntry(item) ? dayCheckCard(person, item, locked) : pillWithPrint(person, item, index, lane, locked, now));
+      for (const { order, item } of doneRows) {
+        list.append(allDayEntry(item) ? dayCheckCard(order, item, locked) : pillWithPrint(order, item, item.index, lane, locked, now));
       }
       tray.append(title, list);
       block.append(tray);
@@ -2032,10 +2049,9 @@ function listedPeople(filter, tab, letter) {
     return tokens.every((token) => hay.includes(token));
   });
   const sorted = people.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
-  if (!isVolunteer()) return sorted;
   const seen = new Set();
   return sorted.filter((person) => {
-    if (!personHasFood(person)) return false;
+    if (isVolunteer() && !personHasFood(person)) return false;
     const key = emailKey(person);
     if (seen.has(key)) return false;
     seen.add(key);
@@ -2046,9 +2062,7 @@ function listedPeople(filter, tab, letter) {
 function ticketSnapshot(person) {
   const wrap = document.createElement("span");
   wrap.className = "ticket-snapshot";
-  const items = isVolunteer()
-    ? ordersForPerson(person).flatMap((order) => orderView(order).items)
-    : orderView(person).items;
+  const items = ordersForPerson(person).flatMap((order) => orderView(order).items);
   const entry = isVolunteer() ? [] : items.filter((item) => item.lane === "entry");
   const food = items.filter((item) => item.lane === "food");
   const counts = (list) => {
