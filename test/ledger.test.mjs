@@ -232,6 +232,30 @@ test("a line stays locked so a second phone cannot mark it twice", () => {
   assert.match(cleared.book.log[0].text, /admin cleaned up everything/);
 });
 
+test("a desk can undo a checked-in entry", () => {
+  const person = {
+    code: "12769",
+    full: "UTT20261000012769",
+    name: "Nadia Hossain",
+    email: "hossainnadia13@gmail.com",
+    items: [{ name: "Regular Non Member Entry", qty: 1, lane: "entry", tone: "entry" }],
+  };
+  const seen = ledger.rememberSheet(ledger.emptyBook(), person, person.full, "2026-10-17T18:00:00.000Z", "desk", "entry");
+  const checked = ledger.markEntryDay(seen.book, person, 0, 0, "saturday", true, "2026-10-17T18:01:00.000Z", "desk", "phone");
+  const variant = checked.book.orders["12769"].variants["item:0:0:Regular Non Member Entry"];
+  assert.equal(variant.taken, true);
+  const open = ledger.markEntryDay(checked.book, person, 0, 0, "saturday", false, "2026-10-17T18:02:00.000Z", "desk", "phone");
+  const cleared = open.book.orders["12769"].variants["item:0:0:Regular Non Member Entry"];
+  assert.equal(cleared.taken, false);
+  assert.equal(cleared.days.saturday.taken, false);
+  assert.equal(cleared.days.sunday.taken, false);
+  assert.equal(open.book.orders["12769"].scannedAt, "");
+  const again = ledger.rememberSheet(open.book, person, person.full, "2026-10-17T18:03:00.000Z", "desk", "entry");
+  const undone = ledger.revertLast(again.book, person, "2026-10-17T18:04:00.000Z", "desk", "phone");
+  assert.equal(undone.changed, true);
+  assert.equal(undone.book.orders["12769"].scannedAt, "");
+});
+
 test("factory reset clears scans and the uploaded sheet", () => {
   const reset = ledger.factoryReset({
     schemaVersion: 1,

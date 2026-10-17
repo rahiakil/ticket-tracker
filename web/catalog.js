@@ -7134,9 +7134,185 @@ window.TicketCatalog = {
           "tone": "entry"
         }
       ]
+    },
+    "12765": {
+      "code": "12765",
+      "full": "UTT20261000012765",
+      "name": "Paramita Basu",
+      "email": "paramitaabasu@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 17th, 2026",
+      "amount": "$120",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12766": {
+      "code": "12766",
+      "full": "UTT20261000012766",
+      "name": "Sritapa Dutta",
+      "email": "sritapa.dutta@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 17th, 2026",
+      "amount": "$100",
+      "items": [
+        {
+          "name": "Regular Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12767": {
+      "code": "12767",
+      "full": "UTT20261000012767",
+      "name": "Pramit Dutta",
+      "email": "knight.zico@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 17th, 2026",
+      "amount": "$60",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12768": {
+      "code": "12768",
+      "full": "UTT20261000012768",
+      "name": "Soumyajyoti Bhattacharya",
+      "email": "soumyajyotib909@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 17th, 2026",
+      "amount": "$120",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "12769": {
+      "code": "12769",
+      "full": "UTT20261000012769",
+      "name": "Nadia Hossain",
+      "email": "hossainnadia13@gmail.com",
+      "event": "External Artist Gala 2026",
+      "date": "October 17th, 2026",
+      "amount": "$240",
+      "items": [
+        {
+          "name": "Regular Non Member Entry",
+          "qty": 4,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
     }
   },
-  "refunds": []
+  "refunds": [
+    {
+      "code": "11911",
+      "item": "Sunday Machher Kalia",
+      "keep": 2,
+      "note": "Diby Mukherjee bought 13, refund 11"
+    },
+    {
+      "code": "11809",
+      "item": "Saturday Lunch Vegetarian",
+      "keep": 0,
+      "note": "Asitava Saturday food $16 x 3"
+    },
+    {
+      "code": "11992",
+      "item": "Saturday Lunch Vegetarian",
+      "keep": 0,
+      "note": "Samarpita Anand Saturday Lunch 2"
+    },
+    {
+      "code": "11992",
+      "item": "Friday Kids Non-Member Entry",
+      "keep": 0,
+      "note": "Samarpita Anand kids entry"
+    },
+    {
+      "code": "11992",
+      "item": "Saturday Kids Non-Member Entry",
+      "keep": 0,
+      "note": "Samarpita Anand kids entry"
+    },
+    {
+      "code": "11970",
+      "item": "Saturday Lunch Vegetarian",
+      "keep": 0,
+      "note": "Ananya Roy Saturday Lunch 2"
+    },
+    {
+      "code": "11970",
+      "item": "Sunday Lunch Non-Vegetarian",
+      "keep": 0,
+      "note": "Ananya Roy Sunday Lunch Non-Vegetarian 2"
+    },
+    {
+      "code": "11970",
+      "item": "Sunday Machher Kalia",
+      "keep": 0,
+      "note": "Ananya Roy Sunday Machher Kalia 2"
+    },
+    {
+      "code": "12382",
+      "item": "Saturday Lunch Vegetarian",
+      "keep": 0,
+      "note": "Pradip Saha Saturday Lunch Vegetarian 3"
+    },
+    {
+      "code": "12264",
+      "item": "Saturday Lunch Vegetarian",
+      "keep": 0,
+      "note": "Maitreyi Paul Saturday Lunch Vegetarian 3"
+    },
+    {
+      "code": "12264",
+      "item": "Saturday Adult Non-Member Entry",
+      "keep": 0,
+      "note": "Maitreyi Paul Saturday Entry 3"
+    },
+    {
+      "code": "11807",
+      "item": "Friday Adult Non-Member Entry",
+      "keep": 0,
+      "note": "Kaushik Chatterjee Friday 2 adults"
+    },
+    {
+      "code": "11807",
+      "item": "Friday Kids Non-Member Entry",
+      "keep": 0,
+      "note": "Kaushik Chatterjee Friday 2 kids"
+    },
+    {
+      "code": "12368",
+      "item": "Sunday Adult Non-Member Entry",
+      "keep": 0,
+      "note": "Vishal Bajaj Sunday 2 adults"
+    },
+    {
+      "code": "12368",
+      "item": "Sunday Kids Non-Member Entry",
+      "keep": 0,
+      "note": "Vishal Bajaj Sunday 1 kid"
+    }
+  ]
 };
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();

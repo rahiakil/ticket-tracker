@@ -1198,6 +1198,8 @@ function shownEntryDays(item) {
 function entryComplete(item) {
   const days = shownEntryDays(item);
   if (!days) return Boolean(item.taken);
+  const openDays = visibleDays();
+  if (openDays.length === 1) return Boolean(item.taken) || Boolean(days[openDays[0]] && days[openDays[0]].taken);
   return ["friday", "saturday", "sunday"].every((day) => days[day] && days[day].taken);
 }
 
@@ -1239,7 +1241,7 @@ function dayCheckCard(person, item, locked) {
     line.className = "day-check";
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.checked = Boolean(days[day] && days[day].taken);
+    input.checked = Boolean(item.taken) || Boolean(days[day] && days[day].taken);
     input.disabled = Boolean(locked) || (!can("scan") && !can("add"));
     input.addEventListener("change", () => markEntrySlot(person, item, day, input.checked));
     line.append(input, document.createTextNode(` ${day.charAt(0).toUpperCase() + day.slice(1)}`));
@@ -1250,7 +1252,7 @@ function dayCheckCard(person, item, locked) {
   revert.className = "secondary";
   revert.textContent = "Revert";
   const shown = visibleDays();
-  const any = shown.some((day) => days[day] && days[day].taken);
+  const any = Boolean(item.taken) || shown.some((day) => days[day] && days[day].taken);
   revert.disabled = !any || Boolean(locked) || (!can("scan") && !can("add"));
   revert.addEventListener("click", () => {
     const latest = shown
@@ -1472,13 +1474,7 @@ function itemButtons(person, options = {}) {
   for (const [label, bucket, lane] of groups) {
     const rows = combined.filter(({ item }) => (!bucket || dayBucket(item.id) === bucket) && (item.lane || "food") === lane);
     if (!rows.length) continue;
-    const rowDone = (item) => {
-      if (!can("admin") && allDayEntry(item)) {
-        const days = shownEntryDays(item);
-        return Boolean(days && days.sunday && days.sunday.taken);
-      }
-      return entryComplete(item);
-    };
+    const rowDone = (item) => entryComplete(item);
     const openRows = rows.filter(({ item }) => !rowDone(item));
     const doneRows = rows.filter(({ item }) => rowDone(item));
     const block = document.createElement("section");
@@ -5062,7 +5058,7 @@ document.querySelector("#sheet-upload").addEventListener("change", async (event)
 });
 function resetScans() {
   if (!canResetScans()) return;
-  if (!window.confirm("Clean up all scans? This clears every scan, lock, and log. The order sheet stays.")) return;
+  if (!window.confirm("Clear all scans? Checked-in marks are removed. Orders, new sales, and Bhoomi books stay.")) return;
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
   queueWrite((book) => TicketLedger.cleanupAll(book, at, actor));

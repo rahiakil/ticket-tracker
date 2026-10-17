@@ -517,6 +517,9 @@ function statusDetail(order) {
     if (book && book.archive) next.archive = book.archive;
     if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
     if (book && Array.isArray(book.bhoomiBooks)) next.bhoomiBooks = book.bhoomiBooks;
+    if (book && book.walkups) next.walkups = book.walkups;
+    if (book && book.saleStock) next.saleStock = book.saleStock;
+    if (book && book.saleSkus) next.saleSkus = book.saleSkus;
     const who = actor || "siteadmin";
     next.lines = [`${at} ${who} cleaned up everything`];
     next.log = [{ at, text: `${who} cleaned up everything` }];
@@ -749,7 +752,25 @@ function statusDetail(order) {
     slot.taken = Boolean(taken);
     slot.takenAt = taken ? at : null;
     slot.takenBy = taken ? (actor || "") : "";
-    syncEntryDays(item);
+    if (!taken) {
+      for (const name of ["friday", "saturday", "sunday"]) {
+        const row = days[name];
+        if (!row) continue;
+        row.taken = false;
+        row.takenAt = null;
+        row.takenBy = "";
+      }
+      item.taken = false;
+      item.takenAt = null;
+      item.takenBy = "";
+      const entryLeft = Object.values(placed.order.variants).some((row) => row && row.lane === "entry" && row !== item && (row.taken || (row.days && Object.values(row.days).some((day) => day && day.taken))));
+      if (!entryLeft) placed.order.scannedAt = "";
+    } else {
+      item.taken = true;
+      item.takenAt = at;
+      item.takenBy = actor || "";
+      if (!placed.order.scannedAt) placed.order.scannedAt = at;
+    }
     placed.order.updatedAt = at;
     placed.order.actor = actor || placed.order.actor;
     syncTakenCount(placed.order);
@@ -819,11 +840,32 @@ function statusDetail(order) {
         latestDay = "";
       }
     }
-    if (!latestKey) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
+    if (!latestKey) {
+      if (!order.scannedAt) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
+      order.scannedAt = "";
+      order.updatedAt = at;
+      const text = `${person.code} reverted check-in${actor ? ` by ${actor}` : ""}`;
+      addLine(next, at, text);
+      if (!Array.isArray(next.log)) next.log = [];
+      next.log.push({ at, text });
+      return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(order)) };
+    }
     next.revertKey = latestKey;
     const item = order.variants[latestKey];
     let label = item.name;
-    if (latestDay && item.days && item.days[latestDay]) {
+    if (item.days && allDayEntry(item)) {
+      for (const slot of Object.values(item.days)) {
+        if (!slot) continue;
+        slot.taken = false;
+        slot.takenAt = null;
+        slot.takenBy = "";
+      }
+      item.taken = false;
+      item.takenAt = null;
+      item.takenBy = "";
+      order.scannedAt = "";
+      label = item.name;
+    } else if (latestDay && item.days && item.days[latestDay]) {
       item.days[latestDay].taken = false;
       item.days[latestDay].takenAt = null;
       item.days[latestDay].takenBy = "";
@@ -832,6 +874,8 @@ function statusDetail(order) {
     } else {
       item.taken = false;
       item.takenAt = null;
+      item.takenBy = "";
+      if (item.lane === "entry") order.scannedAt = "";
     }
     syncTakenCount(order);
     order.updatedAt = at;
