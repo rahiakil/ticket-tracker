@@ -58,11 +58,132 @@ let lastAttempt = null;
 let openedCode = "";
 let guestStayCode = "";
 let ticketReturn = null;
+let workspacePage = "desk";
+let historyQuiet = false;
+let scanAfterBack = false;
 let currentBook = TicketLedger.emptyBook();
 const pendingWrites = [];
 let flushTimer = null;
 let flushing = false;
 const FLUSH_WAIT_MS = 400;
+
+function historyScreen() {
+  if (ticketScreen && !ticketScreen.hidden) return "ticket";
+  if (saleScreen && !saleScreen.hidden) return "sale";
+  if (skuScreen && !skuScreen.hidden) return "sku";
+  if (adminScreen && !adminScreen.hidden) return siteTab === "orders" ? "records" : `records:${siteTab}`;
+  if (workspace && !workspace.hidden) return workspacePage === "desk" ? "desk" : `page:${workspacePage}`;
+  if (login && !login.hidden) return "login";
+  return "gate";
+}
+
+function isAppRoot(screen) {
+  return screen === "gate" || screen === "desk" || screen === "records";
+}
+
+function historyPushed(screen) {
+  return screen === "ticket" || screen === "sale" || screen === "sku"
+    || (typeof screen === "string" && (screen.startsWith("page:") || screen.startsWith("records:")));
+}
+
+function syncHistory() {
+  if (historyQuiet) return;
+  const screen = historyScreen();
+  const state = history.state;
+  if (!state || !state.ticketTracker) {
+    history.replaceState({ ticketTracker: true, screen: "gate", trap: true }, "");
+    history.pushState({ ticketTracker: true, screen }, "");
+    return;
+  }
+  if (state.trap || state.screen === screen) return;
+  const overlay = screen === "ticket" || screen === "sale" || screen === "sku";
+  const fromOverlay = state.screen === "ticket" || state.screen === "sale" || state.screen === "sku";
+  if ((overlay && !fromOverlay) || (historyPushed(screen) && !historyPushed(state.screen))) {
+    history.pushState({ ticketTracker: true, screen }, "");
+  } else history.replaceState({ ticketTracker: true, screen }, "");
+}
+
+function performBack() {
+  const pay = document.querySelector("#pay-screen");
+  if (pay && !pay.hidden) {
+    pay.hidden = true;
+    return;
+  }
+  if (ticketScreen && !ticketScreen.hidden) closeTicket();
+  else if (saleScreen && !saleScreen.hidden) show(workspace);
+  else if (skuScreen && !skuScreen.hidden) show(workspace);
+  else if (adminScreen && !adminScreen.hidden && siteTab !== "orders") showSitePage("orders");
+  else if (workspace && !workspace.hidden && workspacePage !== "desk") showWorkspacePage("desk");
+  else if (login && !login.hidden) showGate();
+}
+
+function applyHistory(screen) {
+  historyQuiet = true;
+  try {
+    const pay = document.querySelector("#pay-screen");
+    if (pay && !pay.hidden) pay.hidden = true;
+    if (ticketScreen && !ticketScreen.hidden && screen !== "ticket") closeTicket();
+    if (saleScreen && !saleScreen.hidden && screen !== "sale") show(workspace);
+    if (skuScreen && !skuScreen.hidden && screen !== "sku") show(workspace);
+    if (screen === "gate") showGate();
+    else if (screen === "login") show(login);
+    else if (screen === "sale") show(saleScreen);
+    else if (screen === "sku") show(skuScreen);
+    else if (screen === "ticket") show(ticketScreen);
+    else if (screen === "records" || (screen && screen.startsWith("records:"))) {
+      show(adminScreen);
+      showSitePage(screen === "records" ? "orders" : screen.slice("records:".length));
+    } else if (screen === "desk" || (screen && screen.startsWith("page:"))) {
+      show(workspace);
+      showWorkspacePage(screen === "desk" ? "desk" : screen.slice("page:".length));
+    }
+  } finally {
+    historyQuiet = false;
+  }
+}
+
+function appBack() {
+  const pay = document.querySelector("#pay-screen");
+  if (pay && !pay.hidden) {
+    pay.hidden = true;
+    return;
+  }
+  if (!isAppRoot(historyScreen())) {
+    history.back();
+    return;
+  }
+}
+
+function onPopState() {
+  const pay = document.querySelector("#pay-screen");
+  if (pay && !pay.hidden) {
+    pay.hidden = true;
+    history.pushState({ ticketTracker: true, screen: historyScreen() }, "");
+    return;
+  }
+  const state = history.state;
+  if (!state || !state.ticketTracker || state.trap) {
+    const screen = historyScreen();
+    if (!isAppRoot(screen)) {
+      history.pushState({ ticketTracker: true, screen }, "");
+      historyQuiet = true;
+      try { performBack(); } finally { historyQuiet = false; }
+      history.replaceState({ ticketTracker: true, screen: historyScreen() }, "");
+    } else {
+      history.pushState({ ticketTracker: true, screen }, "");
+    }
+    if (scanAfterBack) {
+      scanAfterBack = false;
+      startCamera();
+    }
+    return;
+  }
+  applyHistory(state.screen);
+  if (scanAfterBack) {
+    scanAfterBack = false;
+    startCamera();
+  }
+}
 
 function show(view) {
   gate.hidden = view !== gate;
@@ -72,6 +193,7 @@ function show(view) {
   if (ticketScreen) ticketScreen.hidden = view !== ticketScreen;
   if (saleScreen) saleScreen.hidden = view !== saleScreen;
   if (skuScreen) skuScreen.hidden = view !== skuScreen;
+  syncHistory();
 }
 
 function closeTicket() {
@@ -87,6 +209,11 @@ function closeTicket() {
 
 function scanAnother() {
   if (!can("scan")) return;
+  if (ticketScreen && !ticketScreen.hidden && !isAppRoot(historyScreen())) {
+    scanAfterBack = true;
+    history.back();
+    return;
+  }
   closeTicket();
   startCamera();
 }
@@ -332,7 +459,7 @@ document.querySelector("#show-volunteer").addEventListener("click", () => { open
 
 document.querySelector("#show-admin").addEventListener("click", () => { openLogin("siteadmin", "records"); });
 
-document.querySelector("#login-back").addEventListener("click", showGate);
+document.querySelector("#login-back").addEventListener("click", appBack);
 
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -4574,7 +4701,7 @@ document.querySelector("#site-orders-search").addEventListener("keydown", (event
     runListSearch("#site-orders-search");
   }
 });
-document.querySelector("#main-page").addEventListener("click", closeTicket);
+document.querySelector("#main-page").addEventListener("click", appBack);
 document.querySelector("#search-order").addEventListener("click", searchOrder);
 document.querySelector("#entry-query").addEventListener("input", () => {
   entryLetter = "";
@@ -4853,6 +4980,7 @@ setInterval(() => {
 }, 10000);
 
 function showWorkspacePage(page) {
+  workspacePage = page || "desk";
   document.querySelectorAll("[data-page]").forEach((item) => {
     item.className = item.getAttribute("data-page") === page ? "btn-teal" : "btn-quiet";
   });
@@ -4866,6 +4994,7 @@ function showWorkspacePage(page) {
   });
   const back = document.querySelector("#workspace-back");
   if (back) back.hidden = page === "desk";
+  syncHistory();
 }
 
 function showSitePage(tab) {
@@ -4879,12 +5008,13 @@ function showSitePage(tab) {
   if (siteTab === "logins") renderLogins();
   const back = document.querySelector("#site-back");
   if (back) back.hidden = siteTab === "orders";
+  syncHistory();
 }
 
 const workspaceBack = document.querySelector("#workspace-back");
-if (workspaceBack) workspaceBack.addEventListener("click", () => { showWorkspacePage("desk"); });
+if (workspaceBack) workspaceBack.addEventListener("click", appBack);
 const siteBack = document.querySelector("#site-back");
-if (siteBack) siteBack.addEventListener("click", () => { showSitePage("orders"); });
+if (siteBack) siteBack.addEventListener("click", appBack);
 document.querySelectorAll("[data-page]").forEach((button) => {
   button.addEventListener("click", () => {
     showWorkspacePage(button.getAttribute("data-page"));
@@ -4913,9 +5043,9 @@ document.querySelector("#manage-skus").addEventListener("click", () => {
   show(skuScreen);
   renderSkuAdmin();
 });
-document.querySelector("#sku-back").addEventListener("click", () => show(workspace));
+document.querySelector("#sku-back").addEventListener("click", appBack);
 document.querySelector("#sku-admin-create").addEventListener("click", createSaleSku);
-document.querySelector("#sale-back").addEventListener("click", () => show(workspace));
+document.querySelector("#sale-back").addEventListener("click", appBack);
 document.querySelector("#sale-name").addEventListener("input", paintCart);
 document.querySelector("#sale-submit").addEventListener("click", submitSale);
 const saleCancel = document.querySelector("#sale-cancel");
@@ -4926,7 +5056,7 @@ if (saleCancel) {
     saleCancel.hidden = true;
     const submit = document.querySelector("#sale-submit");
     if (submit) submit.textContent = "Create QR";
-    show(workspace);
+    appBack();
     renderOrders();
   });
 }
@@ -5005,6 +5135,11 @@ if (payClose) payClose.addEventListener("click", () => {
 });
 
 async function startApp() {
+  if (!history.state || !history.state.ticketTracker) {
+    history.replaceState({ ticketTracker: true, screen: "gate", trap: true }, "");
+    history.pushState({ ticketTracker: true, screen: "gate" }, "");
+  }
+  window.addEventListener("popstate", onPopState);
   await loadPackagedLive();
   restoreCachedBook();
   paintDemo();
