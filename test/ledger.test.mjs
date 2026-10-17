@@ -335,3 +335,21 @@ test("orders stay until the file reaches 10000, then the oldest order is dropped
   assert.equal(Object.keys(capped.orders).length, 10000);
   assert.equal(Boolean(capped.orders.old), false);
 });
+
+test("a Bhoomi book checkout keeps a name and an optional email", () => {
+  const first = ledger.addBhoomiBook(ledger.emptyBook(), "  Rina Das  ", "", "2026-10-17T18:00:00.000Z", "desk");
+  assert.equal(first.changed, true);
+  assert.equal(first.book.bhoomiBooks.length, 1);
+  assert.equal(first.book.bhoomiBooks[0].name, "Rina Das");
+  assert.equal(first.book.bhoomiBooks[0].email, "");
+  const second = ledger.addBhoomiBook(first.book, "Amit Sen", "amit@example.com", "2026-10-17T18:05:00.000Z", "desk");
+  assert.equal(second.book.bhoomiBooks.length, 2);
+  assert.equal(second.book.bhoomiBooks[1].email, "amit@example.com");
+  const blank = ledger.addBhoomiBook(second.book, "   ", "not-an-email", "2026-10-17T18:06:00.000Z", "desk");
+  assert.equal(blank.changed, false);
+  const cleaned = ledger.cleanupAll(second.book, "2026-10-17T19:00:00.000Z", "siteadmin");
+  assert.equal(cleaned.book.bhoomiBooks.length, 2);
+  const removed = ledger.removeBhoomiBook(second.book, second.book.bhoomiBooks[0].id, "2026-10-17T18:10:00.000Z", "desk");
+  assert.equal(removed.book.bhoomiBooks.length, 1);
+  assert.equal(removed.book.bhoomiBooks[0].name, "Amit Sen");
+});

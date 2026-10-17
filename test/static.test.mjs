@@ -38,6 +38,9 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /open-saturday/);
   assert.match(html, /External Artist Gala/);
   assert.match(html, /Next scan/);
+  assert.match(html, /Bhoomi books/);
+  assert.match(app, /bhoomi\.hidden = volunteer/);
+  assert.match(app, /function addBhoomiCheckout/);
   assert.match(app, /function scanAnother/);
   assert.match(app, /function appBack/);
   assert.match(app, /popstate/);

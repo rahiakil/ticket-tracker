@@ -474,12 +474,48 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true };
   }
 
+  function bookName(value) {
+    return String(value || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  }
+
+  function bookEmail(value) {
+    const email = String(value || "").trim().toLowerCase().slice(0, 120);
+    if (!email) return "";
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+  }
+
+  function addBhoomiBook(book, name, email, at, actor) {
+    const cleanName = bookName(name);
+    const cleanEmail = bookEmail(email);
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!cleanName || cleanEmail === null) return { book: pruneBook(next), changed: false };
+    if (!Array.isArray(next.bhoomiBooks)) next.bhoomiBooks = [];
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    next.bhoomiBooks.push({ id, name: cleanName, email: cleanEmail, at, actor: actor || "desk" });
+    if (!Array.isArray(next.log)) next.log = [];
+    const who = cleanEmail ? `${cleanName} (${cleanEmail})` : cleanName;
+    next.log.push({ at, text: `Bhoomi book checked out for ${who} by ${actor || "desk"}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
+  function removeBhoomiBook(book, id, at, actor) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const rows = Array.isArray(next.bhoomiBooks) ? next.bhoomiBooks : [];
+    const found = rows.find((row) => row && row.id === id);
+    if (!found) return { book: pruneBook(next), changed: false };
+    next.bhoomiBooks = rows.filter((row) => row && row.id !== id);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text: `Bhoomi book removed for ${found.name} by ${actor || "desk"}` });
+    return { book: pruneBook(next), changed: true };
+  }
+
   function cleanupAll(book, at, actor) {
     const next = emptyBook();
     if (book && book.sheet) next.sheet = book.sheet;
     if (book && book.eventDays) next.eventDays = book.eventDays;
     if (book && book.archive) next.archive = book.archive;
     if (book && Array.isArray(book.accounts)) next.accounts = book.accounts;
+    if (book && Array.isArray(book.bhoomiBooks)) next.bhoomiBooks = book.bhoomiBooks;
     const who = actor || "siteadmin";
     next.lines = [`${at} ${who} cleaned up everything`];
     next.log = [{ at, text: `${who} cleaned up everything` }];
@@ -1065,6 +1101,8 @@ function statusDetail(order) {
     acquireLock,
     releaseLock,
     releaseAllLocks,
+    addBhoomiBook,
+    removeBhoomiBook,
     cleanupAll,
     factoryReset,
     resetLog,

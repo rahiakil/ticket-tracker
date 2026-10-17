@@ -423,6 +423,8 @@ function applyRoleUi() {
   if (foodDesk) foodDesk.hidden = true;
   const counterSwitch = document.querySelector(".counter-switch");
   if (counterSwitch) counterSwitch.hidden = true;
+  const bhoomi = document.querySelector("#bhoomi-books");
+  if (bhoomi) bhoomi.hidden = volunteer;
   localStorage.setItem(storeKey("counter"), "entry");
   const searchLine = document.querySelector("#order-query")?.closest(".search-line");
   if (searchLine) searchLine.hidden = !search;
@@ -937,6 +939,7 @@ function cacheLiveBook(book) {
       archive: book.archive || null,
       skus: book.skus || null,
       walkups: book.walkups || {},
+      bhoomiBooks: book.bhoomiBooks || [],
     };
     localStorage.setItem(storeKey("book-cache"), JSON.stringify(copy));
   } catch {
@@ -2306,8 +2309,66 @@ function paintFlowTabs() {
   });
 }
 
+function bhoomiRows() {
+  return Array.isArray(currentBook.bhoomiBooks) ? currentBook.bhoomiBooks : [];
+}
+
+function paintBhoomiBooks() {
+  const count = document.querySelector("#bhoomi-count");
+  const list = document.querySelector("#bhoomi-list");
+  if (count) count.textContent = String(bhoomiRows().length);
+  if (!list || isVolunteer()) return;
+  list.replaceChildren();
+  const rows = bhoomiRows().slice().reverse();
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No books checked out yet.";
+    list.append(empty);
+    return;
+  }
+  for (const row of rows) {
+    const item = document.createElement("div");
+    item.className = "bhoomi-row";
+    const text = document.createElement("p");
+    text.textContent = row.email ? `${row.name} · ${row.email}` : row.name;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-quiet bhoomi-remove";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => removeBhoomiCheckout(row.id));
+    item.append(text, remove);
+    list.append(item);
+  }
+}
+
+function addBhoomiCheckout(name, email) {
+  if (isVolunteer()) return;
+  const who = holderNow();
+  const applied = queueWrite((book) => TicketLedger.addBhoomiBook(book, name, email, who.at, who.actor));
+  const note = document.querySelector("#bhoomi-note");
+  if (note) {
+    note.hidden = false;
+    note.textContent = applied.write ? `Added ${name.trim()}.` : "Enter a name. Email can be left blank.";
+    note.className = applied.write ? "result valid" : "result invalid";
+  }
+  if (applied.write) {
+    const form = document.querySelector("#bhoomi-form");
+    if (form) form.reset();
+  }
+  paintBhoomiBooks();
+}
+
+function removeBhoomiCheckout(id) {
+  if (isVolunteer()) return;
+  const who = holderNow();
+  queueWrite((book) => TicketLedger.removeBhoomiBook(book, id, who.at, who.actor));
+  paintBhoomiBooks();
+}
+
 function renderOrders() {
   paintDemo();
+  paintBhoomiBooks();
   paintEventDays();
   renderSkus();
   paintFlowTabs();
@@ -5036,6 +5097,16 @@ document.querySelector("#home-whatsapp").addEventListener("click", () => { share
 document.querySelector("#home-email-qr").addEventListener("click", () => { shareQrImage("email"); });
 document.querySelector("#export-stats").addEventListener("click", exportStats);
 document.querySelector("#new-sale").addEventListener("click", openSale);
+const bhoomiForm = document.querySelector("#bhoomi-form");
+if (bhoomiForm) {
+  bhoomiForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (isVolunteer()) return;
+    const name = document.querySelector("#bhoomi-name")?.value || "";
+    const email = document.querySelector("#bhoomi-email")?.value || "";
+    addBhoomiCheckout(name, email);
+  });
+}
 document.querySelector("#manage-skus").addEventListener("click", () => {
   if (!can("admin")) return;
   const pay = document.querySelector("#pay-screen");

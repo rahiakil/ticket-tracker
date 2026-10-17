@@ -262,6 +262,10 @@ html.magazine-on #magazine-count { display: block !important; }
 .volunteer-food .done-window { margin-top: 0; }
 .volunteer-food .item-pills { grid-template-columns: 1fr; }
 button.food-revert { min-height: 40px; margin-top: 4px; }
+.bhoomi-books { margin-top: 18px; padding-top: 8px; border-top: 1px solid rgba(20, 32, 48, 0.14); }
+.bhoomi-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(20, 32, 48, 0.1); }
+.bhoomi-row p { margin: 0; }
+button.bhoomi-remove { min-height: 40px; width: auto; }
 .done-window {
   margin-top: 4px;
   padding: 12px;
@@ -682,6 +686,7 @@ button.food-revert { min-height: 40px; margin-top: 4px; }
   html.is-phone .item-pills,
   html.is-phone .sale-tiles { grid-template-columns: 1fr; }
   html.is-phone button.food-revert { min-height: 44px; font-size: 1rem; }
+  html.is-phone button.bhoomi-remove { min-height: 44px; font-size: 1rem; }
   html.is-phone .item-pill,
   html.is-phone .sale-tile { aspect-ratio: auto; min-height: 84px; font-size: 1.25rem; }
   html.is-phone .letter-hint,

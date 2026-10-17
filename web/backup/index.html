@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker Backup</title>
-  <link rel="stylesheet" href="../styles.css?v=83">
+  <link rel="stylesheet" href="../styles.css?v=84">
 </head>
 <body>
 <div class="app-shell">
@@ -94,6 +94,22 @@
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
       <p id="result" class="result" role="status" aria-live="polite"></p>
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
+      <div id="bhoomi-books" class="bhoomi-books">
+        <h2>Bhoomi books</h2>
+        <p id="bhoomi-count" class="people-count">0</p>
+        <p class="note">Checked out at this desk. No QR code.</p>
+        <form id="bhoomi-form">
+          <label>Name
+            <input id="bhoomi-name" name="name" autocomplete="name" autocapitalize="words" required>
+          </label>
+          <label>Email
+            <input id="bhoomi-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="Optional">
+          </label>
+          <button class="btn-teal" type="submit">Add book</button>
+        </form>
+        <p id="bhoomi-note" class="result" role="status" hidden></p>
+        <div id="bhoomi-list"></div>
+      </div>
       <details class="more-fold" open>
         <summary>More</summary>
         <div class="qr-actions">
@@ -590,9 +606,9 @@
   <script src="../vendor/xlsx.mini.min.js"></script>
   <script src="../sheet.js?v=1"></script>
   <script src="../catalog.js?v=15"></script>
-  <script src="../ledger.js?v=49"></script>
+  <script src="../ledger.js?v=50"></script>
   <script src="../record.js?v=13"></script>
   <script src="../vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="../app.js?v=137"></script>
+  <script src="../app.js?v=138"></script>
 </body>
 </html>
