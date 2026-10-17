@@ -434,6 +434,8 @@ function applyRoleUi() {
   document.querySelectorAll("#show-colors").forEach((node) => { node.hidden = !scan && !add; });
   const fileScan = document.querySelector("label[for='file-scan']");
   if (fileScan) fileScan.hidden = !scan;
+  const nativeCamera = document.querySelector("label[for='native-scan']");
+  if (nativeCamera) nativeCamera.hidden = !scan;
   document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = true; });
   const deskStats = document.querySelector("#desk-stats");
   if (deskStats) deskStats.hidden = !admin;
@@ -536,12 +538,22 @@ async function stopCamera() {
   reader.hidden = true;
 }
 
+async function backCameraId() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return "";
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  const track = stream.getVideoTracks()[0];
+  const deviceId = track && track.getSettings ? track.getSettings().deviceId : "";
+  stream.getTracks().forEach((item) => item.stop());
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  return deviceId || "";
+}
+
 async function startCamera() {
   if (!can("scan")) return;
   const Scanner = library();
   if (!Scanner) {
     cameraHelp.hidden = false;
-    cameraHelp.textContent = "Camera library did not load. Choose a photo of the QR code instead.";
+    cameraHelp.textContent = "Camera library did not load. Tap iPhone camera and take a photo of the QR code.";
     return;
   }
   if (cameraOn || scanLock) return;
@@ -550,36 +562,41 @@ async function startCamera() {
   scanButton.hidden = true;
   cancelButton.hidden = false;
   const generation = ++scanGeneration;
-  camera = new Scanner("reader", { verbose: false });
-  const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  camera = new Scanner("reader", { verbose: false, useBarCodeDetectorIfSupported: false });
   try {
-    await camera.start(
-      { facingMode: "environment" },
-      apple
-        ? { fps: 10, disableFlip: false }
-        : {
-          fps: 10,
-          disableFlip: false,
-          videoConstraints: { facingMode: { ideal: "environment" } },
-        },
-      (decoded) => { onDecoded(decoded, generation); },
-      () => {},
-    );
+    let chosen = { facingMode: "environment" };
+    try {
+      const deviceId = await backCameraId();
+      if (deviceId) chosen = deviceId;
+    } catch (error) {
+      if (error && (error.name === "NotAllowedError" || error.name === "SecurityError")) throw error;
+    }
+    const onCode = (decoded) => { onDecoded(decoded, generation); };
+    try {
+      await camera.start(chosen, { fps: 10, disableFlip: false }, onCode, () => {});
+    } catch (error) {
+      if (typeof chosen === "string") {
+        try { await camera.stop(); } catch { /* not running */ }
+        await camera.start({ facingMode: "environment" }, { fps: 10, disableFlip: false }, onCode, () => {});
+      } else {
+        throw error;
+      }
+    }
     const video = reader.querySelector("video");
     if (video) {
       video.setAttribute("playsinline", "true");
       video.setAttribute("webkit-playsinline", "true");
       video.muted = true;
-      video.play().catch(() => {});
     }
     cameraOn = true;
-  } catch {
+  } catch (error) {
     cameraOn = false;
     reader.hidden = true;
     scanButton.hidden = false;
     cancelButton.hidden = true;
     cameraHelp.hidden = false;
-    cameraHelp.textContent = cameraDeniedMessage();
+    const detail = error && error.message ? ` ${error.message}` : "";
+    cameraHelp.textContent = `${cameraDeniedMessage()}${detail}`;
   }
 }
 
@@ -631,26 +648,35 @@ document.querySelector("#cancel-scan").addEventListener("click", () => {
   stopCamera();
 });
 
-document.querySelector("#file-scan").addEventListener("change", async (event) => {
-  const file = event.target.files && event.target.files[0];
-  event.target.value = "";
-  if (!file || scanLock) return;
+async function readQrFile(file) {
   const Scanner = library();
-  if (!Scanner) return;
+  if (!file || !Scanner || scanLock) return;
   scanLock = true;
   await stopCamera();
-  const scanner = new Scanner("file-reader", { verbose: false });
+  const scanner = new Scanner("file-reader", { verbose: false, useBarCodeDetectorIfSupported: false });
   try {
     const text = await scanFileAnyWay(scanner, file);
     try { await scanner.clear(); } catch { /* no preview to clear */ }
     lastAttempt = { raw: text };
     await submitAttempt();
   } catch {
-    showMessage("Could not read a QR code from that image.", "invalid");
+    showMessage("Could not read a QR code from that photo. Hold the code steady and try again.", "invalid");
   } finally {
     scanLock = false;
   }
-});
+}
+
+function bindQrPhoto(input) {
+  if (!input) return;
+  input.addEventListener("change", (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    readQrFile(file);
+  });
+}
+
+bindQrPhoto(document.querySelector("#file-scan"));
+bindQrPhoto(document.querySelector("#native-scan"));
 
 function mirrorImageFile(file) {
   return new Promise((resolve, reject) => {

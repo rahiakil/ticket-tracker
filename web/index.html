@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=85">
+  <link rel="stylesheet" href="styles.css?v=86">
 </head>
 <body>
 <div class="app-shell">
@@ -92,6 +92,8 @@
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
+      <label class="native-camera" for="native-scan">iPhone camera</label>
+      <input id="native-scan" class="visually-hidden" type="file" accept="image/*" capture="environment">
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
       <button id="manage-skus" class="btn-teal" type="button" hidden>SKUs · admin only</button>
@@ -614,6 +616,6 @@
   <script src="ledger.js?v=50"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=139"></script>
+  <script src="app.js?v=140"></script>
 </body>
 </html>
