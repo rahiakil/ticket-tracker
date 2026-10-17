@@ -241,6 +241,15 @@ html.magazine-on #magazine-count { display: block !important; }
 .all-done { margin: 8px 0 16px; font-size: 4rem; line-height: 1; color: var(--teal); }
 .ticket-board { display: grid; gap: 16px; }
 .day-block { display: grid; gap: 8px; }
+.volunteer-food {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.volunteer-food .done-window { margin-top: 0; }
+.volunteer-food .item-pills { grid-template-columns: 1fr; }
+button.food-revert { min-height: 40px; margin-top: 4px; }
 .done-window {
   margin-top: 4px;
   padding: 12px;
@@ -660,6 +669,7 @@ html.magazine-on #magazine-count { display: block !important; }
   html.is-phone .done-box { font-size: 1.15rem; }
   html.is-phone .item-pills,
   html.is-phone .sale-tiles { grid-template-columns: 1fr; }
+  html.is-phone button.food-revert { min-height: 44px; font-size: 1rem; }
   html.is-phone .item-pill,
   html.is-phone .sale-tile { aspect-ratio: auto; min-height: 84px; font-size: 1.25rem; }
   html.is-phone .letter-hint,

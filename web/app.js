@@ -888,6 +888,7 @@ function volunteerRevertLeft(code) {
 }
 
 function canMarkTicket(lane, day) {
+  if (isVolunteer()) return lane === "food";
   if (readSession()?.role === "desk" && lane === "food") return false;
   if (can("add")) return true;
   if (!can("scan")) return false;
@@ -909,7 +910,9 @@ function markOne(person, index, unit) {
   const at = new Date().toISOString();
   const actor = holderNow().actor;
   const applied = queueWrite((book) => {
-    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit, eventDays: eventDatesForMark(book) });
+    const dates = eventDatesForMark(book);
+    if (isVolunteer()) dates.open = { friday: true, saturday: true, sunday: true };
+    const next = TicketLedger.markItem(book, person, index, at, actor, deviceId(), { demo: demoMode, unit, eventDays: dates });
     const message = next.locked
       ? `This line is locked. ${person.name}. ${person.email}.`
       : next.blocked
@@ -921,7 +924,7 @@ function markOne(person, index, unit) {
   if (isVolunteer() && !String(applied.message || "").startsWith("Already") && !String(applied.message || "").startsWith("Unavailable") && !String(applied.message || "").startsWith("This line")) {
     volunteerMarks.set(person.code, Date.now());
   }
-  paintOpen(person);
+  repaintOpen(person);
 }
 
 function markEntryDay(person, bucket) {
@@ -1146,6 +1149,114 @@ function ticketPill(person, item, index, lane, locked, now) {
   return button;
 }
 
+function repaintOpen(person) {
+  const staying = isVolunteer() && openedCode && catalogPerson(openedCode);
+  paintOpen(staying || person);
+}
+
+function emailKey(person) {
+  const email = String(person && person.email || "").trim().toLowerCase();
+  return email || `name:${String(person && person.name || "").trim().toLowerCase()}`;
+}
+
+function personHasFood(person) {
+  return ordersForPerson(person).some((order) => orderView(order).items.some((item) => item.lane === "food"));
+}
+
+function revertFood(order, item) {
+  if (!isVolunteer() && !can("add") && !can("scan")) return;
+  const at = new Date().toISOString();
+  const actor = holderNow().actor;
+  const applied = queueWrite((book) => {
+    const next = TicketLedger.revertUnit(book, order, item.index, item.unit, at, actor, deviceId());
+    const message = next.locked
+      ? `This line is locked. ${order.name}. ${order.email}.`
+      : next.changed ? `Reverted. ${item.id}. ${order.name}.` : `Nothing to revert. ${order.name}.`;
+    return { write: next.changed, book: next.book, message };
+  });
+  showMessage(applied.message, String(applied.message).startsWith("Nothing") ? "already_seen" : "pending");
+  repaintOpen(order);
+}
+
+function volunteerFoodCard(order, item, taken) {
+  const wrap = document.createElement("div");
+  wrap.className = "pill-wrap";
+  const button = document.createElement("button");
+  button.type = "button";
+  const kind = TicketLedger.couponKind(item.id, "food");
+  button.className = `item-pill coupon-${kind} ${taken ? "picked" : "ready"}`;
+  const label = item.parts > 1 ? `${item.id} (${item.unit + 1} of ${item.parts})` : item.id;
+  button.textContent = taken ? `${label}\nTaken` : label;
+  button.disabled = taken;
+  if (!taken) button.addEventListener("click", () => markOne(order, item.index, item.unit));
+  wrap.append(button);
+  if (taken) {
+    const revert = document.createElement("button");
+    revert.type = "button";
+    revert.className = "secondary food-revert";
+    revert.textContent = "Revert";
+    revert.addEventListener("click", () => revertFood(order, item));
+    wrap.append(revert);
+  }
+  return wrap;
+}
+
+function volunteerFoodBoard(anchor) {
+  const orders = ordersForPerson(anchor);
+  const cards = [];
+  for (const order of orders) {
+    for (const item of orderView(order).items) {
+      if (item.lane !== "food") continue;
+      cards.push({ order, item });
+    }
+  }
+  const board = document.createElement("div");
+  board.className = "ticket-board volunteer-food";
+  if (!cards.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No food for this email.";
+    board.append(empty);
+    return board;
+  }
+  const open = cards.filter((row) => !row.item.taken);
+  const done = cards.filter((row) => row.item.taken);
+  const available = document.createElement("div");
+  available.className = "volunteer-open";
+  const heading = document.createElement("p");
+  heading.className = "day-heading";
+  const names = [...new Set(orders.map((order) => order.name).filter(Boolean))];
+  heading.textContent = names.length > 1 ? `Food · ${names.join(", ")}` : "Food";
+  available.append(heading);
+  const openList = document.createElement("div");
+  openList.className = "item-pills";
+  if (open.length) {
+    for (const row of open) openList.append(volunteerFoodCard(row.order, row.item, false));
+  } else {
+    const none = document.createElement("p");
+    none.className = "note";
+    none.textContent = "All food is taken.";
+    openList.append(none);
+  }
+  available.append(openList);
+  const tray = document.createElement("aside");
+  tray.className = "done-window";
+  const title = document.createElement("h3");
+  title.textContent = `Taken (${done.length})`;
+  const doneList = document.createElement("div");
+  doneList.className = "item-pills";
+  for (const row of done) doneList.append(volunteerFoodCard(row.order, row.item, true));
+  if (!done.length) {
+    const waiting = document.createElement("p");
+    waiting.className = "note";
+    waiting.textContent = "Tap a card. It moves here.";
+    doneList.append(waiting);
+  }
+  tray.append(title, doneList);
+  board.append(available, tray);
+  return board;
+}
+
 function itemButtons(person, options = {}) {
   const view = orderView(person);
   const now = new Date();
@@ -1252,6 +1363,7 @@ function itemButtons(person, options = {}) {
 }
 
 function itemBoard(person, options = {}) {
+  if (isVolunteer()) return volunteerFoodBoard(person);
   const wrap = document.createElement("div");
   wrap.append(itemButtons(person, options));
   if (!can("add") && !can("scan")) return wrap;
@@ -1919,14 +2031,25 @@ function listedPeople(filter, tab, letter) {
     const hay = normalized(`${person.name} ${person.email} ${person.full} ${person.code}`);
     return tokens.every((token) => hay.includes(token));
   });
-  return people.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
+  const sorted = people.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
+  if (!isVolunteer()) return sorted;
+  const seen = new Set();
+  return sorted.filter((person) => {
+    if (!personHasFood(person)) return false;
+    const key = emailKey(person);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function ticketSnapshot(person) {
   const wrap = document.createElement("span");
   wrap.className = "ticket-snapshot";
-  const items = orderView(person).items;
-  const entry = items.filter((item) => item.lane === "entry");
+  const items = isVolunteer()
+    ? ordersForPerson(person).flatMap((order) => orderView(order).items)
+    : orderView(person).items;
+  const entry = isVolunteer() ? [] : items.filter((item) => item.lane === "entry");
   const food = items.filter((item) => item.lane === "food");
   const counts = (list) => {
     const totals = new Map();
@@ -1959,7 +2082,7 @@ function ticketSnapshot(person) {
     }
     wrap.append(line);
   }
-  if (!wrap.childElementCount) wrap.textContent = "No items on this ticket";
+  if (!wrap.childElementCount) wrap.textContent = isVolunteer() ? "No food for this email" : "No items on this ticket";
   return wrap;
 }
 

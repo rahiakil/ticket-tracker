@@ -726,6 +726,30 @@ function statusDetail(order) {
     return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(placed.order)) };
   }
 
+  function revertUnit(book, person, itemIndex, unit, at, actor, holder) {
+    if (foreignLock(book, person.code, holder, at)) {
+      const current = structuredClone(ready(book) ? book : emptyBook());
+      return { book: pruneBook(current), changed: false, locked: true, already: false, phrase: "" };
+    }
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    const order = next.orders[person.code];
+    if (!order) return { book: pruneBook(next), changed: false, already: true, phrase: "" };
+    const key = Object.keys(order.variants || {}).find((id) => id.startsWith(`item:${itemIndex}:${unit}:`));
+    const item = key && order.variants[key];
+    if (!item || !item.taken) return { book: pruneBook(next), changed: false, already: true, phrase: sheetPhrase(variantList(order)) };
+    item.taken = false;
+    item.takenAt = null;
+    item.takenBy = "";
+    syncTakenCount(order);
+    order.updatedAt = at;
+    order.actor = actor || order.actor;
+    const text = `${person.code} reverted ${item.name}${actor ? ` by ${actor}` : ""}`;
+    addLine(next, at, text);
+    if (!Array.isArray(next.log)) next.log = [];
+    next.log.push({ at, text });
+    return { book: pruneBook(next), changed: true, already: false, phrase: sheetPhrase(variantList(order)) };
+  }
+
   function revertLast(book, person, at, actor, holder) {
     if (foreignLock(book, person.code, holder, at)) {
       const current = structuredClone(ready(book) ? book : emptyBook());
@@ -1032,6 +1056,7 @@ function statusDetail(order) {
     exportCsv,
     sheetPhrase,
     markItem,
+    revertUnit,
     markMagazine,
     magazineLeft,
     markEntryDay,
