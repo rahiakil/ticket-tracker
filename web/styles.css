@@ -263,8 +263,13 @@ html.magazine-on #magazine-count { display: block !important; }
 .volunteer-food .item-pills { grid-template-columns: 1fr; }
 button.food-revert { min-height: 40px; margin-top: 4px; }
 .bhoomi-books { margin-top: 18px; padding-top: 8px; border-top: 1px solid rgba(20, 32, 48, 0.14); }
-.bhoomi-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(20, 32, 48, 0.1); }
-.bhoomi-row p { margin: 0; }
+.buyer-card { margin: 0 0 10px; padding: 12px; border: 1px solid rgba(20, 32, 48, 0.16); border-radius: 12px; background: white; }
+.buyer-card p { margin: 0 0 4px; }
+.buyer-name { font-size: 1.15rem; font-weight: 700; }
+.buyer-email { font-size: 1rem; word-break: break-word; }
+.buyer-qty { font-weight: 650; }
+.buyer-card button { margin-top: 8px; }
+.sale-qty-input { width: 4.5rem; flex: 0 0 auto; font-size: 1.2rem; text-align: center; }
 button.bhoomi-remove { min-height: 40px; width: auto; }
 .done-window {
   margin-top: 4px;

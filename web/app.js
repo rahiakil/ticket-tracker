@@ -2342,39 +2342,54 @@ function bhoomiRows() {
   return Array.isArray(currentBook.bhoomiBooks) ? currentBook.bhoomiBooks : [];
 }
 
+function bookQty(value) {
+  const count = Math.round(Number(value));
+  if (!Number.isFinite(count)) return 1;
+  return Math.max(1, Math.min(99, count));
+}
+
 function paintBhoomiBooks() {
   const count = document.querySelector("#bhoomi-count");
   const list = document.querySelector("#bhoomi-list");
-  if (count) count.textContent = String(bhoomiRows().length);
+  const rows = bhoomiRows();
+  const books = rows.reduce((sum, row) => sum + (Number(row.qty) || 1), 0);
+  if (count) count.textContent = rows.length ? `${books} book${books === 1 ? "" : "s"} · ${rows.length} buyer${rows.length === 1 ? "" : "s"}` : "0";
   if (!list || isVolunteer()) return;
   list.replaceChildren();
-  const rows = bhoomiRows().slice().reverse();
   if (!rows.length) {
     const empty = document.createElement("p");
     empty.className = "note";
-    empty.textContent = "No books checked out yet.";
+    empty.textContent = "No books sold yet.";
     list.append(empty);
     return;
   }
-  for (const row of rows) {
-    const item = document.createElement("div");
-    item.className = "bhoomi-row";
-    const text = document.createElement("p");
-    text.textContent = row.email ? `${row.name} · ${row.email}` : row.name;
+  rows.slice().reverse().forEach((row) => {
+    const card = document.createElement("article");
+    card.className = "buyer-card";
+    const name = document.createElement("p");
+    name.className = "buyer-name";
+    name.textContent = row.name;
+    const email = document.createElement("p");
+    email.className = "buyer-email";
+    email.textContent = row.email || "No email";
+    const qty = document.createElement("p");
+    qty.className = "buyer-qty";
+    qty.textContent = `Quantity ${Number(row.qty) || 1}`;
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "btn-quiet bhoomi-remove";
     remove.textContent = "Remove";
     remove.addEventListener("click", () => removeBhoomiCheckout(row.id));
-    item.append(text, remove);
-    list.append(item);
-  }
+    card.append(name, email, qty, remove);
+    list.append(card);
+  });
 }
 
 function createBhoomiQr() {
   if (isVolunteer()) return;
   const name = String(document.querySelector("#bhoomi-name")?.value || "").replace(/\s+/g, " ").trim();
   const email = String(document.querySelector("#bhoomi-email")?.value || "").trim();
+  const qty = bookQty(document.querySelector("#bhoomi-qty")?.value);
   const note = document.querySelector("#bhoomi-note");
   if (!name) {
     if (note) {
@@ -2395,11 +2410,11 @@ function createBhoomiQr() {
     event: "Bhoomi book",
     date: new Date().toLocaleDateString(),
     amount: "",
-    items: [{ name: "Bhoomi book", qty: 1, lane: "book", tone: "other" }],
+    items: [{ name: "Bhoomi book", qty, lane: "book", tone: "other" }],
   };
   queueWrite((book) => {
     const sold = TicketLedger.addWalkup(book, person, at, actor);
-    const listed = TicketLedger.addBhoomiBook(sold.book, name, email, at, actor);
+    const listed = TicketLedger.addBhoomiBook(sold.book, name, email, at, actor, qty);
     return { write: true, book: listed.book || sold.book, message: `Bhoomi book QR ${code} for ${name}. To be procured later.` };
   });
   const form = document.querySelector("#bhoomi-form");
@@ -2413,10 +2428,11 @@ function createBhoomiQr() {
   });
 }
 
-function addBhoomiCheckout(name, email) {
+function addBhoomiCheckout(name, email, qty) {
   if (isVolunteer()) return;
   const who = holderNow();
-  const applied = queueWrite((book) => TicketLedger.addBhoomiBook(book, name, email, who.at, who.actor));
+  const count = bookQty(qty);
+  const applied = queueWrite((book) => TicketLedger.addBhoomiBook(book, name, email, who.at, who.actor, count));
   const note = document.querySelector("#bhoomi-note");
   if (note) {
     note.hidden = false;
@@ -2994,7 +3010,7 @@ function addSaleItem(item) {
     return;
   }
   const found = cart.find((row) => row.name === item.name);
-  if (found) found.qty += 1;
+  if (found) found.qty = Math.min(99, found.qty + 1);
   else cart.push({ name: item.name, qty: 1, lane: item.lane, tone: item.tone || "" });
   paintSaleTiles();
   paintCart();
@@ -3005,6 +3021,17 @@ function changeSaleQty(name, delta) {
   if (index < 0) return;
   cart[index].qty += delta;
   if (cart[index].qty <= 0) cart.splice(index, 1);
+  else cart[index].qty = Math.min(99, cart[index].qty);
+  paintSaleTiles();
+  paintCart();
+}
+
+function setSaleQty(name, raw) {
+  const index = cart.findIndex((row) => row.name === name);
+  if (index < 0) return;
+  const next = Math.round(Number(raw));
+  if (!Number.isFinite(next) || next <= 0) cart.splice(index, 1);
+  else cart[index].qty = Math.min(99, next);
   paintSaleTiles();
   paintCart();
 }
@@ -3077,6 +3104,8 @@ function openSale() {
   if (cancel) cancel.hidden = true;
   cart = [];
   document.querySelector("#sale-name").value = "";
+  const saleEmail = document.querySelector("#sale-email");
+  if (saleEmail) saleEmail.value = "";
   paintSaleTiles();
   paintCart();
   document.querySelector("#sale-note").textContent = "Sunday meals only.";
@@ -3172,12 +3201,26 @@ function paintCart() {
     line.className = "checkout-line";
     const label = document.createElement("span");
     label.textContent = `${item.name} × ${item.qty}`;
+    const qty = document.createElement("input");
+    qty.type = "number";
+    qty.min = "1";
+    qty.max = "99";
+    qty.inputMode = "numeric";
+    qty.className = "sale-qty-input";
+    qty.value = String(item.qty);
+    qty.setAttribute("aria-label", `${item.name} quantity`);
+    qty.addEventListener("change", () => setSaleQty(item.name, qty.value));
     const fewer = document.createElement("button");
     fewer.type = "button";
     fewer.className = "text-button";
     fewer.textContent = "Minus";
     fewer.addEventListener("click", () => changeSaleQty(item.name, -1));
-    line.append(label, fewer);
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "text-button";
+    more.textContent = "Plus";
+    more.addEventListener("click", () => changeSaleQty(item.name, 1));
+    line.append(label, qty, fewer, more);
     box.append(line);
   });
   const total = document.createElement("p");
@@ -3196,9 +3239,14 @@ function nextWalkCode() {
 async function submitSale() {
   if (!can("sell")) return;
   const name = document.querySelector("#sale-name").value.trim();
+  const typedEmail = String(document.querySelector("#sale-email")?.value || "").trim();
   const note = document.querySelector("#sale-note");
   if (!name || !cart.length) {
     note.textContent = "Add a name and at least one meal.";
+    return;
+  }
+  if (typedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typedEmail)) {
+    note.textContent = "That email does not look right. Leave it blank if they have none.";
     return;
   }
   if (cart.some((item) => /^(Friday|Saturday)\b/.test(item.name))) {
@@ -3233,7 +3281,7 @@ async function submitSale() {
     code,
     full: `WALK${code}`,
     name,
-    email: (existing && existing.email) || "",
+    email: typedEmail || (existing && existing.email) || "",
     event: "On site",
     date: existing && existing.date || new Date().toLocaleDateString(),
     amount: "",
@@ -3766,12 +3814,22 @@ function soldButtonClass(person) {
 }
 
 function appendSoldRow(box, person) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = soldButtonClass(person);
-  const items = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ");
-  button.textContent = `${person.name} · ${person.full || person.code}${items ? ` · ${items}` : ""}`;
-  button.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
+  const card = document.createElement("article");
+  card.className = `buyer-card ${soldButtonClass(person)}`;
+  const name = document.createElement("p");
+  name.className = "buyer-name";
+  name.textContent = person.name || "No name";
+  const email = document.createElement("p");
+  email.className = "buyer-email";
+  email.textContent = person.email || "No email";
+  const items = document.createElement("p");
+  items.className = "buyer-qty";
+  items.textContent = (person.items || []).map((item) => `${item.name} × ${item.qty || 1}`).join(", ") || "No tickets";
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = soldButtonClass(person);
+  open.textContent = `Open ${person.full || person.code}`;
+  open.addEventListener("click", () => paintOpen(person, { allTickets: true, showGuest: true }));
   const change = document.createElement("button");
   change.type = "button";
   change.className = "secondary";
@@ -3782,10 +3840,8 @@ function appendSoldRow(box, person) {
   remove.className = "secondary";
   remove.textContent = "Delete";
   remove.addEventListener("click", () => { deleteSale(person); });
-  const row = document.createElement("div");
-  row.className = "sold-row";
-  row.append(button, change, remove);
-  box.append(row);
+  card.append(name, email, items, open, change, remove);
+  box.append(card);
 }
 
 function entryDoneRows() {
@@ -3962,7 +4018,7 @@ function renderSoldQrs() {
   const matches = all.filter((person) => {
     if (!searching) return true;
     const items = (person.items || []).map((item) => `${item.name} ${item.qty || ""}`).join(" ");
-    const hay = normalized(`${person.name} ${person.full} ${person.code} ${items}`);
+    const hay = normalized(`${person.name} ${person.email || ""} ${person.full} ${person.code} ${items}`);
     return tokens.every((token) => hay.includes(token));
   });
   const note = document.createElement("p");
@@ -5175,7 +5231,8 @@ if (bhoomiForm) {
     if (isVolunteer()) return;
     const name = document.querySelector("#bhoomi-name")?.value || "";
     const email = document.querySelector("#bhoomi-email")?.value || "";
-    addBhoomiCheckout(name, email);
+    const qty = document.querySelector("#bhoomi-qty")?.value || "1";
+    addBhoomiCheckout(name, email, qty);
   });
 }
 const bhoomiQr = document.querySelector("#bhoomi-qr");

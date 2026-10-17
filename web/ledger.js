@@ -484,17 +484,18 @@ function statusDetail(order) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
   }
 
-  function addBhoomiBook(book, name, email, at, actor) {
+  function addBhoomiBook(book, name, email, at, actor, qty) {
     const cleanName = bookName(name);
     const cleanEmail = bookEmail(email);
+    const count = Math.max(1, Math.min(99, Math.round(Number(qty) || 1)));
     const next = structuredClone(ready(book) ? book : emptyBook());
     if (!cleanName || cleanEmail === null) return { book: pruneBook(next), changed: false };
     if (!Array.isArray(next.bhoomiBooks)) next.bhoomiBooks = [];
     const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    next.bhoomiBooks.push({ id, name: cleanName, email: cleanEmail, at, actor: actor || "desk" });
+    next.bhoomiBooks.push({ id, name: cleanName, email: cleanEmail, qty: count, at, actor: actor || "desk" });
     if (!Array.isArray(next.log)) next.log = [];
     const who = cleanEmail ? `${cleanName} (${cleanEmail})` : cleanName;
-    next.log.push({ at, text: `Bhoomi book checked out for ${who} by ${actor || "desk"}` });
+    next.log.push({ at, text: `Bhoomi book × ${count} checked out for ${who} by ${actor || "desk"}` });
     return { book: pruneBook(next), changed: true };
   }
 

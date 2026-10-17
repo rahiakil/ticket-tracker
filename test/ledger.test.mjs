@@ -342,6 +342,9 @@ test("a Bhoomi book checkout keeps a name and an optional email", () => {
   assert.equal(first.book.bhoomiBooks.length, 1);
   assert.equal(first.book.bhoomiBooks[0].name, "Rina Das");
   assert.equal(first.book.bhoomiBooks[0].email, "");
+  assert.equal(first.book.bhoomiBooks[0].qty, 1);
+  const several = ledger.addBhoomiBook(first.book, "Rina Das", "rina@example.com", "2026-10-17T18:01:00.000Z", "desk", 3);
+  assert.equal(several.book.bhoomiBooks[1].qty, 3);
   const second = ledger.addBhoomiBook(first.book, "Amit Sen", "amit@example.com", "2026-10-17T18:05:00.000Z", "desk");
   assert.equal(second.book.bhoomiBooks.length, 2);
   assert.equal(second.book.bhoomiBooks[1].email, "amit@example.com");
