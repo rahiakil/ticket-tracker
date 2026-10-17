@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=88">
+  <link rel="stylesheet" href="styles.css?v=89">
 </head>
 <body>
 <div class="app-shell">
@@ -113,7 +113,7 @@
           <label>Quantity
             <input id="bhoomi-qty" name="qty" type="number" min="1" max="99" inputmode="numeric" value="1">
           </label>
-          <button class="btn-teal" type="submit">Add book</button>
+          <button id="bhoomi-pay" class="btn-teal" type="button">Pay</button>
           <button id="bhoomi-qr" class="btn-orange" type="button">Create Bhoomi book QR</button>
         </form>
         <p id="bhoomi-note" class="result" role="status" hidden></p>
@@ -580,6 +580,14 @@
 
 </div>
 </div>
+  <div id="book-pay" class="backdrop" hidden>
+    <div class="dialog pay-dialog" role="dialog" aria-modal="true" aria-labelledby="book-pay-title">
+      <h2 id="book-pay-title">Pay for the books</h2>
+      <img class="book-pay-qr" src="140540.jpg" alt="Zelle QR code">
+      <button id="book-pay-back" class="btn-orange" type="button">Back</button>
+    </div>
+  </div>
+
   <div id="pay-screen" class="backdrop" hidden>
     <div class="dialog pay-dialog" role="dialog" aria-modal="true" aria-labelledby="pay-title">
       <h2 id="pay-title">Take payment</h2>
@@ -621,6 +629,6 @@
   <script src="ledger.js?v=52"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=144"></script>
+  <script src="app.js?v=145"></script>
 </body>
 </html>

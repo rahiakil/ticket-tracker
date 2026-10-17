@@ -104,6 +104,11 @@ function syncHistory() {
 }
 
 function performBack() {
+  const bookPay = document.querySelector("#book-pay");
+  if (bookPay && !bookPay.hidden) {
+    bookPay.hidden = true;
+    return;
+  }
   const pay = document.querySelector("#pay-screen");
   if (pay && !pay.hidden) {
     pay.hidden = true;
@@ -120,6 +125,8 @@ function performBack() {
 function applyHistory(screen) {
   historyQuiet = true;
   try {
+    const bookPay = document.querySelector("#book-pay");
+    if (bookPay && !bookPay.hidden) bookPay.hidden = true;
     const pay = document.querySelector("#pay-screen");
     if (pay && !pay.hidden) pay.hidden = true;
     if (ticketScreen && !ticketScreen.hidden && screen !== "ticket") closeTicket();
@@ -143,6 +150,11 @@ function applyHistory(screen) {
 }
 
 function appBack() {
+  const bookPay = document.querySelector("#book-pay");
+  if (bookPay && !bookPay.hidden) {
+    bookPay.hidden = true;
+    return;
+  }
   const pay = document.querySelector("#pay-screen");
   if (pay && !pay.hidden) {
     pay.hidden = true;
@@ -155,6 +167,12 @@ function appBack() {
 }
 
 function onPopState() {
+  const bookPay = document.querySelector("#book-pay");
+  if (bookPay && !bookPay.hidden) {
+    bookPay.hidden = true;
+    history.pushState({ ticketTracker: true, screen: historyScreen() }, "");
+    return;
+  }
   const pay = document.querySelector("#pay-screen");
   if (pay && !pay.hidden) {
     pay.hidden = true;
@@ -1842,8 +1860,8 @@ function guestQrPanel(person) {
   const meals = document.createElement("p");
   meals.className = "guest-qr-meals";
   meals.textContent = mealWords(person) || "Ticket";
-  const later = (person.items || []).some((item) => /bhoomi/i.test(String((item && (item.name || item.id)) || "")));
-  if (later) meals.textContent = "Bhoomi book · to be procured later";
+  const bookLabel = bookOrderLabel(person);
+  if (bookLabel) meals.textContent = bookLabel;
   const qr = document.createElement("div");
   paintQr(person.code, qr);
   const code = document.createElement("p");
@@ -2336,6 +2354,17 @@ function paintFlowTabs() {
 
 function bhoomiRows() {
   return Array.isArray(currentBook.bhoomiBooks) ? currentBook.bhoomiBooks : [];
+}
+
+function bookOrderLabel(person) {
+  const qty = (person && person.items || []).reduce((sum, item) => {
+    const name = String((item && (item.name || item.id)) || "");
+    if (!/bhoomi/i.test(name)) return sum;
+    return sum + (Number(item.qty) || item.parts || 1);
+  }, 0);
+  if (!qty) return "";
+  const who = String(person.name || "").trim() || "Bhoomi book";
+  return `${who} · ${qty} book${qty === 1 ? "" : "s"}`;
 }
 
 function bookQty(value) {
@@ -3386,8 +3415,9 @@ async function qrImageFile() {
   ctx.drawImage(image, 70, 110, 500, 500);
   ctx.fillStyle = "#1c140c";
   ctx.textAlign = "center";
-  ctx.font = "800 42px sans-serif";
-  const meals = mealWords(person) || "Ticket";
+  ctx.font = "800 36px sans-serif";
+  const bookLabel = bookOrderLabel(person);
+  const meals = bookLabel || mealWords(person) || "Ticket";
   ctx.fillText(meals, 320, 70);
   ctx.font = "700 36px sans-serif";
   ctx.fillText(person.name, 320, 660);
@@ -5233,6 +5263,20 @@ if (bhoomiForm) {
 }
 const bhoomiQr = document.querySelector("#bhoomi-qr");
 if (bhoomiQr) bhoomiQr.addEventListener("click", () => createBhoomiQr());
+const bhoomiPay = document.querySelector("#bhoomi-pay");
+if (bhoomiPay) {
+  bhoomiPay.addEventListener("click", () => {
+    const pay = document.querySelector("#book-pay");
+    if (pay) pay.hidden = false;
+  });
+}
+const bookPayBack = document.querySelector("#book-pay-back");
+if (bookPayBack) {
+  bookPayBack.addEventListener("click", () => {
+    const pay = document.querySelector("#book-pay");
+    if (pay) pay.hidden = true;
+  });
+}
 document.querySelector("#manage-skus").addEventListener("click", () => {
   if (!can("admin")) return;
   const pay = document.querySelector("#pay-screen");

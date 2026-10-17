@@ -621,7 +621,7 @@ button.bhoomi-remove { min-height: 40px; width: auto; }
 .pay-grid section { width: min(100%, 420px); }
 .pay-grid h3 { margin: 0 0 8px; }
 .pay-qr { position: relative; width: min(100%, 340px); margin: 0 auto; background: #fff; }
-.pay-direct, .pay-zelle { width: min(100%, 340px); height: auto; display: block; margin: 0 auto; background: #fff; object-fit: contain; }
+.pay-direct, .pay-zelle, .book-pay-qr { width: min(100%, 340px); height: auto; display: block; margin: 0 auto 12px; background: #fff; object-fit: contain; }
 .pay-mark {
   position: absolute;
   left: 50%;
