@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=89">
+  <link rel="stylesheet" href="styles.css?v=90">
 </head>
 <body>
 <div class="app-shell">
@@ -409,7 +409,13 @@
       <button type="button" data-site-tab="logins" class="btn-quiet">Logins</button>
       <button type="button" data-site-tab="download" class="btn-quiet">Download</button>
       <button type="button" data-site-tab="export" class="btn-quiet">Export</button>
+      <button type="button" data-site-tab="archive" class="btn-quiet">Past events</button>
     </div>
+    <section class="panel" data-site-panel="archive" hidden>
+      <h2>Past events</h2>
+      <p class="note">Site admin only. Volunteer and desk phones do not load these files.</p>
+      <div id="past-events"></div>
+    </section>
     <section class="panel" data-site-panel="orders">
       <h2>Event days</h2>
       <p class="note">Turn a day on when that day's tickets should be accepted. Leave the others off.</p>
@@ -629,6 +635,6 @@
   <script src="ledger.js?v=52"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=145"></script>
+  <script src="app.js?v=146"></script>
 </body>
 </html>

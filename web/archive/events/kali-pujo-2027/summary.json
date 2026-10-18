@@ -1,0 +1,19 @@
+{
+  "id": "kali-pujo-2027",
+  "name": "Kali Pujo",
+  "when": "November 8, 2027",
+  "status": "upcoming",
+  "note": "This folder is ready. Analytics will be filed here when Kali Pujo runs. Nothing is collected yet.",
+  "totals": {
+    "orders": 0,
+    "scans": 0,
+    "desk": 0,
+    "food": 0,
+    "entryMarked": 0,
+    "foodPicked": 0
+  },
+  "hours": [],
+  "food": [],
+  "entry": [],
+  "staff": []
+}

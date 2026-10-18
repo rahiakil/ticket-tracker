@@ -1,0 +1,296 @@
+{
+  "id": "external-artist-gala-2026",
+  "name": "External Artist Gala",
+  "when": "October 17, 2026",
+  "place": "Highline Performing Arts Center, Burien",
+  "status": "closed",
+  "totals": {
+    "orders": 336,
+    "scans": 306,
+    "desk": 851,
+    "food": 249,
+    "entryMarked": 457,
+    "foodPicked": 249
+  },
+  "hours": [
+    {
+      "hour": "1 PM",
+      "desk": 4,
+      "food": 0
+    },
+    {
+      "hour": "2 PM",
+      "desk": 2,
+      "food": 0
+    },
+    {
+      "hour": "4 PM",
+      "desk": 450,
+      "food": 0
+    },
+    {
+      "hour": "5 PM",
+      "desk": 272,
+      "food": 0
+    },
+    {
+      "hour": "6 PM",
+      "desk": 16,
+      "food": 0
+    },
+    {
+      "hour": "7 PM",
+      "desk": 19,
+      "food": 27
+    },
+    {
+      "hour": "8 PM",
+      "desk": 42,
+      "food": 110
+    },
+    {
+      "hour": "9 PM",
+      "desk": 46,
+      "food": 112
+    }
+  ],
+  "food": [
+    {
+      "lane": "food",
+      "name": "Mutton Biriyani",
+      "bought": 80,
+      "picked": 74,
+      "left": 6
+    },
+    {
+      "lane": "food",
+      "name": "Chinese Non-Veg Combo",
+      "bought": 57,
+      "picked": 53,
+      "left": 4
+    },
+    {
+      "lane": "food",
+      "name": "Chicken Biriyani",
+      "bought": 45,
+      "picked": 42,
+      "left": 3
+    },
+    {
+      "lane": "food",
+      "name": "Chicken Chaap",
+      "bought": 37,
+      "picked": 36,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "North Indian Non-Veg Combo",
+      "bought": 23,
+      "picked": 22,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "Veg Pulao with Paneer Kofta",
+      "bought": 16,
+      "picked": 13,
+      "left": 3
+    },
+    {
+      "lane": "food",
+      "name": "North Indian Veg Combo",
+      "bought": 6,
+      "picked": 5,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "Chinese Veg Combo",
+      "bought": 5,
+      "picked": 4,
+      "left": 1
+    }
+  ],
+  "entry": [
+    {
+      "lane": "entry",
+      "name": "Early Bird Non Member Entry",
+      "bought": 152,
+      "picked": 120,
+      "left": 32
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Member Entry",
+      "bought": 176,
+      "picked": 110,
+      "left": 66
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Non Member Entry",
+      "bought": 93,
+      "picked": 80,
+      "left": 13
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Member Entry",
+      "bought": 50,
+      "picked": 37,
+      "left": 13
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Kids Non Member Entry (Age below 12)",
+      "bought": 43,
+      "picked": 36,
+      "left": 7
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Kids Member Entry (Age below 12)",
+      "bought": 30,
+      "picked": 16,
+      "left": 14
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Visiting Parents Member Entry",
+      "bought": 21,
+      "picked": 16,
+      "left": 5
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Kids Member Entry (Age 12-18)",
+      "bought": 16,
+      "picked": 10,
+      "left": 6
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Kids Non Member Entry (Age 12-18)",
+      "bought": 7,
+      "picked": 7,
+      "left": 0
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Kids Non Member Entry (Age below 12)",
+      "bought": 11,
+      "picked": 7,
+      "left": 4
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Visiting Parents Member Entry",
+      "bought": 6,
+      "picked": 6,
+      "left": 0
+    },
+    {
+      "lane": "entry",
+      "name": "Early Bird Visiting Parents Non Member Entry",
+      "bought": 5,
+      "picked": 4,
+      "left": 1
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Kids Member Entry (Age below 12)",
+      "bought": 6,
+      "picked": 4,
+      "left": 2
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Visiting Parents Non Member Entry",
+      "bought": 2,
+      "picked": 2,
+      "left": 0
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Kids Member Entry (Age 12-18)",
+      "bought": 3,
+      "picked": 1,
+      "left": 2
+    },
+    {
+      "lane": "entry",
+      "name": "Regular Kids Non Member Entry (Age 12-18)",
+      "bought": 2,
+      "picked": 1,
+      "left": 1
+    }
+  ],
+  "staff": [
+    {
+      "name": "Aarush",
+      "desk": 8,
+      "food": 0
+    },
+    {
+      "name": "Amit",
+      "desk": 42,
+      "food": 19
+    },
+    {
+      "name": "Ananda Bandyopadhyay",
+      "desk": 147,
+      "food": 0
+    },
+    {
+      "name": "Ankur",
+      "desk": 78,
+      "food": 0
+    },
+    {
+      "name": "Biplob",
+      "desk": 245,
+      "food": 85
+    },
+    {
+      "name": "Hd",
+      "desk": 112,
+      "food": 0
+    },
+    {
+      "name": "Rajdip",
+      "desk": 12,
+      "food": 26
+    },
+    {
+      "name": "Rebanta",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Shuvendu",
+      "desk": 123,
+      "food": 119
+    },
+    {
+      "name": "Soumick",
+      "desk": 78,
+      "food": 0
+    },
+    {
+      "name": "Subhasish",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Sunanda",
+      "desk": 3,
+      "food": 0
+    },
+    {
+      "name": "system",
+      "desk": 1,
+      "food": 0
+    }
+  ]
+}

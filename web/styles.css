@@ -930,3 +930,12 @@ button.bhoomi-remove { min-height: 40px; width: auto; }
 .order-food h3 { margin: 0 0 8px; font-size: 1.15rem; }
 .order-food ul { margin: 0; padding-left: 1.2rem; }
 .order-food li { margin: 4px 0; font-weight: 700; }
+.archive-list { display: grid; gap: 10px; }
+.archive-card { text-align: left; }
+.archive-card small { display: block; font-weight: 650; opacity: 0.75; }
+.archive-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.archive-kpis p { margin: 0; padding: 10px; border-radius: 12px; background: #f4f7f8; }
+.archive-kpis strong { display: block; font-size: 1.4rem; }
+.archive-table { width: 100%; border-collapse: collapse; margin: 0 0 16px; }
+.archive-table th, .archive-table td { padding: 8px 6px; border-bottom: 1px solid rgba(20, 32, 48, 0.12); text-align: left; }
+.archive-table th { font-size: 0.92rem; }

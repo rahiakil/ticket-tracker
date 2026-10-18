@@ -1,0 +1,546 @@
+{
+  "id": "sharodotsav-2026",
+  "name": "Sharodotsav",
+  "when": "October 9–11, 2026",
+  "status": "closed",
+  "totals": {
+    "orders": 692,
+    "scans": 396,
+    "desk": 1533,
+    "food": 311,
+    "entryMarked": 956,
+    "foodPicked": 268
+  },
+  "hours": [
+    {
+      "hour": "12 AM",
+      "desk": 21,
+      "food": 9
+    },
+    {
+      "hour": "1 AM",
+      "desk": 6,
+      "food": 4
+    },
+    {
+      "hour": "9 AM",
+      "desk": 15,
+      "food": 0
+    },
+    {
+      "hour": "10 AM",
+      "desk": 224,
+      "food": 14
+    },
+    {
+      "hour": "11 AM",
+      "desk": 338,
+      "food": 13
+    },
+    {
+      "hour": "12 PM",
+      "desk": 435,
+      "food": 4
+    },
+    {
+      "hour": "1 PM",
+      "desk": 224,
+      "food": 117
+    },
+    {
+      "hour": "2 PM",
+      "desk": 110,
+      "food": 132
+    },
+    {
+      "hour": "3 PM",
+      "desk": 18,
+      "food": 0
+    },
+    {
+      "hour": "4 PM",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "hour": "5 PM",
+      "desk": 2,
+      "food": 0
+    },
+    {
+      "hour": "6 PM",
+      "desk": 47,
+      "food": 0
+    },
+    {
+      "hour": "7 PM",
+      "desk": 51,
+      "food": 2
+    },
+    {
+      "hour": "8 PM",
+      "desk": 27,
+      "food": 0
+    },
+    {
+      "hour": "10 PM",
+      "desk": 9,
+      "food": 2
+    },
+    {
+      "hour": "11 PM",
+      "desk": 5,
+      "food": 14
+    }
+  ],
+  "food": [
+    {
+      "lane": "food",
+      "name": "Sunday Lunch Non-Vegetarian",
+      "bought": 694,
+      "picked": 12,
+      "left": 682
+    },
+    {
+      "lane": "food",
+      "name": "Saturday Lunch Vegetarian",
+      "bought": 592,
+      "picked": 232,
+      "left": 360
+    },
+    {
+      "lane": "food",
+      "name": "Sunday Machher Kalia",
+      "bought": 219,
+      "picked": 2,
+      "left": 217
+    },
+    {
+      "lane": "food",
+      "name": "Sunday Pizza for Kids",
+      "bought": 195,
+      "picked": 3,
+      "left": 192
+    },
+    {
+      "lane": "food",
+      "name": "Saturday Pizza for Kids",
+      "bought": 150,
+      "picked": 19,
+      "left": 131
+    },
+    {
+      "lane": "food",
+      "name": "Sunday Lunch Vegetarian",
+      "bought": 116,
+      "picked": 0,
+      "left": 116
+    },
+    {
+      "lane": "food",
+      "name": "Chinese Non-Veg Combo",
+      "bought": 2,
+      "picked": 0,
+      "left": 2
+    },
+    {
+      "lane": "food",
+      "name": "Member Non-Veg food (2 Chicken Roll)",
+      "bought": 1,
+      "picked": 0,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "Member Non-Veg food (2 Mutton Roll)",
+      "bought": 1,
+      "picked": 0,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "Member Veg food (2 Paneer Roll)",
+      "bought": 1,
+      "picked": 0,
+      "left": 1
+    },
+    {
+      "lane": "food",
+      "name": "Visiting Parents",
+      "bought": 1,
+      "picked": 0,
+      "left": 1
+    }
+  ],
+  "entry": [
+    {
+      "lane": "entry",
+      "name": "Saturday Adult Member Entry",
+      "bought": 400,
+      "picked": 243,
+      "left": 157
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Adult Non-Member Entry",
+      "bought": 251,
+      "picked": 171,
+      "left": 80
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Adult Member Entry",
+      "bought": 385,
+      "picked": 106,
+      "left": 279
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Adult Non-Member Entry",
+      "bought": 345,
+      "picked": 97,
+      "left": 248
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Kids Member Entry",
+      "bought": 122,
+      "picked": 63,
+      "left": 59
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Visiting Parents Member Entry",
+      "bought": 81,
+      "picked": 43,
+      "left": 38
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Senior Member Entry",
+      "bought": 45,
+      "picked": 34,
+      "left": 11
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Kids Non-Member Entry",
+      "bought": 45,
+      "picked": 32,
+      "left": 13
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Kids Member Entry",
+      "bought": 125,
+      "picked": 28,
+      "left": 97
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Student Member Entry",
+      "bought": 36,
+      "picked": 26,
+      "left": 10
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Visiting Parents Member Entry",
+      "bought": 81,
+      "picked": 21,
+      "left": 60
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Kids Non-Member Entry",
+      "bought": 72,
+      "picked": 17,
+      "left": 55
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Senior Member Entry",
+      "bought": 36,
+      "picked": 15,
+      "left": 21
+    },
+    {
+      "lane": "entry",
+      "name": "Friday Adult Member Entry",
+      "bought": 373,
+      "picked": 12,
+      "left": 361
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Kids (5 Years Old and Below) Non-Member Entry",
+      "bought": 9,
+      "picked": 8,
+      "left": 1
+    },
+    {
+      "lane": "entry",
+      "name": "Friday Adult Non-Member Entry",
+      "bought": 74,
+      "picked": 7,
+      "left": 67
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Student Member Entry",
+      "bought": 26,
+      "picked": 7,
+      "left": 19
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Kids (5 Years Old and Below) Non-Member Entry",
+      "bought": 22,
+      "picked": 6,
+      "left": 16
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Senior Non-Member Entry",
+      "bought": 8,
+      "picked": 5,
+      "left": 3
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Student Non-Member Entry",
+      "bought": 6,
+      "picked": 5,
+      "left": 1
+    },
+    {
+      "lane": "entry",
+      "name": "Saturday Visiting Parents Non-Member Entry",
+      "bought": 10,
+      "picked": 3,
+      "left": 7
+    },
+    {
+      "lane": "entry",
+      "name": "Sunday Senior Non-Member Entry",
+      "bought": 5,
+      "picked": 3,
+      "left": 2
+    },
+    {
+      "lane": "entry",
+      "name": "3-Day Adult Non-Member Entry Package",
+      "bought": 7,
+      "picked": 1,
+      "left": 6
+    },
+    {
+      "lane": "entry",
+      "name": "Friday Kids Non-Member Entry",
+      "bought": 5,
+      "picked": 1,
+      "left": 4
+    },
+    {
+      "lane": "entry",
+      "name": "Friday Senior Non-Member Entry",
+      "bought": 3,
+      "picked": 1,
+      "left": 2
+    },
+    {
+      "lane": "entry",
+      "name": "Friday Visiting Parents Member Entry",
+      "bought": 77,
+      "picked": 1,
+      "left": 76
+    }
+  ],
+  "staff": [
+    {
+      "name": "Aarush",
+      "desk": 425,
+      "food": 0
+    },
+    {
+      "name": "Abheejk",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Abheek",
+      "desk": 2,
+      "food": 4
+    },
+    {
+      "name": "admin",
+      "desk": 51,
+      "food": 3
+    },
+    {
+      "name": "ads",
+      "desk": 7,
+      "food": 0
+    },
+    {
+      "name": "Ag",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Amit",
+      "desk": 5,
+      "food": 0
+    },
+    {
+      "name": "Ananda",
+      "desk": 1,
+      "food": 1
+    },
+    {
+      "name": "Ananda Bandyopadhyay",
+      "desk": 22,
+      "food": 0
+    },
+    {
+      "name": "Arijit",
+      "desk": 2,
+      "food": 0
+    },
+    {
+      "name": "Avi",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Biplob",
+      "desk": 0,
+      "food": 2
+    },
+    {
+      "name": "D",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "F",
+      "desk": 126,
+      "food": 86
+    },
+    {
+      "name": "Gd",
+      "desk": 2,
+      "food": 1
+    },
+    {
+      "name": "Help1",
+      "desk": 7,
+      "food": 0
+    },
+    {
+      "name": "Mou",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "Paraf",
+      "desk": 18,
+      "food": 0
+    },
+    {
+      "name": "Parag",
+      "desk": 6,
+      "food": 3
+    },
+    {
+      "name": "rajat",
+      "desk": 0,
+      "food": 5
+    },
+    {
+      "name": "Rana",
+      "desk": 2,
+      "food": 0
+    },
+    {
+      "name": "Rebanta",
+      "desk": 0,
+      "food": 8
+    },
+    {
+      "name": "Reeshabh Bose",
+      "desk": 263,
+      "food": 0
+    },
+    {
+      "name": "S",
+      "desk": 5,
+      "food": 0
+    },
+    {
+      "name": "Sanjoyan",
+      "desk": 1,
+      "food": 14
+    },
+    {
+      "name": "Saurabh",
+      "desk": 7,
+      "food": 3
+    },
+    {
+      "name": "saurabh",
+      "desk": 20,
+      "food": 0
+    },
+    {
+      "name": "Shuvendu",
+      "desk": 92,
+      "food": 0
+    },
+    {
+      "name": "Soumick",
+      "desk": 68,
+      "food": 5
+    },
+    {
+      "name": "Srinjay Mitra Mustafi",
+      "desk": 272,
+      "food": 0
+    },
+    {
+      "name": "Subha",
+      "desk": 5,
+      "food": 14
+    },
+    {
+      "name": "Subhasish",
+      "desk": 10,
+      "food": 0
+    },
+    {
+      "name": "Susim",
+      "desk": 7,
+      "food": 0
+    },
+    {
+      "name": "Tc",
+      "desk": 86,
+      "food": 153
+    },
+    {
+      "name": "Test",
+      "desk": 1,
+      "food": 0
+    },
+    {
+      "name": "V",
+      "desk": 14,
+      "food": 1
+    },
+    {
+      "name": "Vo",
+      "desk": 1,
+      "food": 8
+    }
+  ]
+}

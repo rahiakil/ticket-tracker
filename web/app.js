@@ -5211,6 +5211,142 @@ function showWorkspacePage(page) {
   syncHistory();
 }
 
+let pastEventIndex = null;
+
+function archiveCell(row, value, header) {
+  const cell = document.createElement(header ? "th" : "td");
+  cell.textContent = value == null ? "" : String(value);
+  row.append(cell);
+}
+
+function archiveTable(title, headers, records) {
+  const block = document.createElement("div");
+  const heading = document.createElement("h2");
+  heading.textContent = title;
+  const table = document.createElement("table");
+  table.className = "archive-table";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  headers.forEach((header) => archiveCell(headRow, header, true));
+  head.append(headRow);
+  const body = document.createElement("tbody");
+  records.forEach((record) => {
+    const row = document.createElement("tr");
+    record.forEach((value) => archiveCell(row, value));
+    body.append(row);
+  });
+  table.append(head, body);
+  block.append(heading, table);
+  return block;
+}
+
+function paintPastEventList(events) {
+  const host = document.querySelector("#past-events");
+  if (!host) return;
+  host.replaceChildren();
+  const list = document.createElement("div");
+  list.className = "archive-list";
+  events.forEach((event) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-quiet archive-card";
+    const title = document.createElement("strong");
+    title.textContent = event.name;
+    const when = document.createElement("small");
+    when.textContent = event.status === "upcoming" ? `${event.when} · folder ready` : event.when;
+    button.append(title, when);
+    button.addEventListener("click", () => openPastEvent(event));
+    list.append(button);
+  });
+  host.append(list);
+}
+
+function paintPastEvent(summary) {
+  const host = document.querySelector("#past-events");
+  if (!host) return;
+  host.replaceChildren();
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "btn-quiet";
+  back.textContent = "All events";
+  back.addEventListener("click", () => paintPastEventList(pastEventIndex.events || []));
+  const title = document.createElement("h2");
+  title.textContent = summary.name;
+  const when = document.createElement("p");
+  when.className = "note";
+  when.textContent = [summary.when, summary.place].filter(Boolean).join(" · ");
+  host.append(back, title, when);
+  if (summary.status === "upcoming") {
+    const note = document.createElement("p");
+    note.textContent = summary.note || "This folder is ready.";
+    host.append(note);
+    return;
+  }
+  const totals = summary.totals || {};
+  const kpis = document.createElement("div");
+  kpis.className = "archive-kpis";
+  [
+    ["Orders", totals.orders || 0],
+    ["Scans", totals.scans || 0],
+    ["Desk actions", totals.desk || 0],
+    ["Food actions", totals.food || 0],
+    ["Entry marked", totals.entryMarked || 0],
+    ["Food picked up", totals.foodPicked || 0],
+  ].forEach(([label, value]) => {
+    const card = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = String(value);
+    card.append(strong, document.createTextNode(label));
+    kpis.append(card);
+  });
+  host.append(kpis);
+  if ((summary.hours || []).length) {
+    host.append(archiveTable("Hour by hour", ["Hour", "Desk", "Food"], summary.hours.map((row) => [row.hour, row.desk, row.food])));
+  }
+  if ((summary.food || []).length) {
+    host.append(archiveTable("Food", ["Item", "Bought", "Picked up", "Left"], summary.food.map((row) => [row.name, row.bought, row.picked, row.left])));
+  }
+  if ((summary.entry || []).length) {
+    host.append(archiveTable("Entry marked", ["Ticket", "Picked up"], summary.entry.map((row) => [row.name, row.picked])));
+  }
+  if ((summary.staff || []).length) {
+    host.append(archiveTable("Staff", ["Name", "Desk", "Food"], summary.staff.map((row) => [row.name, row.desk, row.food])));
+  }
+}
+
+async function openPastEvent(event) {
+  const session = readSession();
+  if (!session || session.role !== "records") return;
+  const host = document.querySelector("#past-events");
+  if (host) host.textContent = "Loading…";
+  try {
+    const response = await fetch(`archive/events/${event.file}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("missing");
+    paintPastEvent(await response.json());
+  } catch {
+    if (host) host.textContent = "This event folder could not be opened.";
+  }
+}
+
+async function loadPastEvents() {
+  const session = readSession();
+  if (!session || session.role !== "records") return;
+  const host = document.querySelector("#past-events");
+  if (!host) return;
+  if (!pastEventIndex) {
+    host.textContent = "Loading past events…";
+    try {
+      const response = await fetch("archive/events/index.json", { cache: "no-store" });
+      if (!response.ok) throw new Error("missing");
+      pastEventIndex = await response.json();
+    } catch {
+      host.textContent = "Past events could not be loaded.";
+      return;
+    }
+  }
+  paintPastEventList(pastEventIndex.events || []);
+}
+
 function showSitePage(tab) {
   siteTab = tab || "orders";
   document.querySelectorAll("[data-site-tab]").forEach((item) => {
@@ -5220,6 +5356,7 @@ function showSitePage(tab) {
     panel.hidden = panel.getAttribute("data-site-panel") !== siteTab;
   });
   if (siteTab === "logins") renderLogins();
+  if (siteTab === "archive") loadPastEvents();
   const back = document.querySelector("#site-back");
   if (back) back.hidden = siteTab === "orders";
   syncHistory();
