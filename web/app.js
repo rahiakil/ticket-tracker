@@ -5451,8 +5451,156 @@ function paintPastEvent(summary) {
     host.append(archiveTable("Entry marked", ["Ticket", "Picked up"], summary.entry.map((row) => [row.name, row.picked])));
   }
   if ((summary.staff || []).length) {
-    host.append(archiveTable("Staff", ["Name", "Desk", "Food"], summary.staff.map((row) => [row.name, row.desk, row.food])));
+    host.append(paintStaffBoard(summary.staff));
   }
+}
+
+function staffRowKey(row) {
+  return String(row && row.name || "").trim().toLowerCase();
+}
+
+function isOddStaffName(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return true;
+  const lower = raw.toLowerCase();
+  if (/^(admin|ads|test|help\d*|demo|user|staff|na|n\/a|unknown)$/i.test(lower)) return true;
+  if (raw.length <= 2) return true;
+  if (/^[^a-z]*$/i.test(raw)) return true;
+  return false;
+}
+
+function paintStaffBoard(staffRows) {
+  const block = document.createElement("div");
+  block.className = "staff-board";
+  const heading = document.createElement("h2");
+  heading.textContent = "Staff";
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = "Sort by desk, food, or total. Filter by name. Hide odd short names, or remove a row.";
+  const tools = document.createElement("div");
+  tools.className = "staff-tools";
+  const filter = document.createElement("input");
+  filter.type = "search";
+  filter.autocomplete = "off";
+  filter.placeholder = "Filter staff name";
+  const sort = document.createElement("select");
+  [
+    ["total-desc", "Total · high first"],
+    ["total-asc", "Total · low first"],
+    ["desk-desc", "Desk · high first"],
+    ["desk-asc", "Desk · low first"],
+    ["food-desc", "Food · high first"],
+    ["food-asc", "Food · low first"],
+    ["name-asc", "Name A–Z"],
+    ["name-desc", "Name Z–A"],
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    sort.append(option);
+  });
+  sort.value = "total-desc";
+  const hideOdd = document.createElement("label");
+  hideOdd.className = "check-line";
+  const hideOddBox = document.createElement("input");
+  hideOddBox.type = "checkbox";
+  hideOddBox.checked = true;
+  hideOdd.append(hideOddBox, document.createTextNode(" Hide odd names"));
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "secondary";
+  reset.textContent = "Show removed";
+  tools.append(filter, sort, hideOdd, reset);
+  const meta = document.createElement("p");
+  meta.className = "note staff-meta";
+  const tableHost = document.createElement("div");
+  tableHost.className = "sheet-scroll";
+  block.append(heading, note, tools, meta, tableHost);
+
+  const source = (staffRows || []).map((row) => ({
+    name: String(row.name || "").trim() || "—",
+    desk: Number(row.desk) || 0,
+    food: Number(row.food) || 0,
+  }));
+  const removed = new Set();
+
+  const render = () => {
+    const query = normalized(filter.value || "");
+    const tokens = query.split(" ").filter(Boolean);
+    const [field, direction] = String(sort.value || "total-desc").split("-");
+    const rows = source
+      .filter((row) => !removed.has(staffRowKey(row)))
+      .filter((row) => !(hideOddBox.checked && isOddStaffName(row.name)))
+      .filter((row) => {
+        if (!tokens.length) return true;
+        const hay = normalized(row.name);
+        return tokens.every((token) => hay.includes(token));
+      })
+      .map((row) => ({ ...row, total: row.desk + row.food }))
+      .sort((left, right) => {
+        if (field === "name") {
+          const cmp = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+          return direction === "asc" ? cmp : -cmp;
+        }
+        const leftValue = field === "desk" ? left.desk : field === "food" ? left.food : left.total;
+        const rightValue = field === "desk" ? right.desk : field === "food" ? right.food : right.total;
+        if (leftValue !== rightValue) return direction === "asc" ? leftValue - rightValue : rightValue - leftValue;
+        return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+      });
+
+    const oddHidden = hideOddBox.checked
+      ? source.filter((row) => !removed.has(staffRowKey(row)) && isOddStaffName(row.name)).length
+      : 0;
+    meta.textContent = `${rows.length} shown · ${removed.size} removed · ${oddHidden} odd hidden`;
+
+    tableHost.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "note";
+      empty.textContent = "No staff rows match.";
+      tableHost.append(empty);
+      return;
+    }
+    const table = document.createElement("table");
+    table.className = "archive-table staff-table";
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    ["Name", "Desk", "Food", "Total", ""].forEach((label) => archiveCell(headRow, label, true));
+    head.append(headRow);
+    const body = document.createElement("tbody");
+    rows.forEach((row) => {
+      const tr = document.createElement("tr");
+      if (isOddStaffName(row.name)) tr.classList.add("staff-odd");
+      archiveCell(tr, row.name);
+      archiveCell(tr, row.desk);
+      archiveCell(tr, row.food);
+      archiveCell(tr, row.total);
+      const action = document.createElement("td");
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn-quiet staff-remove";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", () => {
+        removed.add(staffRowKey(row));
+        render();
+      });
+      action.append(remove);
+      tr.append(action);
+      body.append(tr);
+    });
+    table.append(head, body);
+    tableHost.append(table);
+  };
+
+  filter.addEventListener("input", render);
+  sort.addEventListener("change", render);
+  hideOddBox.addEventListener("change", render);
+  reset.addEventListener("click", () => {
+    removed.clear();
+    render();
+  });
+  render();
+  return block;
 }
 
 async function openPastEvent(event) {
