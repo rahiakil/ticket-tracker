@@ -17,7 +17,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /role: "food"/);
   assert.match(html, /Find a ticket/);
   assert.match(html, /Save QR image/);
-  assert.match(html, /Admin functions/);
+  assert.match(html, /Admin tools/);
   assert.match(html, /Export stats/);
   assert.match(html, /Food and tickets/);
   assert.match(html, /Locks now/);
@@ -34,13 +34,18 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Search orders/);
   assert.match(html, /id="main-page"/);
   assert.match(html, /Clean up everything/);
-  assert.match(html, /Factory reset/);
+  assert.match(html, /Clear all data and start/);
   assert.match(html, /open-saturday/);
   assert.match(html, /External Artist Gala/);
   assert.match(html, /Next scan/);
   assert.match(html, /Past events/);
-  assert.match(app, /session\.role !== "records"/);
+  assert.match(html, /data-page="archive"/);
+  assert.match(html, /data-page="export"/);
+  assert.match(html, /data-page="analytics"/);
+  assert.match(app, /can\("admin"\)/);
   assert.match(app, /function loadPastEvents/);
+  assert.match(app, /function formatScanClock/);
+  assert.match(app, /function renderAdminAnalytics/);
   assert.match(html, /Bhoomi books/);
   assert.match(app, /bhoomi\.hidden = volunteer/);
   assert.match(app, /function addBhoomiCheckout/);
@@ -53,7 +58,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /resetLog/);
   assert.match(app, /hiddenSaleItem/);
   assert.match(app, /sale-lane/);
-  assert.match(html, /Upload order sheet/);
+  assert.match(html, /Choose Excel or CSV/);
   assert.match(html, /Search log/);
   assert.equal(html.includes("Demo on"), false);
   assert.match(app, /const demoMode = false/);

@@ -335,7 +335,7 @@ function enterApp() {
   document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
   applyRoleUi();
-  showWorkspacePage("desk");
+  showWorkspacePage(session.role === "scanner" || loginLanding === "admin" ? "stats" : "desk");
   paintCounter();
   refreshOrders();
 }
@@ -391,7 +391,7 @@ function canEditSource() {
 }
 
 function canResetScans() {
-  return can("admin");
+  return readSession()?.role === "records";
 }
 
 function abilityBox(abilities) {
@@ -460,7 +460,9 @@ function applyRoleUi() {
   const findHeading = document.querySelector("[data-page-panel='desk'] h1");
   if (findHeading) findHeading.hidden = !search && !scan && !add;
   document.querySelectorAll("[data-page='admin']").forEach((button) => { button.hidden = !admin; });
-  document.querySelectorAll("[data-page='stats']").forEach((button) => { button.hidden = !admin; });
+  document.querySelectorAll("[data-page='stats'], [data-page='calendar'], [data-page='archive'], [data-page='analytics'], [data-page='export'], [data-page='catalog'], [data-page='import']").forEach((button) => {
+    button.hidden = !admin;
+  });
   document.querySelectorAll(".cleanup-scans").forEach((button) => { button.hidden = !canResetScans(); });
 }
 
@@ -983,6 +985,7 @@ function cacheLiveBook(book) {
       accounts: book.accounts || null,
       archive: book.archive || null,
       skus: book.skus || null,
+      managedEvents: book.managedEvents || null,
       walkups: book.walkups || {},
       bhoomiBooks: book.bhoomiBooks || [],
     };
@@ -1596,10 +1599,14 @@ function paintOpen(person, options) {
     queueWrite((book) => TicketLedger.acquireLock(book, person.code, who.holder, who.actor, who.at));
   }
   if (ticketScreen) show(ticketScreen);
-  const seen = Boolean(currentBook.orders[person.code] && currentBook.orders[person.code].scannedAt);
+  const savedOrder = currentBook.orders[person.code] || {};
+  const seen = Boolean(savedOrder.scannedAt);
+  const scanClock = formatScanClock(savedOrder.scannedAt);
   const search = document.querySelector("#search-result");
   if (search) {
-    search.textContent = `${seen ? "Already seen" : "Not seen yet"}. ${person.name}. ${person.email}.`;
+    search.textContent = seen
+      ? `Already seen${scanClock ? ` at ${scanClock}` : ""}. ${person.name}. ${person.email}.`
+      : `Not seen yet. ${person.name}. ${person.email}.`;
     search.className = seen ? "result already_seen" : "result pending";
   }
   const host = document.querySelector("#ticket-body");
@@ -1613,6 +1620,16 @@ function paintOpen(person, options) {
   mail.textContent = person.email;
   const eventLine = document.createElement("p");
   eventLine.textContent = `${person.event} · ${person.date} · ${person.amount}`;
+  const scanLine = document.createElement("p");
+  scanLine.className = "note";
+  if (seen) {
+    const staff = firstCheckinStaff(person);
+    scanLine.textContent = staff
+      ? `First scan ${scanClock || "time unknown"} · marked by ${staff}`
+      : `First scan ${scanClock || "time unknown"}`;
+  } else {
+    scanLine.textContent = "Not scanned yet.";
+  }
   const activity = document.createElement("div");
   activity.className = "log-scroll";
   const heading = document.createElement("p");
@@ -1644,7 +1661,7 @@ function paintOpen(person, options) {
     allTickets: Boolean(options && options.allTickets) || String(person.full || "").startsWith("WALK"),
   };
   const magazine = magazineCard(person, locked);
-  const parts = [title, mail, eventLine, phrase];
+  const parts = [title, mail, eventLine, scanLine, phrase];
   if (magazine) parts.push(magazine);
   const again = document.createElement("button");
   again.type = "button";
@@ -1925,11 +1942,16 @@ function showSearchMatches(people) {
     button.className = "secondary name-row";
     const title = document.createElement("span");
     title.className = "name-row-title";
-    title.textContent = `${person.name} · ${person.code}${person.email ? ` · ${person.email}` : ""}`;
+    const saved = currentBook.orders[person.code] || {};
+    const clock = formatScanClock(saved.scannedAt);
+    const scanBit = can("admin")
+      ? (clock ? ` · scanned ${clock}` : " · not scanned yet")
+      : "";
+    title.textContent = `${person.name} · ${person.code}${person.email ? ` · ${person.email}` : ""}${scanBit}`;
     button.append(title, ticketSnapshot(person));
     button.addEventListener("click", () => {
       box.replaceChildren();
-      paintOpen(person);
+      paintOpen(person, { allActivity: can("admin") });
     });
     box.append(button);
   });
@@ -2547,6 +2569,11 @@ function renderOrders() {
   renderDisputes();
   renderStats();
   paintMagazineCount();
+  if (workspacePage === "analytics" && workspace && !workspace.hidden) renderAdminAnalytics();
+  if (workspacePage === "catalog" && workspace && !workspace.hidden) {
+    renderManagedEvents();
+    renderCatalogSkuList();
+  }
 }
 
 function renderDisputes() {
@@ -2632,6 +2659,16 @@ function hiddenSaleItem(name) {
   return false;
 }
 
+function moneyNumber(raw) {
+  const value = Math.round(Number(raw) * 100) / 100;
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function wholeNumber(raw) {
+  const value = Math.floor(Number(raw));
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
 function normalizeSku(raw) {
   if (!raw) return null;
   const day = ["friday", "saturday", "sunday"].includes(raw.day) ? raw.day : "";
@@ -2642,7 +2679,24 @@ function normalizeSku(raw) {
   const lane = raw.lane === "entry" ? "entry" : "food";
   const id = String(raw.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-")).replace(/^-|-$/g, "").slice(0, 60);
   if (!id) return null;
-  return { id, name: name.slice(0, 80), day, lane, enabled: raw.enabled !== false };
+  return {
+    id,
+    name: name.slice(0, 80),
+    day,
+    lane,
+    enabled: raw.enabled !== false,
+    price: moneyNumber(raw.price),
+    units: wholeNumber(raw.units),
+    limit: wholeNumber(raw.limit),
+  };
+}
+
+function skuDetailText(sku) {
+  const bits = [`${sku.day}`, sku.lane === "entry" ? "entry" : "food"];
+  if (sku.price > 0) bits.push(`$${sku.price.toFixed(sku.price % 1 ? 2 : 0)}`);
+  if (sku.units > 0) bits.push(`${sku.units} units`);
+  if (sku.limit > 0) bits.push(`limit ${sku.limit}`);
+  return bits.join(" · ");
 }
 
 function storedSkuRows() {
@@ -2757,11 +2811,12 @@ function renderSkus() {
         const next = mergedSkus().map((item) => (item.id === sku.id ? { ...item, enabled: input.checked } : item));
         persistSkus(next, `${sku.name} is ${input.checked ? "on" : "off"} for ${sku.day}.`);
       });
-      line.append(input, document.createTextNode(` ${sku.name} · ${sku.day} · ${sku.lane === "entry" ? "entry" : "food"}`));
+      line.append(input, document.createTextNode(` ${sku.name} · ${skuDetailText(sku)}`));
       host.append(line);
     });
   });
   renderSaleStock();
+  renderCatalogSkuList();
 }
 
 const SUNDAY_SALE_SKUS = [
@@ -2946,6 +3001,9 @@ function createSaleSku() {
   const note = document.querySelector("#sku-admin-note");
   const nameInput = document.querySelector("#sku-admin-name");
   const remainInput = document.querySelector("#sku-admin-remaining");
+  const priceInput = document.querySelector("#sku-admin-price");
+  const unitsInput = document.querySelector("#sku-admin-units");
+  const limitInput = document.querySelector("#sku-admin-limit");
   const typed = nameInput ? nameInput.value : "";
   if (/^(friday|saturday)\b/i.test(String(typed).trim())) {
     if (note) note.textContent = "New SKUs are for Sunday only.";
@@ -2956,15 +3014,32 @@ function createSaleSku() {
     if (note) note.textContent = "Enter a SKU name.";
     return;
   }
-  const remaining = Math.max(0, Math.floor(Number(remainInput && remainInput.value) || 0));
+  const price = moneyNumber(priceInput && priceInput.value);
+  const units = wholeNumber(unitsInput && unitsInput.value);
+  const limit = wholeNumber(limitInput && limitInput.value);
+  const remaining = Math.max(0, Math.floor(Number(remainInput && remainInput.value) || units || 0));
+  sku.price = price;
+  sku.units = units || remaining;
+  sku.limit = limit;
   const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
-  if (!list.some((item) => item.name.toLowerCase() === sku.name.toLowerCase())) list.push(sku);
+  const existing = list.findIndex((item) => item.name.toLowerCase() === sku.name.toLowerCase());
+  if (existing >= 0) list[existing] = { ...list[existing], ...sku };
+  else list.push(sku);
   const stock = saleStockMap(currentBook);
   stock[sku.name] = { qty: soldQty(sku.name) + remaining, buffer: 0 };
+  const ticket = normalizeSku({ name: sku.name, day: "sunday", lane: "food", enabled: true, price, units: units || remaining, limit });
+  if (ticket) {
+    const tickets = mergedSkus().filter((item) => item.id !== ticket.id);
+    tickets.push(ticket);
+    persistSkus(tickets, `${ticket.name} saved.`);
+  }
   const applied = writeSaleCatalog(list, stock, `${sku.label} is on New sale. ${remaining} left.`);
   if (note) note.textContent = applied.message;
   if (nameInput) nameInput.value = "";
   if (remainInput) remainInput.value = "0";
+  if (priceInput) priceInput.value = "0";
+  if (unitsInput) unitsInput.value = "0";
+  if (limitInput) limitInput.value = "0";
   renderSkuAdmin();
   renderSaleStock();
   paintSaleTiles();
@@ -3022,6 +3097,13 @@ function menuItems() {
   });
 }
 
+function skuOrderLimit(name) {
+  const ticket = mergedSkus().find((sku) => sku.name === name);
+  if (ticket && ticket.limit > 0) return ticket.limit;
+  const sale = activeSaleSkus().find((sku) => sku.name === name);
+  return sale && sale.limit > 0 ? sale.limit : 0;
+}
+
 function addSaleItem(item) {
   if (item && item.open === false) return;
   if (FRIDAY_STOCK[item.name] != null && fridayLeft(item.name) < 1) {
@@ -3035,6 +3117,13 @@ function addSaleItem(item) {
     return;
   }
   const found = cart.find((row) => row.name === item.name);
+  const limit = skuOrderLimit(item.name);
+  const nextQty = found ? found.qty + 1 : 1;
+  if (limit > 0 && nextQty > limit) {
+    const note = document.querySelector("#sale-note");
+    if (note) note.textContent = `${item.label || item.name} is limited to ${limit} per order.`;
+    return;
+  }
   if (found) found.qty = Math.min(99, found.qty + 1);
   else cart.push({ name: item.name, qty: 1, lane: item.lane, tone: item.tone || "" });
   paintSaleTiles();
@@ -3870,6 +3959,42 @@ function appendSoldRow(box, person) {
   box.append(card);
 }
 
+function formatScanClock(at) {
+  if (!at) return "";
+  const when = new Date(at);
+  if (Number.isNaN(when.getTime())) return String(at);
+  return when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function firstCheckinStaff(person) {
+  const order = currentBook.orders && person && person.code ? currentBook.orders[person.code] : null;
+  if (!order) return "";
+  let bestAt = "";
+  let bestStaff = "";
+  Object.values(order.variants || {}).forEach((variant) => {
+    if (!variant) return;
+    if (variant.days) {
+      ["friday", "saturday", "sunday"].forEach((day) => {
+        const slot = variant.days[day];
+        if (!slot || !slot.taken || !slot.takenBy) return;
+        const at = slot.takenAt || "";
+        if (!bestAt || String(at).localeCompare(bestAt) < 0) {
+          bestAt = at;
+          bestStaff = slot.takenBy;
+        }
+      });
+      return;
+    }
+    if (!variant.taken || !variant.takenBy) return;
+    const at = variant.takenAt || order.scannedAt || "";
+    if (!bestAt || String(at).localeCompare(bestAt) < 0) {
+      bestAt = at;
+      bestStaff = variant.takenBy;
+    }
+  });
+  return bestStaff || order.actor || "";
+}
+
 function entryDoneRows() {
   return Object.values(activeOrders()).map((person) => {
     const items = orderView(person).items.filter((item) => {
@@ -3883,7 +4008,8 @@ function entryDoneRows() {
     const when = items.reduce((latest, item) => Math.max(latest, Date.parse(item.takenAt || 0) || 0), 0)
       || Date.parse(saved.updatedAt || saved.scannedAt || 0)
       || 0;
-    return { person, items, when };
+    const staff = items.map((item) => item.takenBy).find(Boolean) || firstCheckinStaff(person) || saved.actor || "";
+    return { person, items, when, staff, scannedAt: saved.scannedAt || "" };
   }).filter(Boolean).sort((left, right) => right.when - left.when || String(right.person.code).localeCompare(String(left.person.code)));
 }
 
@@ -3898,12 +4024,12 @@ function renderEntries() {
   const matches = all.filter((row) => {
     if (!searching) return true;
     const items = row.items.map((item) => item.name).join(" ");
-    const hay = normalized(`${row.person.name} ${row.person.full} ${row.person.code} ${items}`);
+    const hay = normalized(`${row.person.name} ${row.person.full} ${row.person.code} ${row.person.email || ""} ${items} ${row.staff || ""}`);
     return tokens.every((token) => hay.includes(token));
   });
   const note = document.createElement("p");
   note.className = "note";
-  note.textContent = all.length ? `${all.length} checked in. Newest first.` : "No entries are done yet.";
+  note.textContent = all.length ? `${all.length} checked in. Newest first. Each row shows scan time.` : "No entries are done yet.";
   box.append(note);
   const showRows = (rows) => {
     rows.forEach((row) => {
@@ -3916,8 +4042,10 @@ function renderEntries() {
         const done = ["friday", "saturday", "sunday"].filter((day) => days[day] && days[day].taken).map((day) => day.charAt(0).toUpperCase() + day.slice(1));
         return done.length ? `${item.name} (${done.join(", ")})` : item.name;
       }).join(", ");
-      button.textContent = `${row.person.name} · ${row.person.code}${items ? ` · ${items}` : ""}`;
-      button.addEventListener("click", () => paintOpen(row.person));
+      const clock = formatScanClock(row.when || row.scannedAt) || "time unknown";
+      const by = row.staff ? ` · by ${row.staff}` : "";
+      button.textContent = `${row.person.name} · ${row.person.code} · ${clock}${by}${items ? ` · ${items}` : ""}`;
+      button.addEventListener("click", () => paintOpen(row.person, { allActivity: can("admin") }));
       box.append(button);
     });
   };
@@ -5052,7 +5180,7 @@ document.querySelector("#release-locks").addEventListener("click", () => {
   renderOrders();
 });
 async function applySheetFile(file) {
-  const noteBox = document.querySelector("#sheet-note");
+  const noteBoxes = [document.querySelector("#sheet-note"), document.querySelector("#import-sheet-note")].filter(Boolean);
   const lower = file.name.toLowerCase();
   let orders;
   try {
@@ -5068,7 +5196,8 @@ async function applySheetFile(file) {
       orders = TicketSheet.ordersFromText(await file.text(), ",");
     }
   } catch (error) {
-    noteBox.textContent = error && error.message ? error.message : "Could not read that sheet.";
+    const message = error && error.message ? error.message : "Could not read that sheet.";
+    noteBoxes.forEach((noteBox) => { noteBox.textContent = message; });
     return;
   }
   const sheet = { orders, fileName: file.name, uploadedAt: new Date().toISOString(), epoch: (window.TicketCatalog && window.TicketCatalog.epoch) || "" };
@@ -5077,14 +5206,19 @@ async function applySheetFile(file) {
     book.sheet = sheet;
     return { write: true, book, message: `Loaded ${Object.keys(orders).length} orders from ${file.name}` };
   });
-  noteBox.textContent = `Loaded ${Object.keys(orders).length} orders from ${file.name}.`;
+  const message = `Loaded ${Object.keys(orders).length} orders from ${file.name}.`;
+  noteBoxes.forEach((noteBox) => { noteBox.textContent = message; });
   renderOrders();
 }
 
-document.querySelector("#sheet-upload").addEventListener("change", async (event) => {
-  const file = event.target.files && event.target.files[0];
-  event.target.value = "";
-  if (file) await applySheetFile(file);
+["#sheet-upload", "#admin-sheet-upload"].forEach((selector) => {
+  const input = document.querySelector(selector);
+  if (!input) return;
+  input.addEventListener("change", async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (file) await applySheetFile(file);
+  });
 });
 function resetScans() {
   if (!canResetScans()) return;
@@ -5208,6 +5342,13 @@ function showWorkspacePage(page) {
   });
   const back = document.querySelector("#workspace-back");
   if (back) back.hidden = page === "desk";
+  if (workspacePage === "calendar") loadAdminCalendar();
+  if (workspacePage === "archive") loadPastEvents();
+  if (workspacePage === "analytics") renderAdminAnalytics();
+  if (workspacePage === "catalog") {
+    renderManagedEvents();
+    renderCatalogSkuList();
+  }
   syncHistory();
 }
 
@@ -5315,8 +5456,7 @@ function paintPastEvent(summary) {
 }
 
 async function openPastEvent(event) {
-  const session = readSession();
-  if (!session || session.role !== "records") return;
+  if (!can("admin")) return;
   const host = document.querySelector("#past-events");
   if (host) host.textContent = "Loading…";
   try {
@@ -5329,22 +5469,577 @@ async function openPastEvent(event) {
 }
 
 async function loadPastEvents() {
-  const session = readSession();
-  if (!session || session.role !== "records") return;
+  if (!can("admin")) return;
   const host = document.querySelector("#past-events");
   if (!host) return;
-  if (!pastEventIndex) {
-    host.textContent = "Loading past events…";
-    try {
-      const response = await fetch("archive/events/index.json", { cache: "no-store" });
-      if (!response.ok) throw new Error("missing");
-      pastEventIndex = await response.json();
-    } catch {
-      host.textContent = "Past events could not be loaded.";
-      return;
-    }
+  await ensurePastEventIndex();
+  if (!(pastEventIndex && pastEventIndex.events)) {
+    host.textContent = "Past events could not be loaded.";
+    return;
   }
   paintPastEventList(pastEventIndex.events || []);
+}
+
+let calendarCursor = new Date();
+calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1);
+let calendarSelectedDay = "";
+
+function eventSlug(name, start) {
+  const base = String(name || "event").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  return `${base || "event"}-${String(start || "").replace(/-/g, "") || Date.now()}`;
+}
+
+function managedEventRows(book) {
+  const rows = Array.isArray((book || currentBook).managedEvents) ? (book || currentBook).managedEvents : [];
+  return rows.filter((row) => row && row.id && row.name && row.start);
+}
+
+function catalogEventRows() {
+  const catalog = window.TicketCatalog || {};
+  const id = catalog.eventId || "live-event";
+  const dates = eventDates(currentBook);
+  const stamps = [dates.friday, dates.saturday, dates.sunday].filter(Boolean).sort();
+  const name = (Object.values(catalog.orders || {})[0] || {}).event || "Live event";
+  return [{
+    id,
+    name,
+    start: stamps[0] || dates.saturday || "",
+    end: stamps[stamps.length - 1] || stamps[0] || "",
+    place: "",
+    status: "open",
+    source: "live",
+  }];
+}
+
+function archiveDateStamp(monthName, day, year) {
+  const parsed = Date.parse(`${monthName} ${day}, ${year}`);
+  if (Number.isNaN(parsed)) return "";
+  const date = new Date(parsed);
+  return stampFromDate(date);
+}
+
+function archiveEventRows() {
+  return ((pastEventIndex && pastEventIndex.events) || []).map((event) => {
+    const text = String(event.when || "");
+    const range = text.match(/([A-Za-z]+)\s+(\d{1,2})\s*[–-]\s*(\d{1,2}),\s*(\d{4})/);
+    const single = text.match(/([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/);
+    let start = "";
+    let end = "";
+    if (range) {
+      start = archiveDateStamp(range[1], range[2], range[4]);
+      end = archiveDateStamp(range[1], range[3], range[4]);
+    } else if (single) {
+      start = archiveDateStamp(single[1], single[2], single[3]);
+      end = start;
+    }
+    return {
+      id: event.id,
+      name: event.name,
+      start: start || "",
+      end: end || start || "",
+      place: "",
+      status: event.status || "closed",
+      when: event.when,
+      file: event.file,
+      source: "archive",
+    };
+  });
+}
+
+async function ensurePastEventIndex() {
+  if (pastEventIndex) return pastEventIndex;
+  try {
+    const response = await fetch("archive/events/index.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("missing");
+    pastEventIndex = await response.json();
+  } catch {
+    pastEventIndex = { events: [] };
+  }
+  return pastEventIndex;
+}
+
+function allAdminEvents() {
+  const map = new Map();
+  archiveEventRows().forEach((event) => map.set(event.id, event));
+  catalogEventRows().forEach((event) => map.set(event.id, { ...map.get(event.id), ...event }));
+  managedEventRows().forEach((event) => map.set(event.id, { ...map.get(event.id), ...event, source: event.source || "managed" }));
+  return [...map.values()];
+}
+
+function eventsOnDay(dayStamp) {
+  if (!dayStamp) return [];
+  return allAdminEvents().filter((event) => {
+    const start = event.start || "";
+    const end = event.end || start;
+    if (!start) return false;
+    return dayStamp >= start && dayStamp <= end;
+  });
+}
+
+function stampFromDate(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
+function paintCalendarDayDetail(dayStamp) {
+  const host = document.querySelector("#calendar-day-detail");
+  if (!host) return;
+  host.replaceChildren();
+  if (!dayStamp) return;
+  const heading = document.createElement("h2");
+  const when = new Date(`${dayStamp}T12:00:00`);
+  heading.textContent = Number.isNaN(when.getTime()) ? dayStamp : when.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  host.append(heading);
+  const events = eventsOnDay(dayStamp);
+  if (!events.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No events on this day.";
+    host.append(empty);
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "archive-list";
+  events.forEach((event) => {
+    const card = document.createElement("div");
+    card.className = "archive-card calendar-event-card";
+    const title = document.createElement("strong");
+    title.textContent = event.name;
+    const meta = document.createElement("small");
+    meta.textContent = [event.when || `${event.start}${event.end && event.end !== event.start ? ` – ${event.end}` : ""}`, event.place, event.status].filter(Boolean).join(" · ");
+    const actions = document.createElement("div");
+    actions.className = "day-actions";
+    if (event.file) {
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "btn-teal";
+      open.textContent = "Open summary";
+      open.addEventListener("click", () => {
+        showWorkspacePage("archive");
+        openPastEvent(event);
+      });
+      actions.append(open);
+    }
+    const analytics = document.createElement("button");
+    analytics.type = "button";
+    analytics.className = "btn-orange";
+    analytics.textContent = "Analytics & logs";
+    analytics.addEventListener("click", () => {
+      const from = document.querySelector("#analytics-from");
+      const to = document.querySelector("#analytics-to");
+      if (from) from.value = event.start || dayStamp;
+      if (to) to.value = event.end || dayStamp;
+      showWorkspacePage("analytics");
+    });
+    actions.append(analytics);
+    card.append(title, meta, actions);
+    list.append(card);
+  });
+  host.append(list);
+}
+
+function renderAdminCalendar() {
+  const host = document.querySelector("#admin-calendar");
+  const label = document.querySelector("#cal-label");
+  if (!host) return;
+  const year = calendarCursor.getFullYear();
+  const month = calendarCursor.getMonth();
+  if (label) label.textContent = new Date(year, month, 1).toLocaleDateString([], { month: "long", year: "numeric" });
+  host.replaceChildren();
+  const week = document.createElement("div");
+  week.className = "calendar-weekdays";
+  ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((name) => {
+    const cell = document.createElement("span");
+    cell.textContent = name;
+    week.append(cell);
+  });
+  host.append(week);
+  const grid = document.createElement("div");
+  grid.className = "calendar-grid";
+  const first = new Date(year, month, 1);
+  const startPad = first.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let i = 0; i < startPad; i += 1) {
+    const blank = document.createElement("span");
+    blank.className = "calendar-day is-blank";
+    grid.append(blank);
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const stamp = stampFromDate(new Date(year, month, day));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calendar-day";
+    const hits = eventsOnDay(stamp);
+    if (hits.length) button.classList.add("has-event");
+    if (calendarSelectedDay === stamp) button.classList.add("is-selected");
+    const num = document.createElement("strong");
+    num.textContent = String(day);
+    button.append(num);
+    if (hits.length) {
+      const mark = document.createElement("small");
+      mark.textContent = hits.length === 1 ? hits[0].name : `${hits.length} events`;
+      button.append(mark);
+    }
+    button.addEventListener("click", () => {
+      calendarSelectedDay = stamp;
+      renderAdminCalendar();
+      paintCalendarDayDetail(stamp);
+    });
+    grid.append(button);
+  }
+  host.append(grid);
+  if (calendarSelectedDay) paintCalendarDayDetail(calendarSelectedDay);
+}
+
+async function loadAdminCalendar() {
+  if (!can("admin")) return;
+  await ensurePastEventIndex();
+  renderAdminCalendar();
+}
+
+function parseActivityLine(item) {
+  const text = String(item && item.text || "");
+  const patterns = [
+    [/^(\d{5}) scanned again at the .+ by (.+)$/i, "scan"],
+    [/^(\d{5}) scanned at the .+ by (.+)$/i, "scan"],
+    [/^(\d{5}) food picked up: (.+) by (.+)$/i, "food"],
+    [/^(\d{5}) reverted (?:Friday |Saturday |Sunday )?entry: (.+) by (.+)$/i, "entry"],
+    [/^(\d{5}) (?:Friday |Saturday |Sunday )?entry done: (.+) by (.+)$/i, "entry"],
+    [/^(\d{5}) reverted (.+) by (.+)$/i, "other"],
+    [/^(\d{5}) new sale for (.+) by (.+)$/i, "sale"],
+    [/^(\d{5}) sale changed for (.+) by (.+)$/i, "sale"],
+    [/^(\d{5}) .*(?:by (.+))$/i, "other"],
+  ];
+  for (const [pattern, kind] of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    if (kind === "scan") {
+      return { at: item.at, kind, code: match[1], item: "", staff: match[2], text };
+    }
+    if (kind === "sale") {
+      return { at: item.at, kind, code: match[1], item: "", staff: match[3], guest: match[2], text };
+    }
+    if (match.length >= 4) {
+      return { at: item.at, kind, code: match[1], item: match[2], staff: match[3], text };
+    }
+    return { at: item.at, kind, code: match[1], item: "", staff: match[2] || "", text };
+  }
+  return { at: item.at, kind: "other", code: "", item: "", staff: "", text };
+}
+
+function checkinRowsFromBook() {
+  const people = activeOrders();
+  const rows = [];
+  Object.values(currentBook.orders || {}).forEach((order) => {
+    const person = people[order.orderId] || {};
+    Object.values(order.variants || {}).forEach((variant) => {
+      if (!variant) return;
+      if (variant.days) {
+        ["friday", "saturday", "sunday"].forEach((day) => {
+          const slot = variant.days[day];
+          if (!slot || !slot.taken) return;
+          rows.push({
+            at: slot.takenAt || "",
+            guest: person.name || order.name || "",
+            email: person.email || order.email || "",
+            code: order.orderId || person.code || "",
+            item: `${day} · ${variant.name || ""}`,
+            kind: "entry",
+            staff: slot.takenBy || order.actor || "",
+          });
+        });
+        return;
+      }
+      if (!variant.taken) return;
+      rows.push({
+        at: variant.takenAt || order.updatedAt || order.scannedAt || "",
+        guest: person.name || order.name || "",
+        email: person.email || order.email || "",
+        code: order.orderId || person.code || "",
+        item: variant.name || "",
+        kind: variant.lane === "entry" ? "entry" : "food",
+        staff: variant.takenBy || order.actor || "",
+      });
+    });
+  });
+  return rows.sort((left, right) => String(right.at).localeCompare(String(left.at)));
+}
+
+function analyticsFilters() {
+  return {
+    query: (document.querySelector("#analytics-query")?.value || "").trim().toLowerCase(),
+    staff: (document.querySelector("#analytics-staff")?.value || "").trim().toLowerCase(),
+    from: document.querySelector("#analytics-from")?.value || "",
+    to: document.querySelector("#analytics-to")?.value || "",
+    kind: document.querySelector("#analytics-kind")?.value || "all",
+  };
+}
+
+function withinAnalyticsDates(at, from, to) {
+  if (!from && !to) return true;
+  const stamp = String(at || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(stamp)) return !from && !to;
+  if (from && stamp < from) return false;
+  if (to && stamp > to) return false;
+  return true;
+}
+
+function renderAdminAnalytics() {
+  if (!can("admin")) return;
+  const filters = analyticsFilters();
+  const checkins = checkinRowsFromBook().filter((row) => {
+    if (filters.kind !== "all" && row.kind !== filters.kind) return false;
+    if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
+    if (filters.staff && !String(row.staff || "").toLowerCase().includes(filters.staff)) return false;
+    if (!filters.query) return true;
+    const hay = [row.guest, row.email, row.code, row.item, row.staff].join(" ").toLowerCase();
+    return hay.includes(filters.query);
+  });
+  const logs = [...(currentBook.log || []), ...readNotes()]
+    .map(parseActivityLine)
+    .map((row) => {
+      const person = row.code ? (activeOrders()[row.code] || {}) : {};
+      return {
+        ...row,
+        guest: row.guest || person.name || "",
+        email: person.email || "",
+      };
+    })
+    .filter((row) => {
+      if (filters.kind !== "all" && row.kind !== filters.kind) return false;
+      if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
+      if (filters.staff && !String(row.staff || "").toLowerCase().includes(filters.staff)) return false;
+      if (!filters.query) return true;
+      const hay = [row.guest, row.email, row.code, row.item, row.staff, row.text].join(" ").toLowerCase();
+      return hay.includes(filters.query);
+    })
+    .sort((left, right) => String(right.at).localeCompare(String(left.at)));
+
+  const kpis = document.querySelector("#analytics-kpis");
+  if (kpis) {
+    kpis.replaceChildren();
+    const staffSet = new Set(checkins.map((row) => row.staff).filter(Boolean));
+    [
+      ["Check-ins", checkins.length],
+      ["Log lines", logs.length],
+      ["Guests", new Set(checkins.map((row) => row.code).filter(Boolean)).size],
+      ["Staff", staffSet.size],
+    ].forEach(([label, value]) => {
+      const card = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = String(value);
+      card.append(strong, document.createTextNode(label));
+      kpis.append(card);
+    });
+  }
+
+  const checkHost = document.querySelector("#analytics-checkins");
+  if (checkHost) {
+    checkHost.replaceChildren();
+    if (!checkins.length) {
+      const empty = document.createElement("p");
+      empty.textContent = filters.query || filters.staff || filters.from || filters.to ? "No matching check-ins." : "No check-ins yet for the live event.";
+      checkHost.append(empty);
+    } else {
+      checkHost.append(archiveTable("Guest check-ins", ["When", "Guest", "Order", "Item", "Checked in by"], checkins.slice(0, 500).map((row) => {
+        const when = new Date(row.at);
+        const clock = Number.isNaN(when.getTime()) ? row.at : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        return [clock, row.guest || "—", row.code || "—", row.item || "—", row.staff || "—"];
+      })));
+    }
+  }
+
+  const logHost = document.querySelector("#analytics-log");
+  if (logHost) {
+    logHost.replaceChildren();
+    if (!logs.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No matching activity.";
+      logHost.append(empty);
+    } else {
+      logs.slice(0, 400).forEach((row) => {
+        const line = document.createElement("p");
+        const when = new Date(row.at);
+        const clock = Number.isNaN(when.getTime()) ? row.at : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        const guest = row.guest ? `${row.guest} · ${row.code}` : (row.code || "");
+        const staff = row.staff ? ` · by ${row.staff}` : "";
+        line.textContent = guest
+          ? `${clock} — ${guest} — ${row.item || row.text}${staff}`
+          : `${clock} — ${row.text}`;
+        logHost.append(line);
+      });
+    }
+  }
+}
+
+function renderManagedEvents() {
+  const host = document.querySelector("#managed-events");
+  if (!host) return;
+  host.replaceChildren();
+  const rows = managedEventRows().sort((left, right) => String(right.start).localeCompare(String(left.start)));
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No admin-created events yet.";
+    host.append(empty);
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "archive-list";
+  rows.forEach((event) => {
+    const card = document.createElement("div");
+    card.className = "archive-card";
+    const title = document.createElement("strong");
+    title.textContent = event.name;
+    const meta = document.createElement("small");
+    meta.textContent = [`${event.start}${event.end && event.end !== event.start ? ` – ${event.end}` : ""}`, event.place, event.status].filter(Boolean).join(" · ");
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      if (!window.confirm(`Remove ${event.name} from the calendar?`)) return;
+      queueWrite((book) => {
+        book.managedEvents = managedEventRows(book).filter((row) => row.id !== event.id);
+        return { write: true, book, message: `${event.name} removed.` };
+      });
+      const note = document.querySelector("#event-note");
+      if (note) {
+        note.hidden = false;
+        note.textContent = `${event.name} removed.`;
+      }
+      renderManagedEvents();
+      renderAdminCalendar();
+    });
+    card.append(title, meta, remove);
+    list.append(card);
+  });
+  host.append(list);
+}
+
+function renderCatalogSkuList() {
+  const host = document.querySelector("#catalog-sku-list");
+  if (!host) return;
+  host.replaceChildren();
+  const rows = mergedSkus().sort((left, right) => left.day.localeCompare(right.day) || left.name.localeCompare(right.name));
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No SKUs yet.";
+    host.append(empty);
+    return;
+  }
+  rows.forEach((sku) => {
+    const line = document.createElement("p");
+    line.className = "sale-stock-row";
+    line.textContent = `${sku.name} · ${skuDetailText(sku)}${sku.enabled === false ? " · off" : ""}`;
+    host.append(line);
+  });
+}
+
+function createManagedEvent(event) {
+  event.preventDefault();
+  if (!can("admin")) return;
+  const note = document.querySelector("#event-note");
+  const name = (document.querySelector("#event-name")?.value || "").replace(/\s+/g, " ").trim();
+  const place = (document.querySelector("#event-place")?.value || "").replace(/\s+/g, " ").trim();
+  const start = document.querySelector("#event-start")?.value || "";
+  const end = document.querySelector("#event-end")?.value || start;
+  const status = document.querySelector("#event-status")?.value || "upcoming";
+  if (!name || !start) {
+    if (note) {
+      note.hidden = false;
+      note.textContent = "Enter an event name and start date.";
+    }
+    return;
+  }
+  if (end && end < start) {
+    if (note) {
+      note.hidden = false;
+      note.textContent = "The end date must be on or after the start date.";
+    }
+    return;
+  }
+  const row = {
+    id: eventSlug(name, start),
+    name: name.slice(0, 80),
+    place: place.slice(0, 120),
+    start,
+    end: end || start,
+    status,
+    createdAt: new Date().toISOString(),
+    createdBy: holderNow().actor,
+    source: "managed",
+  };
+  queueWrite((book) => {
+    const next = managedEventRows(book).filter((item) => item.id !== row.id);
+    next.push(row);
+    book.managedEvents = next;
+    if (status === "open") {
+      book.eventDays = {
+        friday: start,
+        saturday: start,
+        sunday: end || start,
+        open: { friday: false, saturday: true, sunday: false },
+        skus: (book.eventDays && book.eventDays.skus) || storedSkuRows() || mergedSkus(),
+        ...saleExtras(book),
+      };
+    }
+    return { write: true, book, message: `${row.name} is on the calendar.` };
+  });
+  if (note) {
+    note.hidden = false;
+    note.textContent = `${row.name} is on the calendar.`;
+  }
+  document.querySelector("#create-event-form")?.reset();
+  renderManagedEvents();
+  renderAdminCalendar();
+  paintEventDays();
+}
+
+function createCatalogSku(event) {
+  event.preventDefault();
+  if (!can("admin")) return;
+  const note = document.querySelector("#catalog-sku-note");
+  const name = document.querySelector("#catalog-sku-name")?.value || "";
+  const day = document.querySelector("#catalog-sku-day")?.value || "sunday";
+  const lane = document.querySelector("#catalog-sku-lane")?.value || "food";
+  const price = document.querySelector("#catalog-sku-price")?.value;
+  const units = document.querySelector("#catalog-sku-units")?.value;
+  const limit = document.querySelector("#catalog-sku-limit")?.value;
+  const clean = normalizeSku({ name, day, lane, enabled: true, price, units, limit });
+  if (!clean) {
+    if (note) {
+      note.hidden = false;
+      note.textContent = "Enter an item name.";
+    }
+    return;
+  }
+  const next = mergedSkus().filter((sku) => sku.id !== clean.id);
+  next.push(clean);
+  if (clean.units > 0 && clean.lane === "food") {
+    const sale = canonicalSaleSku({ name: clean.name.replace(/^(Friday|Saturday|Sunday)\s+/i, "") });
+    if (sale) {
+      sale.price = clean.price;
+      sale.units = clean.units;
+      sale.limit = clean.limit;
+      const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
+      const existing = list.findIndex((item) => item.name.toLowerCase() === sale.name.toLowerCase());
+      if (existing >= 0) list[existing] = { ...list[existing], ...sale };
+      else list.push(sale);
+      const stock = saleStockMap(currentBook);
+      stock[sale.name] = { qty: soldQty(sale.name) + clean.units, buffer: 0 };
+      writeSaleCatalog(list, stock, `${sale.label || sale.name}: ${clean.units} units ready.`);
+    }
+  }
+  persistSkus(next, `${clean.name} added. ${skuDetailText(clean)}`);
+  if (note) {
+    note.hidden = false;
+    note.textContent = `${clean.name} added. ${skuDetailText(clean)}`;
+  }
+  document.querySelector("#create-sku-form")?.reset();
+  const dayField = document.querySelector("#catalog-sku-day");
+  if (dayField) dayField.value = "sunday";
+  renderCatalogSkuList();
 }
 
 function showSitePage(tab) {
@@ -5356,7 +6051,6 @@ function showSitePage(tab) {
     panel.hidden = panel.getAttribute("data-site-panel") !== siteTab;
   });
   if (siteTab === "logins") renderLogins();
-  if (siteTab === "archive") loadPastEvents();
   const back = document.querySelector("#site-back");
   if (back) back.hidden = siteTab === "orders";
   syncHistory();
@@ -5382,6 +6076,33 @@ document.querySelectorAll("[data-site-tab]").forEach((button) => {
     showSitePage(button.getAttribute("data-site-tab"));
   });
 });
+const calPrev = document.querySelector("#cal-prev");
+if (calPrev) {
+  calPrev.addEventListener("click", () => {
+    calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+    renderAdminCalendar();
+  });
+}
+const calNext = document.querySelector("#cal-next");
+if (calNext) {
+  calNext.addEventListener("click", () => {
+    calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+    renderAdminCalendar();
+  });
+}
+const analyticsRun = document.querySelector("#analytics-run");
+if (analyticsRun) analyticsRun.addEventListener("click", () => renderAdminAnalytics());
+["#analytics-query", "#analytics-staff", "#analytics-from", "#analytics-to", "#analytics-kind"].forEach((selector) => {
+  const node = document.querySelector(selector);
+  if (!node) return;
+  node.addEventListener(selector.includes("kind") || selector.includes("from") || selector.includes("to") ? "change" : "input", () => {
+    if (workspacePage === "analytics") renderAdminAnalytics();
+  });
+});
+const createEventForm = document.querySelector("#create-event-form");
+if (createEventForm) createEventForm.addEventListener("submit", createManagedEvent);
+const createSkuForm = document.querySelector("#create-sku-form");
+if (createSkuForm) createSkuForm.addEventListener("submit", createCatalogSku);
 document.querySelector("#home-save-qr").addEventListener("click", () => { saveQrImage(); });
 document.querySelector("#home-whatsapp").addEventListener("click", () => { shareQrImage("whatsapp"); });
 document.querySelector("#home-email-qr").addEventListener("click", () => { shareQrImage("email"); });
@@ -5470,7 +6191,10 @@ document.querySelectorAll(".sku-form").forEach((form) => {
     const name = form.querySelector(".sku-name").value;
     const day = form.querySelector(".sku-day").value;
     const lane = form.querySelector(".sku-lane").value;
-    const clean = normalizeSku({ name, day, lane, enabled: true });
+    const price = form.querySelector(".sku-price")?.value;
+    const units = form.querySelector(".sku-units")?.value;
+    const limit = form.querySelector(".sku-limit")?.value;
+    const clean = normalizeSku({ name, day, lane, enabled: true, price, units, limit });
     const noteBox = form.parentElement && form.parentElement.querySelector(".sku-note");
     if (!clean) {
       if (noteBox) {
@@ -5481,8 +6205,29 @@ document.querySelectorAll(".sku-form").forEach((form) => {
     }
     const next = mergedSkus().filter((sku) => sku.id !== clean.id);
     next.push(clean);
+    if (clean.units > 0 && clean.lane === "food" && clean.day === "sunday") {
+      const sale = canonicalSaleSku({ name: clean.name });
+      if (sale) {
+        sale.price = clean.price;
+        sale.units = clean.units;
+        sale.limit = clean.limit;
+        const list = activeSaleSkus(currentBook).map((item) => ({ ...item }));
+        const existing = list.findIndex((item) => item.name.toLowerCase() === sale.name.toLowerCase());
+        if (existing >= 0) list[existing] = { ...list[existing], ...sale };
+        else list.push(sale);
+        const stock = saleStockMap(currentBook);
+        stock[sale.name] = { qty: soldQty(sale.name) + clean.units, buffer: 0 };
+        writeSaleCatalog(list, stock, `${sale.label || sale.name}: ${clean.units} units on New sale.`);
+      }
+    }
     form.querySelector(".sku-name").value = "";
-    persistSkus(next, `${clean.name} is on for ${clean.day}.`);
+    const priceField = form.querySelector(".sku-price");
+    const unitsField = form.querySelector(".sku-units");
+    const limitField = form.querySelector(".sku-limit");
+    if (priceField) priceField.value = "0";
+    if (unitsField) unitsField.value = "0";
+    if (limitField) limitField.value = "0";
+    persistSkus(next, `${clean.name} is on for ${clean.day}. ${skuDetailText(clean)}`);
   });
 });
 document.querySelectorAll(".close-day").forEach((button) => {

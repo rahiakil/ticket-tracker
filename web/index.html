@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=90">
+  <link rel="stylesheet" href="styles.css?v=93">
 </head>
 <body>
 <div class="app-shell">
@@ -18,9 +18,9 @@
     </div>
   </header>
   <section id="wifi-ask" class="wifi-ask">
-    <p>Join the Wi-Fi <strong>HPS-PAC_Theatre</strong> before you scan.</p>
-    <p>The password is with Parag or Sanjoyan. Text <a href="sms:4257536526">425-753-6526</a> or <a href="sms:4252746422">425-274-6422</a> to get the password.</p>
-    <button id="wifi-connected" class="btn-teal" type="button">I'm on HPS-PAC_Theatre</button>
+    <p>Use the venue’s local Wi-Fi before you scan.</p>
+    <p>Mobile data is often spotty at the event, so phones stay in sync more reliably on the local network.</p>
+    <button id="wifi-connected" class="btn-teal" type="button">I’m on venue Wi-Fi</button>
   </section>
   <main id="gate" class="gate">
     <div>
@@ -65,13 +65,20 @@
       <button type="button" data-page="desk" class="btn-teal">Desk</button>
       <button type="button" data-page="entries" class="btn-quiet">Entries</button>
       <button type="button" data-page="stats" class="btn-quiet">Stats</button>
-      <button type="button" data-page="admin" class="btn-quiet">Admin functions</button>
+      <button type="button" data-page="calendar" class="btn-quiet">Calendar</button>
+      <button type="button" data-page="archive" class="btn-quiet">Past events</button>
+      <button type="button" data-page="analytics" class="btn-quiet">Analytics</button>
+      <button type="button" data-page="export" class="btn-quiet">Export</button>
+      <button type="button" data-page="catalog" class="btn-quiet">Events &amp; SKUs</button>
+      <button type="button" data-page="import" class="btn-quiet">Import</button>
+      <button type="button" data-page="admin" class="btn-quiet">Admin tools</button>
     </div>
 
     <section class="panel" data-page-panel="entries" hidden>
       <h1>Entries done</h1>
+      <p class="note">Search a guest to see when they were scanned. Tap a row for the full ticket and activity log.</p>
       <label for="entry-query">Search entries
-        <input id="entry-query" type="search" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name or order number">
+        <input id="entry-query" type="search" inputmode="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name, order number, or email">
       </label>
       <div id="entry-done"></div>
     </section>
@@ -184,6 +191,140 @@
       <button id="export-stats" class="btn-teal" type="button">Export stats</button>
     </section>
 
+    <section class="panel" data-page-panel="calendar" hidden>
+      <h2>Event calendar</h2>
+      <p class="note">Browse month by month. Tap a day to see events that ran or are scheduled, then open the summary or search that person’s scan time in Analytics.</p>
+      <div class="calendar-nav">
+        <button id="cal-prev" class="btn-quiet" type="button">Earlier</button>
+        <p id="cal-label" class="calendar-label"></p>
+        <button id="cal-next" class="btn-quiet" type="button">Later</button>
+      </div>
+      <div id="admin-calendar" class="admin-calendar"></div>
+      <div id="calendar-day-detail"></div>
+    </section>
+
+    <section class="panel" data-page-panel="archive" hidden>
+      <h2>Past events</h2>
+      <p class="note">Archived event totals and hour-by-hour logs. Open one to see scans, food pickup, and staff counts. Use Analytics to search a guest’s scan time on the live event.</p>
+      <div id="past-events"></div>
+    </section>
+
+    <section class="panel" data-page-panel="export" hidden>
+      <h2>Export</h2>
+      <p class="note">Download the live order sheet, new sales by day, or email a status file. Files land in Downloads; Excel opens both formats.</p>
+      <button id="export-csv" class="secondary" type="button">Download CSV</button>
+      <button id="download-xlsx" class="btn-orange" type="button">Download Excel</button>
+      <button id="download-new-sales" class="btn-teal" type="button">New sales by day</button>
+      <button id="email-csv" class="secondary" type="button">Email CSV</button>
+      <p id="download-reconcile" class="sale-check">Loading food counts…</p>
+      <p class="note">Orders and stats also save to the Ticket Tracker Google Drive folder after a phone sync.</p>
+    </section>
+
+    <section class="panel" data-page-panel="analytics" hidden>
+      <h2>Check-in analytics</h2>
+      <p class="note">Search who checked in, when (scan time), which ticket, and which staff member marked it. Includes the full activity log for the live event.</p>
+      <div class="analytics-filters">
+        <label>Search
+          <input id="analytics-query" type="search" autocomplete="off" placeholder="Guest, email, order, staff, item">
+        </label>
+        <label>Staff
+          <input id="analytics-staff" type="search" autocomplete="off" placeholder="Who checked them in">
+        </label>
+        <label>From
+          <input id="analytics-from" type="date">
+        </label>
+        <label>To
+          <input id="analytics-to" type="date">
+        </label>
+        <label>Kind
+          <select id="analytics-kind">
+            <option value="all">Everything</option>
+            <option value="entry">Entry</option>
+            <option value="food">Food</option>
+            <option value="sale">New sales</option>
+            <option value="scan">Scans</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <button id="analytics-run" class="btn-orange" type="button">Search</button>
+      </div>
+      <div id="analytics-kpis" class="archive-kpis"></div>
+      <h2>Check-ins</h2>
+      <div id="analytics-checkins" class="sheet-scroll"></div>
+      <h2>Activity log</h2>
+      <div id="analytics-log" class="log-scroll"></div>
+    </section>
+
+    <section class="panel" data-page-panel="catalog" hidden>
+      <h2>Create event</h2>
+      <p class="note">Add a venue event with dates. It shows on the calendar so desk phones can switch days when you open them.</p>
+      <form id="create-event-form" class="catalog-form">
+        <label>Event name
+          <input id="event-name" autocomplete="off" required placeholder="Kali Pujo 2027">
+        </label>
+        <label>Place
+          <input id="event-place" autocomplete="off" placeholder="Highline Performing Arts Center">
+        </label>
+        <label>Starts
+          <input id="event-start" type="date" required>
+        </label>
+        <label>Ends
+          <input id="event-end" type="date" required>
+        </label>
+        <label>Status
+          <select id="event-status">
+            <option value="upcoming">Upcoming</option>
+            <option value="open">Open now</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <button class="btn-teal" type="submit">Create event</button>
+      </form>
+      <p id="event-note" class="result" role="status" hidden></p>
+      <div id="managed-events"></div>
+      <h2>Create SKU</h2>
+      <p class="note">Food or entry item for New sale: price, how many units you can sell, and a per-order limit.</p>
+      <form id="create-sku-form" class="catalog-form">
+        <label>Item name
+          <input id="catalog-sku-name" autocomplete="off" required placeholder="Fish">
+        </label>
+        <label>Day
+          <select id="catalog-sku-day">
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday" selected>Sunday</option>
+          </select>
+        </label>
+        <label>Kind
+          <select id="catalog-sku-lane">
+            <option value="food">Food</option>
+            <option value="entry">Entry</option>
+          </select>
+        </label>
+        <label>Price ($)
+          <input id="catalog-sku-price" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+        </label>
+        <label>Units to sell
+          <input id="catalog-sku-units" type="number" min="0" inputmode="numeric" value="0">
+        </label>
+        <label>Per-order limit
+          <input id="catalog-sku-limit" type="number" min="0" inputmode="numeric" value="0" placeholder="0 = no limit">
+        </label>
+        <button class="btn-orange" type="submit">Add SKU</button>
+      </form>
+      <p id="catalog-sku-note" class="result" role="status" hidden></p>
+      <div id="catalog-sku-list"></div>
+    </section>
+
+    <section class="panel" data-page-panel="import" hidden>
+      <h2>Import Excel</h2>
+      <p class="note">Upload the latest order sheet. Excel (.xlsx) or CSV works. Existing scans stay; order names and tickets update from the file.</p>
+      <label class="secondary file-btn" for="admin-sheet-upload">Choose Excel or CSV</label>
+      <input id="admin-sheet-upload" class="visually-hidden" type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values">
+      <p id="import-sheet-note" class="note"></p>
+      <p class="note">Expected columns: Order Number, Full Name, Email, Items. Optional: Event Name, Order Date, Total Amount.</p>
+    </section>
+
     <section class="panel" data-page-panel="admin">
       <h2>Event days</h2>
       <p class="note">Turn a day on when that day's tickets should be accepted.</p>
@@ -210,25 +351,8 @@
 
     <div class="page-tabs tool-tabs" data-page-panel="admin" hidden>
       <button type="button" data-tool="sheet" class="btn-teal">Sheet</button>
-      <button type="button" data-tool="download" class="btn-quiet">Download</button>
-      <button type="button" data-tool="export" class="btn-quiet">Export</button>
       <button type="button" data-tool="more" class="btn-quiet">More</button>
     </div>
-
-    <section class="panel" data-page-panel="admin" data-tool-panel="download" hidden>
-      <h2>Download</h2>
-      <button id="export-csv" class="secondary" type="button">Download CSV</button>
-      <button id="download-xlsx" class="btn-orange" type="button">Download Excel</button>
-      <button id="download-new-sales" class="btn-teal" type="button">New sales by day</button>
-      <p id="download-reconcile" class="sale-check">Loading food counts…</p>
-      <p class="note">The file lands in your Downloads folder. Excel opens both. New sales includes taken meals and a reconciliation sheet.</p>
-    </section>
-
-    <section class="panel" data-page-panel="admin" data-tool-panel="export" hidden>
-      <h2>Export</h2>
-      <button id="email-csv" class="secondary" type="button">Email CSV</button>
-      <p class="note">Orders and stats are saved in the Ticket Tracker Google Drive folder.</p>
-    </section>
 
     <section class="panel sheet-panel" data-page-panel="admin" data-tool-panel="sheet" hidden>
       <h2>Sheet</h2>
@@ -245,7 +369,7 @@
             <option value="open">Still open</option>
           </select>
         </label>
-        <button type="button" class="cleanup-scans secondary">Clear all scans</button>
+        <p class="note">Clearing scans is a Site admin action.</p>
       </div>
       <a class="google-sheet-link" hidden target="_blank" rel="noopener noreferrer">Open the live Google Sheet</a>
       <a class="google-sales-link" hidden target="_blank" rel="noopener noreferrer">Open on-site sales sheet</a>
@@ -283,9 +407,7 @@
 
     <section class="panel" data-page-panel="admin" data-tool-panel="more" hidden>
       <h2>Log</h2>
-      <button type="button" class="reset-log secondary">Reset log</button>
-      <button type="button" class="factory-reset secondary">Clear all data and start</button>
-      <p class="note">Reset log clears past actions on every phone. Clear all data also clears scans, walk-up sales, and the uploaded sheet, then opens Friday, Saturday, and Sunday. Logins stay. Factory reset does not remove the order list saved in the website.</p>
+      <p class="note">Deletes, log reset, and clear-all stay on Site admin. This log is for review only.</p>
       <h2>Sunday quantities</h2>
       <p class="note">Veg, Non-veg, and Fish. The number you save is how many are left to sell on New sale.</p>
       <div class="sale-stock"></div>
@@ -314,6 +436,15 @@
             <option value="food">Food</option>
             <option value="entry">Entry</option>
           </select>
+        </label>
+        <label>Price ($)
+          <input class="sku-price" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+        </label>
+        <label>Units to sell
+          <input class="sku-units" type="number" min="0" inputmode="numeric" value="0">
+        </label>
+        <label>Per-order limit
+          <input class="sku-limit" type="number" min="0" inputmode="numeric" value="0">
         </label>
         <button class="btn-orange" type="submit">Add ticket</button>
       </form>
@@ -352,11 +483,20 @@
     </header>
     <section class="panel">
       <h1>SKUs · admin only</h1>
-      <p class="note">Add an item and how many are left. It appears on New sale for Sunday. This screen does not take payment or create a QR.</p>
+      <p class="note">Add an item with price, units, and limits. It appears on New sale. This screen does not take payment or create a QR.</p>
       <div id="sku-admin-list"></div>
       <h2>New SKU</h2>
       <label>SKU name
         <input id="sku-admin-name" autocomplete="off" placeholder="Fish">
+      </label>
+      <label>Price ($)
+        <input id="sku-admin-price" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+      </label>
+      <label>Units to sell
+        <input id="sku-admin-units" type="number" min="0" inputmode="numeric" value="0">
+      </label>
+      <label>Per-order limit
+        <input id="sku-admin-limit" type="number" min="0" inputmode="numeric" value="0">
       </label>
       <label>Remaining
         <input id="sku-admin-remaining" type="number" min="0" inputmode="numeric" value="0">
@@ -392,7 +532,7 @@
     <header class="topbar">
       <button id="site-back" class="btn-quiet" type="button" hidden>Back</button>
       <div>
-        <p class="eyebrow">Site admin</p>
+        <p class="eyebrow">Site admin · deletes &amp; logins</p>
         <p id="admin-who"></p>
       </div>
       <button id="admin-print" class="btn-teal" type="button">Print sheet</button>
@@ -404,66 +544,15 @@
       <p class="note">Off for this concert. Turn it on only when that earlier counter should appear on every phone.</p>
     </details>
     <div class="page-tabs admin-tabs">
-      <button type="button" data-site-tab="orders" class="btn-teal">Orders</button>
+      <button type="button" data-site-tab="orders" class="btn-teal">Orders &amp; deletes</button>
       <button type="button" data-site-tab="sheet" class="btn-quiet">Sheet</button>
       <button type="button" data-site-tab="logins" class="btn-quiet">Logins</button>
       <button type="button" data-site-tab="download" class="btn-quiet">Download</button>
       <button type="button" data-site-tab="export" class="btn-quiet">Export</button>
-      <button type="button" data-site-tab="archive" class="btn-quiet">Past events</button>
     </div>
-    <section class="panel" data-site-panel="archive" hidden>
-      <h2>Past events</h2>
-      <p class="note">Site admin only. Volunteer and desk phones do not load these files.</p>
-      <div id="past-events"></div>
-    </section>
     <section class="panel" data-site-panel="orders">
-      <h2>Event days</h2>
-      <p class="note">Turn a day on when that day's tickets should be accepted. Leave the others off.</p>
-      <label>Friday
-        <input class="day-date" data-day="friday" type="date" value="2026-10-09">
-      </label>
-      <label class="check-line"><input class="day-open" data-day="friday" type="checkbox" checked> Friday open</label>
-      <label>Saturday
-        <input class="day-date" data-day="saturday" type="date" value="2026-10-10">
-      </label>
-      <label class="check-line"><input class="day-open" data-day="saturday" type="checkbox" checked> Saturday open</label>
-      <label>Sunday
-        <input class="day-date" data-day="sunday" type="date" value="2026-10-11">
-      </label>
-      <label class="check-line"><input class="day-open" data-day="sunday" type="checkbox" checked> Sunday open</label>
-      <button class="save-event-days btn-teal" type="button">Save event days</button>
-      <div class="day-actions">
-        <button type="button" class="open-all-days btn-teal">Open Friday, Saturday, and Sunday</button>
-        <button type="button" class="close-day btn-orange" data-day="friday">Close Friday sales</button>
-        <button type="button" class="close-day secondary" data-day="saturday">Close Saturday sales</button>
-        <button type="button" class="close-day secondary" data-day="sunday">Close Sunday sales</button>
-      </div>
-      <h2>Sunday quantities</h2>
-      <p class="note">Veg, Non-veg, and Fish. The number you save is how many are left to sell on New sale.</p>
-      <div class="sale-stock"></div>
-      <h2>Tickets for sale</h2>
-      <p class="note">Create a ticket and turn it on for one day. Friday Veg and Friday Non-Vegetarian are ready for QR codes.</p>
-      <div class="sku-list"></div>
-      <form class="sku-form">
-        <label>Ticket name
-          <input class="sku-name" autocomplete="off" placeholder="Friday Veg">
-        </label>
-        <label>Day
-          <select class="sku-day">
-            <option value="friday">Friday</option>
-            <option value="saturday">Saturday</option>
-            <option value="sunday">Sunday</option>
-          </select>
-        </label>
-        <label>Kind
-          <select class="sku-lane">
-            <option value="food">Food</option>
-            <option value="entry">Entry</option>
-          </select>
-        </label>
-        <button class="btn-orange" type="submit">Add ticket</button>
-      </form>
-      <p class="sku-note result" role="status" hidden></p>
+      <h2>Site control</h2>
+      <p class="note">Site admin handles deletes, lock release, log reset, and clear-all. Past events, exports, search, scan times, stats, calendar, analytics, events, SKUs, and Excel import are on the Admin login.</p>
       <div class="flow-tabs">
         <button type="button" data-flow="waiting" class="btn-teal">Not scanned</button>
         <button type="button" data-flow="scanned" class="btn-quiet">Already scanned</button>
@@ -494,9 +583,6 @@
       <button id="cleanup-all" class="secondary" type="button">Clean up everything</button>
       <button type="button" class="reset-log secondary">Reset log</button>
       <button id="factory-reset" class="factory-reset secondary" type="button">Clear all data and start</button>
-      <label class="secondary file-btn" for="sheet-upload">Upload order sheet</label>
-      <input id="sheet-upload" class="visually-hidden" type="file" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values">
-      <p id="sheet-note" class="note"></p>
       <p id="admin-note" class="result" role="status" hidden></p>
       <div id="recent-orders"></div>
     </section>
@@ -515,7 +601,7 @@
     </section>
     <section class="panel" data-site-panel="logins" hidden>
       <h2>Logins</h2>
-      <p class="note">Volunteer can scan. Desk can scan, look people up, and add a new QR. A desk scan shows entry and food. Desk cannot edit the sheet. Admin can edit the sheet.</p>
+      <p class="note">Volunteer can scan. Desk can look people up and sell. Admin gets stats, calendar, analytics, events, SKUs, and import. Site admin handles deletes, logins, and clear-all.</p>
       <div id="login-list"></div>
       <h2>Create login</h2>
       <form id="create-login">
@@ -635,6 +721,6 @@
   <script src="ledger.js?v=52"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=146"></script>
+  <script src="app.js?v=149"></script>
 </body>
 </html>
