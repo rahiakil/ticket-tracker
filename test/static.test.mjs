@@ -36,7 +36,11 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /Clean up everything/);
   assert.match(html, /Clear all data and start/);
   assert.match(html, /open-saturday/);
-  assert.match(html, /External Artist Gala/);
+  assert.match(html, /Kali Pujo/);
+  assert.match(html, /desk-live-counters/);
+  assert.match(app, /function paintPastEventList/);
+  assert.match(app, /function laneProgress/);
+  assert.match(app, /function itemNameStats/);
   assert.match(html, /Next scan/);
   assert.match(html, /Past events/);
   assert.match(html, /data-page="archive"/);
@@ -47,7 +51,7 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(app, /function formatScanClock/);
   assert.match(app, /function renderAdminAnalytics/);
   assert.match(html, /Bhoomi books/);
-  assert.match(app, /bhoomi\.hidden = volunteer/);
+  assert.match(app, /bhoomi\.hidden = true/);
   assert.match(app, /function addBhoomiCheckout/);
   assert.match(app, /function scanAnother/);
   assert.match(app, /function appBack/);

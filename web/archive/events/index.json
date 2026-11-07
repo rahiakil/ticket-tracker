@@ -1,16 +1,10 @@
 {
   "events": [
     {
-      "id": "kali-pujo-2027",
-      "name": "Kali Pujo",
-      "when": "November 8, 2027",
-      "status": "upcoming",
-      "file": "kali-pujo-2027/summary.json"
-    },
-    {
       "id": "external-artist-gala-2026",
       "name": "External Artist Gala",
       "when": "October 17, 2026",
+      "year": 2026,
       "status": "closed",
       "file": "external-artist-gala-2026/summary.json"
     },
@@ -18,6 +12,7 @@
       "id": "sharodotsav-2026",
       "name": "Sharodotsav",
       "when": "October 9–11, 2026",
+      "year": 2026,
       "status": "closed",
       "file": "sharodotsav-2026/summary.json"
     }

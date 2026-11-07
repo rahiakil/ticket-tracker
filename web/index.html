@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>Ticket Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=94">
+  <link rel="stylesheet" href="styles.css?v=96">
 </head>
 <body>
 <div class="app-shell">
@@ -14,7 +14,7 @@
     <img src="logo.png" alt="Uttoron">
     <div>
       <p class="wordmark">Uttoron</p>
-      <p class="eyebrow">External Artist Gala · Oct 17</p>
+      <p class="eyebrow">Kali Pujo · Nov 8</p>
     </div>
   </header>
   <section id="wifi-ask" class="wifi-ask">
@@ -55,7 +55,7 @@
     <header class="topbar">
       <button id="workspace-back" class="btn-quiet" type="button" hidden>Back</button>
       <div>
-        <p class="eyebrow">External Artist Gala · Oct 17</p>
+        <p class="eyebrow">Kali Pujo · Nov 8</p>
         <p id="who"></p>
       </div>
       <button id="logout" class="text-button" type="button">Log out</button>
@@ -98,6 +98,8 @@
         <button id="counter-entry" class="primary" type="button">Entry counter</button>
         <button id="counter-food" class="secondary" type="button">Food counter</button>
       </div>
+      <div id="desk-live-counters" class="archive-kpis desk-live-counters" hidden></div>
+      <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
       <button id="scan-btn" class="btn-teal" type="button">Scan QR</button>
       <button id="allow-camera" class="btn-orange" type="button">Allow camera</button>
       <button id="cancel-scan" class="secondary" type="button" hidden>Cancel</button>
@@ -106,7 +108,7 @@
       <p id="camera-help" class="note" hidden>Camera unavailable. Choose a photo of the QR code instead. The photo stays on this phone.</p>
       <p id="result" class="result" role="status" aria-live="polite"></p>
       <button id="retry" class="primary" type="button" hidden>Retry save</button>
-      <div id="bhoomi-books" class="bhoomi-books">
+      <div id="bhoomi-books" class="bhoomi-books" hidden>
         <h2>Bhoomi books</h2>
         <p id="bhoomi-count" class="people-count">0</p>
         <p class="note">The book is procured later. Create a QR the buyer can show when it arrives.</p>
@@ -139,7 +141,6 @@
         </label>
         <div id="sold-qrs"></div>
         <button class="show-pay btn-teal" type="button">Take payment</button>
-        <p id="desk-stats" class="note">Scanned 0 in 15 minutes, 0 in the last hour, 0 in 6 hours.</p>
         <div id="qr-box"></div>
         <div id="open-order"></div>
         <label class="secondary file-btn" for="file-scan">Upload QR image</label>
@@ -181,9 +182,9 @@
       <p class="note">Who bought Friday food, the counts, and any mismatch.</p>
       <div id="stats-sales"></div>
       <h2>Food and tickets</h2>
-      <p class="note">Taken vs still open for each kind.</p>
+      <p class="note">Real-time scanned vs pending for each food item, plus entry done/pending. Partial tickets (for example 2 of 3 food taken) show in the partial-orders count.</p>
       <div id="stats-food"></div>
-      <h2>Sunday food reconciliation</h2>
+      <h2>Food reconciliation</h2>
       <p id="food-reconcile" class="sale-check">Loading food counts…</p>
       <h2>Locks now</h2>
       <p class="note">A phone holds a row for up to 3 minutes while it is open.</p>
@@ -205,7 +206,7 @@
 
     <section class="panel" data-page-panel="archive" hidden>
       <h2>Past events</h2>
-      <p class="note">Archived event totals and hour-by-hour logs. Open one to see scans, food pickup, and staff counts. Use Analytics to search a guest’s scan time on the live event.</p>
+      <p class="note">Pick a year, then open an event tile for archived totals, hour-by-hour logs, food pickup, and staff counts. Live Kali Pujo tracking stays on Desk, Stats, and Analytics.</p>
       <div id="past-events"></div>
     </section>
 
@@ -335,7 +336,7 @@
       <label>Saturday
         <input id="day-saturday" class="day-date" data-day="saturday" type="date" value="2026-10-10">
       </label>
-      <label class="check-line"><input id="open-saturday" class="day-open" data-day="saturday" type="checkbox" checked> Saturday open</label>
+      <label class="check-line"><input id="open-saturday" class="day-open" data-day="saturday" type="checkbox"> Saturday open</label>
       <label>Sunday
         <input id="day-sunday" class="day-date" data-day="sunday" type="date" value="2026-10-11">
       </label>
@@ -717,10 +718,10 @@
   <script src="vendor/qrcode-generator.js"></script>
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
-  <script src="catalog.js?v=16"></script>
+  <script src="catalog.js?v=18"></script>
   <script src="ledger.js?v=52"></script>
   <script src="record.js?v=13"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=150"></script>
+  <script src="app.js?v=153"></script>
 </body>
 </html>

@@ -26,7 +26,7 @@ html, body {
 body {
   font-family: "Segoe UI", system-ui, sans-serif;
   background-color: #140e09;
-  background-image: linear-gradient(rgba(20, 14, 9, 0.28), rgba(20, 14, 9, 0.42)), url("gala-poster.jpg");
+  background-image: linear-gradient(rgba(12, 10, 28, 0.42), rgba(12, 10, 28, 0.58)), url("kali-pujo-backdrop.jpg");
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
@@ -936,9 +936,13 @@ button.bhoomi-remove { min-height: 40px; width: auto; }
 .archive-list { display: grid; gap: 10px; }
 .archive-card { text-align: left; }
 .archive-card small { display: block; font-weight: 650; opacity: 0.75; }
+.year-tiles, .event-tiles { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.year-tile strong, .event-tile strong { font-size: 1.35rem; }
 .archive-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
 .archive-kpis p { margin: 0; padding: 10px; border-radius: 12px; background: #f4f7f8; }
 .archive-kpis strong { display: block; font-size: 1.4rem; }
+.desk-live-counters { margin: 0 0 12px; }
+.desk-live-counters p { background: #fff7ed; border: 1px solid #f0c49a; }
 .archive-table { width: 100%; border-collapse: collapse; margin: 0 0 16px; }
 .archive-table th, .archive-table td { padding: 8px 6px; border-bottom: 1px solid rgba(20, 32, 48, 0.12); text-align: left; }
 .archive-table th { font-size: 0.92rem; }

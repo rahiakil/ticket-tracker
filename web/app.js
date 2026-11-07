@@ -335,8 +335,9 @@ function enterApp() {
   document.querySelector("#who").textContent = `Signed in as ${readAlias()} (${session.username})`;
   show(workspace);
   applyRoleUi();
-  showWorkspacePage(session.role === "scanner" || loginLanding === "admin" ? "stats" : "desk");
+  showWorkspacePage("desk");
   paintCounter();
+  if (can("admin")) paintDeskCounters();
   refreshOrders();
 }
 
@@ -442,7 +443,7 @@ function applyRoleUi() {
   const counterSwitch = document.querySelector(".counter-switch");
   if (counterSwitch) counterSwitch.hidden = true;
   const bhoomi = document.querySelector("#bhoomi-books");
-  if (bhoomi) bhoomi.hidden = volunteer;
+  if (bhoomi) bhoomi.hidden = true;
   localStorage.setItem(storeKey("counter"), "entry");
   const searchLine = document.querySelector("#order-query")?.closest(".search-line");
   if (searchLine) searchLine.hidden = !search;
@@ -455,6 +456,8 @@ function applyRoleUi() {
   document.querySelectorAll("#home-save-qr, #home-whatsapp, #home-email-qr, #qr-box").forEach((node) => { node.hidden = true; });
   const deskStats = document.querySelector("#desk-stats");
   if (deskStats) deskStats.hidden = !admin;
+  const deskCounters = document.querySelector("#desk-live-counters");
+  if (deskCounters) deskCounters.hidden = !admin;
   const orderList = document.querySelector("#orders")?.closest("section");
   if (orderList) orderList.hidden = !search && !add && !scan;
   const findHeading = document.querySelector("[data-page-panel='desk'] h1");
@@ -1038,14 +1041,14 @@ function holderNow() {
 }
 
 const demoMode = false;
-const DEFAULT_EVENT_DAYS = { friday: "2026-10-17", saturday: "2026-10-17", sunday: "2026-10-17" };
+const DEFAULT_EVENT_DAYS = { friday: "2026-11-08", saturday: "2026-11-08", sunday: "2026-11-08" };
 
 function eventDates() {
   return {
     friday: DEFAULT_EVENT_DAYS.friday,
     saturday: DEFAULT_EVENT_DAYS.saturday,
     sunday: DEFAULT_EVENT_DAYS.sunday,
-    open: { friday: false, saturday: true, sunday: false },
+    open: { friday: false, saturday: false, sunday: true },
   };
 }
 
@@ -1077,13 +1080,13 @@ function canMarkTicket(lane, day) {
   if (readSession()?.role === "desk" && lane === "food") return false;
   if (can("add")) return true;
   if (!can("scan")) return false;
-  const today = todayEventDay() || "saturday";
+  const today = todayEventDay() || "sunday";
   return lane === "entry" && day === today;
 }
 
 function eventDatesForMark(book) {
   const dates = eventDates(book);
-  const today = todayEventDay() || "saturday";
+  const today = todayEventDay() || "sunday";
   dates.open = { ...dates.open, [today]: true };
   return dates;
 }
@@ -1201,7 +1204,7 @@ function revertOne(person) {
 }
 
 function dayBucket(name) {
-  return TicketLedger.itemDay(name) || "saturday";
+  return TicketLedger.itemDay(name) || "sunday";
 }
 
 function allDayEntry(item) {
@@ -1247,7 +1250,7 @@ function nextAlready(message) {
 }
 
 function visibleDays() {
-  return ["saturday"];
+  return ["sunday"];
 }
 
 function dayCheckCard(person, item, locked) {
@@ -1290,7 +1293,7 @@ function ticketPill(person, item, index, lane, locked, now) {
   button.type = "button";
   const kind = TicketLedger.couponKind(item.id, item.lane);
   const day = TicketLedger.itemDay(item.id);
-  const today = todayEventDay() || "saturday";
+  const today = todayEventDay() || "sunday";
   const deskViewFood = readSession()?.role === "desk" && lane === "food";
   const closed = deskViewFood || (!demoMode && Boolean(day) && day !== today && !TicketLedger.dayIsOpen(day, eventDates(currentBook)));
   const future = closed;
@@ -1465,10 +1468,10 @@ function itemButtons(person, options = {}) {
     ["3 day entry", "other", "entry"],
     ["3 day visit", "other", "food"],
   ];
-  const today = todayEventDay() || "saturday";
+  const today = todayEventDay() || "sunday";
   const groups = grouped.filter((group) => {
     if (group[2] !== "entry") return false;
-    if (!can("admin") && group[1] !== "saturday") return false;
+    if (!can("admin") && group[1] !== "sunday") return false;
     return showAll || group[2] === desk || (group[2] === "entry" && group[1] === today);
   });
   const board = document.createElement("div");
@@ -1476,7 +1479,10 @@ function itemButtons(person, options = {}) {
   const foodLines = new Map();
   for (const row of combined) {
     if (row.item.lane !== "food") continue;
-    foodLines.set(row.item.id, (foodLines.get(row.item.id) || 0) + 1);
+    if (!foodLines.has(row.item.id)) foodLines.set(row.item.id, { total: 0, taken: 0 });
+    const line = foodLines.get(row.item.id);
+    line.total += 1;
+    if (row.item.taken) line.taken += 1;
   }
   if (foodLines.size) {
     const food = document.createElement("section");
@@ -1484,9 +1490,10 @@ function itemButtons(person, options = {}) {
     const heading = document.createElement("h3");
     heading.textContent = "Food for this email";
     const list = document.createElement("ul");
-    for (const [name, qty] of foodLines) {
+    for (const [name, counts] of foodLines) {
       const line = document.createElement("li");
-      line.textContent = qty > 1 ? `${name} × ${qty}` : name;
+      const pending = counts.total - counts.taken;
+      line.textContent = `${name}: ${counts.taken} of ${counts.total} scanned (${pending} pending)`;
       list.append(line);
     }
     food.append(heading, list);
@@ -2606,15 +2613,9 @@ function renderDisputes() {
   }
 }
 
-const PINNED_SALE_ITEMS = [
-  { name: "Friday Veg", lane: "food", tone: "veg" },
-  { name: "Friday Non-Vegetarian", lane: "food", tone: "nonveg" },
-];
-const FRIDAY_STOCK = {
-  "Friday Veg": 10,
-  "Friday Non-Vegetarian": 90,
-};
-const FRIDAY_FOOD_CAP = 100;
+const PINNED_SALE_ITEMS = [];
+const FRIDAY_STOCK = {};
+const FRIDAY_FOOD_CAP = 0;
 
 function soldQty(name, exceptCode) {
   const names = new Set(saleNameKeys(name));
@@ -2643,10 +2644,11 @@ function fridayLeft(name) {
 }
 
 function fridayCountText() {
-  const vegLeft = Math.max(0, FRIDAY_STOCK["Friday Veg"] - soldQty("Friday Veg", editingSaleCode));
-  const nonvegLeft = Math.max(0, FRIDAY_STOCK["Friday Non-Vegetarian"] - soldQty("Friday Non-Vegetarian", editingSaleCode));
+  if (!FRIDAY_FOOD_CAP) return "No Friday food cap for this event.";
+  const vegLeft = Math.max(0, (FRIDAY_STOCK["Friday Veg"] || 0) - soldQty("Friday Veg", editingSaleCode));
+  const nonvegLeft = Math.max(0, (FRIDAY_STOCK["Friday Non-Vegetarian"] || 0) - soldQty("Friday Non-Vegetarian", editingSaleCode));
   const totalLeft = Math.max(0, FRIDAY_FOOD_CAP - fridaySold(editingSaleCode));
-  return `Friday food ${totalLeft} of ${FRIDAY_FOOD_CAP} left. Non-veg ${nonvegLeft} of 90. Veg ${vegLeft} of 10.`;
+  return `Friday food ${totalLeft} of ${FRIDAY_FOOD_CAP} left. Non-veg ${nonvegLeft} of ${FRIDAY_STOCK["Friday Non-Vegetarian"] || 0}. Veg ${vegLeft} of ${FRIDAY_STOCK["Friday Veg"] || 0}.`;
 }
 
 let cart = [];
@@ -3159,8 +3161,14 @@ function saleTileLabel(item) {
 
 function saleMenu() {
   return menuItems()
-    .filter((item) => item.lane === "entry")
-    .map((item) => ({ ...item, when: "Saturday", label: item.name, cap: Infinity, left: Infinity, open: true }));
+    .map((item) => ({
+      ...item,
+      when: "Sunday",
+      label: item.name,
+      cap: Infinity,
+      left: Infinity,
+      open: true,
+    }));
 }
 
 function paintSaleTiles() {
@@ -3176,9 +3184,9 @@ function paintSaleTiles() {
   }
   const hint = document.createElement("p");
   hint.className = "note";
-  hint.textContent = "Entry only. Each tap adds one ticket. The QR covers every entry on this sale.";
+  hint.textContent = "Entry and food. Each tap adds one ticket. The QR covers every item on this sale.";
   host.append(hint);
-  for (const when of ["Saturday", "Sunday"]) {
+  for (const when of ["Sunday", "Saturday"]) {
     const group = items.filter((item) => item.when === when);
     if (!group.length) continue;
     const heading = document.createElement("h2");
@@ -4547,6 +4555,79 @@ function ticketKindStats() {
   return [...groups.values()].sort((left, right) => right.total - left.total || left.label.localeCompare(right.label));
 }
 
+function itemNameStats(lane) {
+  const groups = new Map();
+  for (const person of Object.values(activeOrders())) {
+    for (const item of orderView(person).items) {
+      if (lane && (item.lane || "food") !== lane) continue;
+      const label = item.id || "Ticket";
+      if (!groups.has(label)) groups.set(label, { label, lane: item.lane || "food", total: 0, taken: 0, open: 0 });
+      const row = groups.get(label);
+      row.total += 1;
+      if (item.taken) row.taken += 1;
+      else row.open += 1;
+    }
+  }
+  return [...groups.values()].sort((left, right) => right.total - left.total || left.label.localeCompare(right.label));
+}
+
+function laneProgress() {
+  const entry = { total: 0, taken: 0, open: 0 };
+  const food = { total: 0, taken: 0, open: 0, partialOrders: 0, completeOrders: 0, waitingOrders: 0 };
+  for (const person of Object.values(activeOrders())) {
+    const view = orderView(person);
+    const foodItems = view.items.filter((item) => item.lane === "food");
+    let foodTaken = 0;
+    for (const item of view.items) {
+      const bucket = item.lane === "entry" ? entry : food;
+      bucket.total += 1;
+      if (item.taken) {
+        bucket.taken += 1;
+        if (item.lane === "food") foodTaken += 1;
+      } else bucket.open += 1;
+    }
+    if (!foodItems.length) continue;
+    if (foodTaken === foodItems.length) food.completeOrders += 1;
+    else if (foodTaken > 0) food.partialOrders += 1;
+    else food.waitingOrders += 1;
+  }
+  return { entry, food };
+}
+
+function paintDeskCounters() {
+  const host = document.querySelector("#desk-live-counters");
+  const deskStats = document.querySelector("#desk-stats");
+  if (!can("admin")) {
+    if (host) host.hidden = true;
+    if (deskStats) deskStats.hidden = true;
+    return;
+  }
+  const progress = laneProgress();
+  const recent = countSince(15 * 60 * 1000);
+  const hour = countSince(60 * 60 * 1000);
+  const hours = countSince(6 * 60 * 60 * 1000);
+  if (deskStats) {
+    deskStats.hidden = false;
+    deskStats.textContent = `Scanned ${recent} in 15 minutes, ${hour} in the last hour, ${hours} in 6 hours. Entry ${progress.entry.taken}/${progress.entry.total} done (${progress.entry.open} pending). Food ${progress.food.taken}/${progress.food.total} done (${progress.food.open} pending).`;
+  }
+  if (!host) return;
+  host.hidden = false;
+  host.replaceChildren();
+  [
+    ["Entry done", progress.entry.taken],
+    ["Entry pending", progress.entry.open],
+    ["Food done", progress.food.taken],
+    ["Food pending", progress.food.open],
+    ["Food partial orders", progress.food.partialOrders],
+  ].forEach(([label, value]) => {
+    const card = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = String(value);
+    card.append(strong, document.createTextNode(label));
+    host.append(card);
+  });
+}
+
 function activeLockRows() {
   const now = Date.now();
   return Object.entries(currentBook.locks || {})
@@ -4585,6 +4666,15 @@ function statsGrid() {
   dailyScans().forEach(([day, count]) => rows.push([day, count]));
   rows.push(["Food kind", "Total", "Taken", "Open"]);
   ticketKindStats().forEach((row) => rows.push([row.label, row.total, row.taken, row.open]));
+  rows.push(["Food item", "Total", "Scanned", "Pending"]);
+  itemNameStats("food").forEach((row) => rows.push([row.label, row.total, row.taken, row.open]));
+  const progress = laneProgress();
+  rows.push(["Lane", "Total", "Done", "Pending"]);
+  rows.push(["Entry", progress.entry.total, progress.entry.taken, progress.entry.open]);
+  rows.push(["Food", progress.food.total, progress.food.taken, progress.food.open]);
+  rows.push(["Food orders complete", progress.food.completeOrders]);
+  rows.push(["Food orders partial", progress.food.partialOrders]);
+  rows.push(["Food orders waiting", progress.food.waitingOrders]);
   rows.push(["Locks", "Name", "By", "Seconds left"]);
   activeLockRows().forEach((row) => rows.push(["Locked", row.name, row.actor, Math.ceil(row.left / 1000)]));
   return rows;
@@ -4630,21 +4720,31 @@ function renderStats() {
   const foodBox = document.querySelector("#stats-food");
   if (foodBox) {
     foodBox.replaceChildren();
-    const kinds = ticketKindStats();
-    if (!kinds.length) {
+    const progress = laneProgress();
+    const summary = document.createElement("p");
+    summary.className = "food-stat";
+    summary.textContent = `Food overall: ${progress.food.taken} done / ${progress.food.total} total (${progress.food.open} pending). Orders complete ${progress.food.completeOrders}, partial ${progress.food.partialOrders}, waiting ${progress.food.waitingOrders}.`;
+    foodBox.append(summary);
+    const entrySummary = document.createElement("p");
+    entrySummary.className = "food-stat";
+    entrySummary.textContent = `Entry overall: ${progress.entry.taken} done / ${progress.entry.total} total (${progress.entry.open} pending).`;
+    foodBox.append(entrySummary);
+    const foods = itemNameStats("food");
+    if (!foods.length) {
       const empty = document.createElement("p");
-      empty.textContent = "No tickets loaded.";
+      empty.textContent = "No food tickets loaded.";
       foodBox.append(empty);
     } else {
-      kinds.forEach((item) => {
+      foods.forEach((item) => {
         const row = document.createElement("p");
         row.className = "food-stat";
-        row.textContent = `${item.label}: ${item.taken} taken / ${item.total} total (${item.open} open)`;
+        row.textContent = `${item.label}: ${item.taken} scanned / ${item.total} bought (${item.open} pending)`;
         foodBox.append(row);
       });
     }
   }
   paintFoodReconcile();
+  paintDeskCounters();
   const lockBox = document.querySelector("#stats-locks");
   if (lockBox) {
     lockBox.replaceChildren();
@@ -5287,7 +5387,7 @@ async function clearAndStart() {
   localStorage.removeItem(storeKey("skus"));
   for (const day of ["friday", "saturday", "sunday"]) {
     document.querySelectorAll(`.day-date[data-day="${day}"]`).forEach((input) => { input.value = DEFAULT_EVENT_DAYS[day]; });
-    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => { input.checked = day === "saturday"; });
+    document.querySelectorAll(`.day-open[data-day="${day}"]`).forEach((input) => { input.checked = day === "sunday"; });
   }
   const at = new Date().toISOString();
   const actor = readSession()?.username || "admin";
@@ -5297,11 +5397,11 @@ async function clearAndStart() {
   queueWrite((book) => {
     book.eventDays = {
       ...DEFAULT_EVENT_DAYS,
-      open: { friday: false, saturday: true, sunday: false },
+      open: { friday: false, saturday: false, sunday: true },
       skus: starter,
     };
     book.skus = starter;
-    return { write: true, book, message: "Cleared. Saturday, Oct 17 is open." };
+    return { write: true, book, message: "Cleared. Sunday, Nov 8 is open." };
   });
   await flushWrites();
   openedCode = "";
@@ -5381,22 +5481,65 @@ function archiveTable(title, headers, records) {
   return block;
 }
 
-function paintPastEventList(events) {
+function eventYear(event) {
+  if (Number.isFinite(Number(event && event.year))) return Number(event.year);
+  const match = String(event && event.when || "").match(/\b(20\d{2})\b/);
+  if (match) return Number(match[1]);
+  const idYear = String(event && event.id || "").match(/(20\d{2})\s*$/);
+  return idYear ? Number(idYear[1]) : 0;
+}
+
+function paintPastEventList(events, yearFilter) {
   const host = document.querySelector("#past-events");
   if (!host) return;
   host.replaceChildren();
+  const rows = events || [];
+  if (yearFilter) {
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "btn-quiet";
+    back.textContent = "All years";
+    back.addEventListener("click", () => paintPastEventList(rows));
+    const heading = document.createElement("h2");
+    heading.textContent = String(yearFilter);
+    const list = document.createElement("div");
+    list.className = "archive-list event-tiles";
+    rows.filter((event) => eventYear(event) === yearFilter).forEach((event) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn-quiet archive-card event-tile";
+      const title = document.createElement("strong");
+      title.textContent = event.name;
+      const when = document.createElement("small");
+      when.textContent = event.status === "upcoming" ? `${event.when} · folder ready` : event.when;
+      button.append(title, when);
+      button.addEventListener("click", () => openPastEvent(event));
+      list.append(button);
+    });
+    host.append(back, heading, list);
+    return;
+  }
+  const years = [...new Set(rows.map(eventYear).filter(Boolean))].sort((left, right) => right - left);
   const list = document.createElement("div");
-  list.className = "archive-list";
-  events.forEach((event) => {
+  list.className = "archive-list year-tiles";
+  if (!years.length) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No archived events yet.";
+    host.append(empty);
+    return;
+  }
+  years.forEach((year) => {
+    const count = rows.filter((event) => eventYear(event) === year).length;
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "btn-quiet archive-card";
+    button.className = "btn-quiet archive-card year-tile";
     const title = document.createElement("strong");
-    title.textContent = event.name;
+    title.textContent = String(year);
     const when = document.createElement("small");
-    when.textContent = event.status === "upcoming" ? `${event.when} · folder ready` : event.when;
+    when.textContent = count === 1 ? "1 event" : `${count} events`;
     button.append(title, when);
-    button.addEventListener("click", () => openPastEvent(event));
+    button.addEventListener("click", () => paintPastEventList(rows, year));
     list.append(button);
   });
   host.append(list);
@@ -5410,7 +5553,7 @@ function paintPastEvent(summary) {
   back.type = "button";
   back.className = "btn-quiet";
   back.textContent = "All events";
-  back.addEventListener("click", () => paintPastEventList(pastEventIndex.events || []));
+  back.addEventListener("click", () => paintPastEventList(pastEventIndex.events || [], eventYear(summary) || undefined));
   const title = document.createElement("h2");
   title.textContent = summary.name;
   const when = document.createElement("p");
