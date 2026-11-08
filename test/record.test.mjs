@@ -52,10 +52,35 @@ test("a lost write is retried and then reported as not saved", async () => {
       calls += 1;
       return { schemaVersion: 1, lines: [], orders: {}, lastWriteId: "old" };
     },
-    async post() {},
+    async post() { throw new Error("timeout"); },
     newId: () => "new-write",
   }, (book) => ({ write: true, book, message: "Order 12196. Scanned but not taken" }));
   assert.equal(saved.ok, false);
   assert.match(saved.message, /Could not save—retry/);
   assert.ok(calls >= 2);
+  assert.equal(saved.attempts, 5);
+  assert.equal(saved.conflicts, 0);
+});
+
+test("a conflict retry counts conflicts and then saves", async () => {
+  let puts = 0;
+  let book = { schemaVersion: 1, lines: [], orders: {}, lastWriteId: "old" };
+  const saved = await commit({
+    recordUrl: SCRIPT,
+    async load() { return structuredClone(book); },
+    async post(_url, next) {
+      puts += 1;
+      if (puts === 1) throw new Error("conflict");
+      book = structuredClone(next);
+    },
+    newId: () => "write-2",
+  }, (current) => ({
+    write: true,
+    book: { ...current, orders: { 12196: { orderId: "12196" } } },
+    message: "saved",
+  }));
+  assert.equal(saved.ok, true);
+  assert.equal(saved.conflicts, 1);
+  assert.equal(saved.attempts, 2);
+  assert.equal(book.orders["12196"].orderId, "12196");
 });

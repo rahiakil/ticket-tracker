@@ -380,3 +380,41 @@ test("a Bhoomi book checkout keeps a name and an optional email", () => {
   assert.equal(removed.book.bhoomiBooks.length, 1);
   assert.equal(removed.book.bhoomiBooks[0].name, "Amit Sen");
 });
+
+test("guest timeline lists desk scan staff and food pickup times", () => {
+  const person = {
+    code: "12166",
+    full: "UTT20260900012166",
+    name: "barna NA",
+    email: "barna_c@yahoo.com",
+    items: [
+      { name: "Saturday Lunch Vegetarian", qty: 1, lane: "food", tone: "sat-veg" },
+      { name: "Regular Member Entry", qty: 1, lane: "entry", tone: "entry" },
+    ],
+  };
+  const scanned = ledger.rememberSheet(ledger.emptyBook(), person, "12166", "2026-11-08T18:00:00.000Z", "desk-a", "entry");
+  const entry = ledger.markItem(scanned.book, person, 1, "2026-11-08T18:01:00.000Z", "desk-a", "holder-a");
+  const food = ledger.markItem(entry.book, person, 0, "2026-11-08T19:15:00.000Z", "food-b", "holder-b");
+  const trail = ledger.guestTimeline(food.book, "12166");
+  assert.equal(trail.some((row) => row.kind === "scan" && row.staff === "desk-a"), true);
+  assert.equal(trail.some((row) => row.kind === "entry" && row.staff === "desk-a"), true);
+  assert.equal(trail.some((row) => row.kind === "food" && row.staff === "food-b" && /Saturday Lunch Vegetarian/.test(row.item)), true);
+  assert.equal(trail.filter((row) => row.kind === "food").length, 1);
+});
+
+test("save diagnostics are kept on the shared book", () => {
+  const recorded = ledger.recordDiagnostic(ledger.emptyBook(), {
+    at: "2026-11-08T20:00:00.000Z",
+    kind: "retry",
+    text: "save retry ok after 1 conflict(s)",
+    attempts: 2,
+    conflicts: 1,
+    actor: "desk/desk",
+    updates: 1,
+  });
+  assert.equal(recorded.changed, true);
+  assert.equal(recorded.book.diagnostics.length, 1);
+  assert.equal(recorded.book.diagnostics[0].conflicts, 1);
+  const reset = ledger.resetLog(recorded.book, "2026-11-08T21:00:00.000Z");
+  assert.equal(reset.book.diagnostics.length, 0);
+});

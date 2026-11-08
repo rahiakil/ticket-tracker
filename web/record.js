@@ -8,37 +8,41 @@
 
   async function commit(options, mutate) {
     const url = recordUrl(options.recordUrl);
-    if (!url) return { ok: false, message: "Add the record link first." };
+    if (!url) return { ok: false, message: "Add the record link first.", attempts: 0, conflicts: 0 };
     const load = options.load;
     const post = options.post;
     const newId = options.newId || (() => `${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+    let attempts = 0;
+    let conflicts = 0;
     for (let attempt = 0; attempt < 5; attempt += 1) {
+      attempts += 1;
       let book;
       let missing = false;
       try {
         book = await load(url);
       } catch (error) {
         if (error && error.message === "missing") missing = true;
-        else return { ok: false, message: failMessage(error) };
+        else return { ok: false, message: failMessage(error), attempts, conflicts };
       }
-      if (missing) book = { schemaVersion: 1, lines: [], log: [], orders: {}, locks: {}, walkups: {}, disputes: [] };
-      if (!book || book.schemaVersion !== 1 || !book.orders) return { ok: false, message: "Could not save—retry. The record file was not readable." };
+      if (missing) book = { schemaVersion: 1, lines: [], log: [], diagnostics: [], orders: {}, locks: {}, walkups: {}, disputes: [] };
+      if (!book || book.schemaVersion !== 1 || !book.orders) return { ok: false, message: "Could not save—retry. The record file was not readable.", attempts, conflicts };
       const changed = mutate(book);
       if (!changed.write) {
-        if (missing) return { ok: false, missing: true, message: "" };
-        return { ok: true, message: changed.message, book };
+        if (missing) return { ok: false, missing: true, message: "", attempts, conflicts };
+        return { ok: true, message: changed.message, book, attempts, conflicts };
       }
       const writeId = newId();
       changed.book.lastWriteId = writeId;
       try {
         await post(url, changed.book);
       } catch (error) {
-        if (error && error.message === "token") return { ok: false, message: "Could not save—retry. Add the GitHub save key on this phone." };
+        if (error && error.message === "token") return { ok: false, message: "Could not save—retry. Add the GitHub save key on this phone.", attempts, conflicts };
+        if (error && error.message === "conflict") conflicts += 1;
         continue;
       }
-      return { ok: true, message: changed.message, book: changed.book };
+      return { ok: true, message: changed.message, book: changed.book, attempts, conflicts };
     }
-    return { ok: false, message: "Could not save—retry. The record did not confirm the save." };
+    return { ok: false, message: "Could not save—retry. The record did not confirm the save.", attempts, conflicts };
   }
 
   function failMessage(error) {

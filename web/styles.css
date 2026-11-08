@@ -724,6 +724,16 @@ button.bhoomi-remove { min-height: 40px; width: auto; }
   padding-right: 4px;
 }
 .log-scroll p { margin: 3px 0; font-size: 12px; word-break: break-word; }
+.log-scroll p.is-clickable,
+.archive-table tr.is-clickable { cursor: pointer; }
+.log-scroll p.is-clickable:hover,
+.archive-table tr.is-clickable:hover { text-decoration: underline; }
+.guest-trail-card {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+.guest-trail-card .name-row { width: 100%; text-align: left; margin-bottom: 4px; }
 @media (min-width: 960px) {
   #workspace.screen,
   #ticket-screen.screen,

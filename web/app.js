@@ -785,6 +785,74 @@ async function drainWrites() {
   return true;
 }
 
+function deskDeviceLabel() {
+  const session = readSession();
+  const who = session && session.username ? session.username : "desk";
+  const role = session && session.role ? session.role : "";
+  return role ? `${who}/${role}` : who;
+}
+
+function rememberSaveDiagnostic(saved, batchSize) {
+  const attempts = Number(saved && saved.attempts) || 0;
+  const conflicts = Number(saved && saved.conflicts) || 0;
+  if (!saved || (saved.ok && conflicts <= 0 && attempts <= 1)) return;
+  const at = new Date().toISOString();
+  const actor = deskDeviceLabel();
+  const text = saved.ok
+    ? `save retry ok after ${conflicts} conflict(s) · ${batchSize} update(s) · ${attempts} attempt(s)`
+    : `save failed after ${attempts} attempt(s) · ${conflicts} conflict(s) · ${batchSize} update(s)`;
+  note(`diag: ${text}`);
+  rememberLocalDiagnostic({ at, kind: saved.ok ? "retry" : "fail", text, attempts, conflicts, actor, updates: batchSize });
+  if (saved.ok && conflicts > 0 && TicketLedger.recordDiagnostic) {
+    queueWrite((book) => TicketLedger.recordDiagnostic(book, {
+      at,
+      kind: "retry",
+      text,
+      attempts,
+      conflicts,
+      actor,
+      device: actor,
+      updates: batchSize,
+    }));
+  }
+}
+
+function rememberLocalDiagnostic(entry) {
+  try {
+    const items = JSON.parse(localStorage.getItem(storeKey("diagnostics")) || "[]");
+    const next = Array.isArray(items) ? items : [];
+    next.push(entry);
+    localStorage.setItem(storeKey("diagnostics"), JSON.stringify(next.slice(-200)));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function readLocalDiagnostics() {
+  try {
+    const items = JSON.parse(localStorage.getItem(storeKey("diagnostics")) || "[]");
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function allDiagnostics() {
+  const epoch = Date.parse(currentBook && currentBook.logEpoch || "") || 0;
+  const shared = Array.isArray(currentBook.diagnostics) ? currentBook.diagnostics : [];
+  const local = readLocalDiagnostics();
+  const seen = new Set();
+  return [...shared, ...local]
+    .filter((item) => item && (!epoch || Date.parse(item.at) > epoch))
+    .filter((item) => {
+      const key = `${item.at}|${item.text}|${item.actor || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => String(right.at).localeCompare(String(left.at)));
+}
+
 async function finishFlush() {
   const batch = pendingWrites.splice(0, pendingWrites.length);
   try {
@@ -802,6 +870,7 @@ async function finishFlush() {
       stripPrepaidCopy(working);
       return { write, book: working, message, commitMessage: `Save ${batch.length} updates` };
     });
+    rememberSaveDiagnostic(saved, batch.length);
     if (!saved.ok) {
       pendingWrites.unshift(...batch);
       note(saved.message || "Could not save—retry");
@@ -818,6 +887,7 @@ async function finishFlush() {
     renderOrders();
     return true;
   } catch {
+    rememberSaveDiagnostic({ ok: false, attempts: 1, conflicts: 0 }, batch.length);
     pendingWrites.unshift(...batch);
     note("Could not save—retry");
     showMessage("Could not save—retry", "save_failed");
@@ -1638,23 +1708,41 @@ function paintOpen(person, options) {
     scanLine.textContent = "Not scanned yet.";
   }
   const activity = document.createElement("div");
-  activity.className = "log-scroll";
+  activity.className = "log-scroll guest-trail";
   const heading = document.createElement("p");
-  const allActivity = Boolean(options && options.allActivity);
+  const allActivity = Boolean(options && options.allActivity) || can("admin");
   const related = allActivity ? ordersForPerson(person) : [person];
-  heading.textContent = allActivity ? `All activity for ${person.name}` : "This order, one by one";
+  heading.textContent = allActivity ? `Guest trail · ${person.name}` : "This order, one by one";
   activity.append(heading);
-  const logs = related
-    .flatMap((item) => TicketLedger.activityFor(currentBook, item.code))
-    .sort((left, right) => String(left.at).localeCompare(String(right.at)));
-  if (!logs.length) {
+  const timeline = TicketLedger.guestTimeline
+    ? TicketLedger.guestTimeline(currentBook, related.map((item) => item.code))
+    : related.flatMap((item) => TicketLedger.activityFor(currentBook, item.code))
+      .sort((left, right) => String(left.at).localeCompare(String(right.at)));
+  const foodTaken = timeline.filter((item) => item.kind === "food").length;
+  const summary = document.createElement("p");
+  summary.className = "note";
+  const desk = timeline.find((item) => item.kind === "scan");
+  summary.textContent = desk
+    ? `Desk scan ${formatScanClock(desk.at) || "time unknown"}${desk.staff ? ` by ${desk.staff}` : ""}. Food taken: ${foodTaken}.`
+    : `Not scanned at desk yet. Food taken: ${foodTaken}.`;
+  activity.append(summary);
+  if (!timeline.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No activity for this order yet.";
+    empty.textContent = "No activity for this guest yet.";
     activity.append(empty);
   } else {
-    for (const item of logs) {
+    for (const item of timeline) {
       const line = document.createElement("p");
-      line.textContent = logLine(item, person);
+      const when = formatScanClock(item.at) || item.at || "time unknown";
+      const staff = item.staff ? ` · by ${item.staff}` : "";
+      const label = item.kind === "scan"
+        ? "Desk scan"
+        : item.kind === "food"
+          ? `Food · ${item.item || "item"}`
+          : item.kind === "entry"
+            ? `Entry · ${item.item || "entry"}`
+            : (item.item || item.text || "Activity");
+      line.textContent = `${when} — ${label}${staff}`;
       activity.append(line);
     }
   }
@@ -6074,10 +6162,82 @@ function withinAnalyticsDates(at, from, to) {
   return true;
 }
 
+function guestMatchesAnalyticsQuery(person, query) {
+  if (!query) return true;
+  const hay = normalized(`${person.name || ""} ${person.email || ""} ${person.code || ""} ${person.full || ""}`);
+  return query.split(/\s+/).filter(Boolean).every((token) => hay.includes(token));
+}
+
+function renderGuestTrailPanel(filters) {
+  const host = document.querySelector("#analytics-guest");
+  if (!host) return;
+  host.replaceChildren();
+  const query = filters.query;
+  if (!query) {
+    const hint = document.createElement("p");
+    hint.className = "note";
+    hint.textContent = "Type a guest name, email, or order number above to open their desk scan and food timeline.";
+    host.append(hint);
+    return;
+  }
+  const matches = Object.values(activeOrders())
+    .filter((person) => guestMatchesAnalyticsQuery(person, query))
+    .slice(0, 12);
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No guest matches that search.";
+    host.append(empty);
+    return;
+  }
+  matches.forEach((person) => {
+    const wrap = document.createElement("div");
+    wrap.className = "guest-trail-card";
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "secondary name-row";
+    title.textContent = `${person.name} · ${person.code} · open full ticket`;
+    title.addEventListener("click", () => paintOpen(person, { allActivity: true, allTickets: true }));
+    wrap.append(title);
+    const related = ordersForPerson(person);
+    const timeline = TicketLedger.guestTimeline
+      ? TicketLedger.guestTimeline(currentBook, related.map((item) => item.code))
+      : [];
+    const filtered = timeline.filter((row) => {
+      if (filters.kind !== "all" && filters.kind !== "diag" && row.kind !== filters.kind) return false;
+      if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
+      if (filters.staff && !String(row.staff || "").toLowerCase().includes(filters.staff)) return false;
+      return true;
+    });
+    const foodTaken = filtered.filter((row) => row.kind === "food").length;
+    const desk = filtered.find((row) => row.kind === "scan");
+    const summary = document.createElement("p");
+    summary.className = "note";
+    summary.textContent = desk
+      ? `Desk: ${formatScanClock(desk.at) || "time unknown"}${desk.staff ? ` by ${desk.staff}` : ""}. Food taken: ${foodTaken}.`
+      : `No desk scan yet. Food taken: ${foodTaken}.`;
+    wrap.append(summary);
+    if (!filtered.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "No matching activity on this guest.";
+      wrap.append(empty);
+    } else {
+      filtered.forEach((row) => {
+        const line = document.createElement("p");
+        const staff = row.staff ? ` · by ${row.staff}` : "";
+        const label = row.kind === "scan" ? "Desk scan" : row.kind === "food" ? `Food · ${row.item || "item"}` : row.kind === "entry" ? `Entry · ${row.item || "entry"}` : (row.item || row.text);
+        line.textContent = `${formatScanClock(row.at) || row.at || "time unknown"} — ${label}${staff}`;
+        wrap.append(line);
+      });
+    }
+    host.append(wrap);
+  });
+}
+
 function renderAdminAnalytics() {
   if (!can("admin")) return;
   const filters = analyticsFilters();
   const checkins = checkinRowsFromBook().filter((row) => {
+    if (filters.kind === "diag") return false;
     if (filters.kind !== "all" && row.kind !== filters.kind) return false;
     if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
     if (filters.staff && !String(row.staff || "").toLowerCase().includes(filters.staff)) return false;
@@ -6096,6 +6256,7 @@ function renderAdminAnalytics() {
       };
     })
     .filter((row) => {
+      if (filters.kind === "diag") return false;
       if (filters.kind !== "all" && row.kind !== filters.kind) return false;
       if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
       if (filters.staff && !String(row.staff || "").toLowerCase().includes(filters.staff)) return false;
@@ -6104,6 +6265,14 @@ function renderAdminAnalytics() {
       return hay.includes(filters.query);
     })
     .sort((left, right) => String(right.at).localeCompare(String(left.at)));
+  const diagnostics = allDiagnostics().filter((row) => {
+    if (filters.kind !== "all" && filters.kind !== "diag") return false;
+    if (!withinAnalyticsDates(row.at, filters.from, filters.to)) return false;
+    if (filters.staff && !String(row.actor || row.device || "").toLowerCase().includes(filters.staff)) return false;
+    if (!filters.query) return true;
+    const hay = [row.text, row.actor, row.device, row.kind].join(" ").toLowerCase();
+    return hay.includes(filters.query);
+  });
 
   const kpis = document.querySelector("#analytics-kpis");
   if (kpis) {
@@ -6111,9 +6280,10 @@ function renderAdminAnalytics() {
     const staffSet = new Set(checkins.map((row) => row.staff).filter(Boolean));
     [
       ["Check-ins", checkins.length],
-      ["Log lines", logs.length],
+      ["Transactions", logs.length],
       ["Guests", new Set(checkins.map((row) => row.code).filter(Boolean)).size],
       ["Staff", staffSet.size],
+      ["Retries", diagnostics.length],
     ].forEach(([label, value]) => {
       const card = document.createElement("p");
       const strong = document.createElement("strong");
@@ -6123,6 +6293,8 @@ function renderAdminAnalytics() {
     });
   }
 
+  renderGuestTrailPanel(filters);
+
   const checkHost = document.querySelector("#analytics-checkins");
   if (checkHost) {
     checkHost.replaceChildren();
@@ -6131,11 +6303,22 @@ function renderAdminAnalytics() {
       empty.textContent = filters.query || filters.staff || filters.from || filters.to ? "No matching check-ins." : "No check-ins yet for the live event.";
       checkHost.append(empty);
     } else {
-      checkHost.append(archiveTable("Guest check-ins", ["When", "Guest", "Order", "Item", "Checked in by"], checkins.slice(0, 500).map((row) => {
+      const table = archiveTable("Guest check-ins", ["When", "Guest", "Order", "Item", "Checked in by"], checkins.slice(0, 500).map((row) => {
         const when = new Date(row.at);
         const clock = Number.isNaN(when.getTime()) ? row.at : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         return [clock, row.guest || "—", row.code || "—", row.item || "—", row.staff || "—"];
-      })));
+      }));
+      checkHost.append(table);
+      table.querySelectorAll("tbody tr").forEach((tr, index) => {
+        const row = checkins[index];
+        if (!row || !row.code) return;
+        tr.classList.add("is-clickable");
+        tr.title = "Open guest trail";
+        tr.addEventListener("click", () => {
+          const person = activeOrders()[row.code];
+          if (person) paintOpen(person, { allActivity: true, allTickets: true });
+        });
+      });
     }
   }
 
@@ -6144,7 +6327,7 @@ function renderAdminAnalytics() {
     logHost.replaceChildren();
     if (!logs.length) {
       const empty = document.createElement("p");
-      empty.textContent = "No matching activity.";
+      empty.textContent = "No matching transactions.";
       logHost.append(empty);
     } else {
       logs.slice(0, 400).forEach((row) => {
@@ -6156,7 +6339,34 @@ function renderAdminAnalytics() {
         line.textContent = guest
           ? `${clock} — ${guest} — ${row.item || row.text}${staff}`
           : `${clock} — ${row.text}`;
+        if (row.code && activeOrders()[row.code]) {
+          line.classList.add("is-clickable");
+          line.title = "Open guest trail";
+          line.addEventListener("click", () => paintOpen(activeOrders()[row.code], { allActivity: true, allTickets: true }));
+        }
         logHost.append(line);
+      });
+    }
+  }
+
+  const diagHost = document.querySelector("#analytics-diagnostics");
+  if (diagHost) {
+    diagHost.replaceChildren();
+    if (!diagnostics.length) {
+      const empty = document.createElement("p");
+      empty.textContent = filters.kind === "diag" || filters.query || filters.staff || filters.from || filters.to
+        ? "No matching save diagnostics."
+        : "No save retries recorded yet.";
+      diagHost.append(empty);
+    } else {
+      diagnostics.slice(0, 300).forEach((row) => {
+        const line = document.createElement("p");
+        const when = formatScanClock(row.at) || row.at || "";
+        const who = row.actor || row.device || "";
+        line.textContent = who
+          ? `${when} — ${who} — ${row.text}`
+          : `${when} — ${row.text}`;
+        diagHost.append(line);
       });
     }
   }

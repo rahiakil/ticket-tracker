@@ -223,7 +223,7 @@
 
     <section class="panel" data-page-panel="analytics" hidden>
       <h2>Check-in analytics</h2>
-      <p class="note">Search who checked in, when (scan time), which ticket, and which staff member marked it. Includes the full activity log for the live event.</p>
+      <p class="note">Search a guest to see desk scan staff, food taken, and times. Transaction log and save-retry diagnostics are below. Tap a check-in row for the full guest trail.</p>
       <div class="analytics-filters">
         <label>Search
           <input id="analytics-query" type="search" autocomplete="off" placeholder="Guest, email, order, staff, item">
@@ -244,16 +244,22 @@
             <option value="food">Food</option>
             <option value="sale">New sales</option>
             <option value="scan">Scans</option>
+            <option value="diag">Save retries</option>
             <option value="other">Other</option>
           </select>
         </label>
         <button id="analytics-run" class="btn-orange" type="button">Search</button>
       </div>
       <div id="analytics-kpis" class="archive-kpis"></div>
+      <h2>Guest trail</h2>
+      <div id="analytics-guest" class="log-scroll"></div>
       <h2>Check-ins</h2>
       <div id="analytics-checkins" class="sheet-scroll"></div>
-      <h2>Activity log</h2>
+      <h2>Transaction log</h2>
       <div id="analytics-log" class="log-scroll"></div>
+      <h2>Save diagnostics</h2>
+      <p class="note">Conflict retries and failed flushes across desks. Shared when a retry succeeds; this phone also keeps a local copy.</p>
+      <div id="analytics-diagnostics" class="log-scroll"></div>
     </section>
 
     <section class="panel" data-page-panel="catalog" hidden>
@@ -719,9 +725,9 @@
   <script src="vendor/xlsx.mini.min.js"></script>
   <script src="sheet.js?v=1"></script>
   <script src="catalog.js?v=18"></script>
-  <script src="ledger.js?v=52"></script>
-  <script src="record.js?v=13"></script>
+  <script src="ledger.js?v=53"></script>
+  <script src="record.js?v=14"></script>
   <script src="vendor/html5-qrcode.min.js?v=2"></script>
-  <script src="app.js?v=153"></script>
+  <script src="app.js?v=154"></script>
 </body>
 </html>

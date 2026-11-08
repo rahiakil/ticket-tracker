@@ -46,10 +46,18 @@ test("the gate is a separate Ticket Tracker page", () => {
   assert.match(html, /data-page="archive"/);
   assert.match(html, /data-page="export"/);
   assert.match(html, /data-page="analytics"/);
+  assert.match(html, /id="analytics-diagnostics"/);
+  assert.match(html, /id="analytics-guest"/);
+  assert.match(html, /Guest trail/);
+  assert.match(html, /Transaction log/);
+  assert.match(html, /Save diagnostics/);
   assert.match(app, /can\("admin"\)/);
   assert.match(app, /function loadPastEvents/);
   assert.match(app, /function formatScanClock/);
   assert.match(app, /function renderAdminAnalytics/);
+  assert.match(app, /rememberSaveDiagnostic/);
+  assert.match(app, /guestTimeline/);
+  assert.match(app, /allDiagnostics/);
   assert.match(html, /Bhoomi books/);
   assert.match(app, /bhoomi\.hidden = true/);
   assert.match(app, /function addBhoomiCheckout/);

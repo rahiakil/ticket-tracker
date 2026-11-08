@@ -13,14 +13,16 @@
   const LOCK_MS = 3 * 60 * 1000;
 
   function emptyBook() {
-    return { schemaVersion: 1, lines: [], log: [], orders: {}, locks: {}, walkups: {}, disputes: [] };
+    return { schemaVersion: 1, lines: [], log: [], diagnostics: [], orders: {}, locks: {}, walkups: {}, disputes: [] };
   }
 
   const MAX_ORDERS = 10000;
+  const MAX_DIAGNOSTICS = 500;
 
   function pruneBook(book) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     if (!Array.isArray(next.log)) next.log = [];
+    if (!Array.isArray(next.diagnostics)) next.diagnostics = [];
     if (!next.locks || typeof next.locks !== "object") next.locks = {};
     if (!next.walkups || typeof next.walkups !== "object") next.walkups = {};
     if (!Array.isArray(next.disputes)) next.disputes = [];
@@ -34,6 +36,7 @@
     }
     if (next.log.length > MAX_ORDERS) next.log = next.log.slice(-MAX_ORDERS);
     if ((next.lines || []).length > MAX_ORDERS) next.lines = next.lines.slice(-MAX_ORDERS);
+    if (next.diagnostics.length > MAX_DIAGNOSTICS) next.diagnostics = next.diagnostics.slice(-MAX_DIAGNOSTICS);
     next.counts = countsOf(next);
     return next;
   }
@@ -891,6 +894,7 @@ function statusDetail(order) {
     const next = structuredClone(ready(book) ? book : emptyBook());
     next.lines = [];
     next.log = [];
+    next.diagnostics = [];
     next.logEpoch = at;
     next.resetLog = true;
     next.allowCleanup = true;
@@ -898,10 +902,111 @@ function statusDetail(order) {
     return { book: next, changed: true };
   }
 
+  function recordDiagnostic(book, entry) {
+    const next = structuredClone(ready(book) ? book : emptyBook());
+    if (!Array.isArray(next.diagnostics)) next.diagnostics = [];
+    const at = entry && entry.at ? entry.at : new Date().toISOString();
+    next.diagnostics.push({
+      at,
+      kind: String((entry && entry.kind) || "retry"),
+      text: String((entry && entry.text) || ""),
+      attempts: Number(entry && entry.attempts) || 0,
+      conflicts: Number(entry && entry.conflicts) || 0,
+      actor: String((entry && entry.actor) || ""),
+      device: String((entry && entry.device) || ""),
+      updates: Number(entry && entry.updates) || 0,
+    });
+    return { book: pruneBook(next), changed: true, write: true, message: "Save diagnostics recorded." };
+  }
+
   function activityFor(book, code) {
     const needle = new RegExp(`\\b${String(code).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
     const epoch = Date.parse(book && book.logEpoch || "") || 0;
     return (book.log || []).filter((item) => item && (!epoch || Date.parse(item.at) > epoch) && needle.test(String(item.text)));
+  }
+
+  function guestTimeline(book, codes) {
+    const list = Array.isArray(codes) ? codes : [codes];
+    const codeSet = new Set(list.map((code) => String(code || "").trim()).filter(Boolean));
+    const events = [];
+    const epoch = Date.parse(book && book.logEpoch || "") || 0;
+    for (const code of codeSet) {
+      const order = book && book.orders && book.orders[code];
+      if (!order) continue;
+      if (order.scannedAt && (!epoch || Date.parse(order.scannedAt) > epoch)) {
+        events.push({
+          at: order.scannedAt,
+          kind: "scan",
+          code,
+          item: "Desk scan",
+          staff: order.actor || "",
+          text: `${code} desk scan${order.actor ? ` by ${order.actor}` : ""}`,
+        });
+      }
+      Object.values(order.variants || {}).forEach((variant) => {
+        if (!variant) return;
+        if (variant.days) {
+          ["friday", "saturday", "sunday"].forEach((day) => {
+            const slot = variant.days[day];
+            if (!slot || !slot.taken) return;
+            const at = slot.takenAt || "";
+            if (epoch && at && Date.parse(at) <= epoch) return;
+            events.push({
+              at,
+              kind: "entry",
+              code,
+              item: `${day} · ${variant.name || "Entry"}`,
+              staff: slot.takenBy || order.actor || "",
+              text: `${code} entry done: ${day} · ${variant.name || "Entry"}${slot.takenBy ? ` by ${slot.takenBy}` : ""}`,
+            });
+          });
+          return;
+        }
+        if (!variant.taken) return;
+        const at = variant.takenAt || "";
+        if (epoch && at && Date.parse(at) <= epoch) return;
+        const kind = variant.lane === "entry" ? "entry" : "food";
+        events.push({
+          at,
+          kind,
+          code,
+          item: variant.name || (kind === "entry" ? "Entry" : "Food"),
+          staff: variant.takenBy || order.actor || "",
+          text: `${code} ${kind === "entry" ? "entry done" : "food picked up"}: ${variant.name || ""}${variant.takenBy ? ` by ${variant.takenBy}` : ""}`,
+        });
+      });
+      if (order.magazine && order.magazine.taken) {
+        const at = order.magazine.takenAt || "";
+        if (!epoch || !at || Date.parse(at) > epoch) {
+          events.push({
+            at,
+            kind: "other",
+            code,
+            item: "Magazine",
+            staff: order.magazine.takenBy || order.actor || "",
+            text: `${code} magazine given${order.magazine.takenBy ? ` by ${order.magazine.takenBy}` : ""}`,
+          });
+        }
+      }
+    }
+    const logRows = (book && book.log) || [];
+    for (const item of logRows) {
+      if (!item || (epoch && Date.parse(item.at) <= epoch)) continue;
+      const text = String(item.text || "");
+      const match = text.match(/\b(\d{5})\b/);
+      if (!match || !codeSet.has(match[1])) continue;
+      const already = events.some((row) => row.at === item.at && row.text === text);
+      if (already) continue;
+      events.push({
+        at: item.at,
+        kind: /food/i.test(text) ? "food" : /entry|checked in|desk scan|scanned/i.test(text) ? (/scanned/i.test(text) ? "scan" : "entry") : "other",
+        code: match[1],
+        item: "",
+        staff: (text.match(/\bby (.+)$/i) || [])[1] || "",
+        text,
+      });
+    }
+    return events.sort((left, right) => String(left.at).localeCompare(String(right.at)));
   }
 
   function isSheetOrder(order) {
@@ -1126,6 +1231,8 @@ function statusDetail(order) {
     rememberSheet,
     markLane,
     activityFor,
+    guestTimeline,
+    recordDiagnostic,
     cleanSheetBook,
     exportRows,
     expandVariants,
