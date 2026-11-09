@@ -28,24 +28,6 @@ window.TicketCatalog = {
           "qty": 2,
           "lane": "entry",
           "tone": "entry"
-        },
-        {
-          "name": "Non-Veg Food",
-          "qty": 2,
-          "lane": "food",
-          "tone": "nonveg"
-        },
-        {
-          "name": "Veg Pulao Food",
-          "qty": 2,
-          "lane": "food",
-          "tone": "veg"
-        },
-        {
-          "name": "Kids Pizza",
-          "qty": 1,
-          "lane": "food",
-          "tone": "other"
         }
       ]
     },
@@ -6824,9 +6806,222 @@ window.TicketCatalog = {
           "tone": "entry"
         }
       ]
+    },
+    "13039": {
+      "code": "13039",
+      "full": "UTT20261100013039",
+      "name": "Kaushik Chatterjee",
+      "email": "dearkaushik@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Kids Non-Member Entry (5-18 Years)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13040": {
+      "code": "13040",
+      "full": "UTT20261100013040",
+      "name": "Paromita Roy Chowdhury",
+      "email": "paro.chowdhury@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$50",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Kids Non-Member Entry (5-18 Years)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13041": {
+      "code": "13041",
+      "full": "UTT20261100013041",
+      "name": "Pradyot Sen",
+      "email": "pksen@yahoo.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$0",
+      "items": [
+        {
+          "name": "Senior Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13042": {
+      "code": "13042",
+      "full": "UTT20261100013042",
+      "name": "Khyati Contractor",
+      "email": "khyati21136@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$40",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Kids Non-Member Entry (0-5 Years)",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13043": {
+      "code": "13043",
+      "full": "UTT20261100013043",
+      "name": "Anisha Mazumder",
+      "email": "anisha.mazumder@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$0",
+      "items": [
+        {
+          "name": "Adult Member Entry",
+          "qty": 2,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13044": {
+      "code": "13044",
+      "full": "UTT20261100013044",
+      "name": "Tanmoy Debnath",
+      "email": "retrahitur@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$60",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 3,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13045": {
+      "code": "13045",
+      "full": "UTT20261100013045",
+      "name": "Deblina Gupta",
+      "email": "gdeblina@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Adult Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        },
+        {
+          "name": "Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13046": {
+      "code": "13046",
+      "full": "UTT20261100013046",
+      "name": "Sourav Khan",
+      "email": "souravmscs.2022@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13047": {
+      "code": "13047",
+      "full": "UTT20261100013047",
+      "name": "Santosh Guha",
+      "email": "guhajay@hotmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$20",
+      "items": [
+        {
+          "name": "Non-Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
+    },
+    "13048": {
+      "code": "13048",
+      "full": "UTT20261100013048",
+      "name": "Shreya Paul",
+      "email": "shreyapaul477@gmail.com",
+      "event": "Kali Pujo 2026",
+      "date": "November 8th, 2026",
+      "amount": "$0",
+      "items": [
+        {
+          "name": "Student Member Entry",
+          "qty": 1,
+          "lane": "entry",
+          "tone": "entry"
+        }
+      ]
     }
   },
-  "refunds": []
+  "refunds": [
+    {
+      "code": "12771",
+      "item": "Non-Veg Food",
+      "keep": 0,
+      "note": "Soumya Banerjee food cancelled"
+    },
+    {
+      "code": "12771",
+      "item": "Veg Pulao Food",
+      "keep": 0,
+      "note": "Soumya Banerjee food cancelled"
+    },
+    {
+      "code": "12771",
+      "item": "Kids Pizza",
+      "keep": 0,
+      "note": "Soumya Banerjee food cancelled"
+    }
+  ]
 };
 window.TicketCatalog.lookup = function lookup(raw) {
   const text = String(raw || "").trim();

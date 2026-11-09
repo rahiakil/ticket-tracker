@@ -134,7 +134,7 @@ for (const rule of REFUNDS.map(({ code, item, keep, note }) => ({ code, item, ke
 
 const catalog = {
   ...(eventId ? { eventId } : {}),
-  epoch: eventId ? "2026-10-15" : "2026-10-08",
+  epoch: eventId === "kali-pujo-2026" ? "2026-11-08" : eventId ? "2026-10-15" : "2026-10-08",
   orders: merged,
   refunds: skipRefunds ? [] : refundRules,
 };
